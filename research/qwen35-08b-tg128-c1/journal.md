@@ -170,3 +170,15 @@ biggest single lever is reproducing their runtime: the recipe's container
 nightly 2026082102 today; their run used an older build. Next: find how to pin
 an older image tag (sparkrun container override or candidate recipe container
 field), pick a tag near their run date, benchmark plain recipe on it.
+
+## Round 10 hypothesis — pin May-era image (env epoch experiment)
+
+sparkrun benchmark supports --image override. ghcr tags for
+dgx-vllm-eugr-nightly span 20260321→2026060701(+latest=2026082102). Arena's
+121.19 was set ~May with the plain recipe. Mutation: plain recipe.yaml minus
+our spec-decode flag (i.e. the original arena recipe) on
+--image ghcr.io/spark-arena/dgx-vllm-eugr-nightly:2026052903.
+If tg ≈ 121 → regression confirmed; new plan: old image + spec decode stacked.
+If tg ≈ 108.7 → gap is not image version (look at driver/kernel/llama-benchy).
+Epoch rule: different image = different epoch — this row compares to arena's
+number, not our incumbent.
