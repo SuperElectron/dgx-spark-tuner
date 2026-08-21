@@ -55,7 +55,7 @@ if [ "$dims" != "$EMBEDDING_DIMS" ]; then
     "EMBEDDING_DIMS (and re-run with CONFIRM_RESET_MEMORY=1 to wipe + recreate the collection)."
   log "CONFIRM_RESET_MEMORY=1 set - dropping the memories collection and restarting mem0"
   docker compose exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" \
-    -c "DROP TABLE IF EXISTS ${POSTGRES_COLLECTION_NAME:-memories};"
+    -c "DROP TABLE IF EXISTS \"${POSTGRES_COLLECTION_NAME:-memories}\";"
   docker compose restart mem0
   wait_for "${MEM0_URL}/health" "mem0 server (post-reset)"
 fi

@@ -27,9 +27,10 @@ services:
   embeddings:
     # GB10 (sm_121a/arm64) needs the community image with source-built
     # FlashInfer/NCCL for this arch - stock vllm/vllm-openai lacks the
-    # kernels. VLLM_GB10_IMAGE/VLLM_GB10_DIGEST are tracked in
-    # research/docs/image-versions.env - bump both together.
-    image: ghcr.io/timothystewart6/vllm-gb10@sha256:54be6cb24d33d6ca9ba2438ca294cbc8d827ddcd0ca1cb141a3563c47e154aa4
+    # kernels. Digest is the one the box actually runs; tracked as
+    # VLLM_GB10_IMAGE/VLLM_GB10_IMAGE_DIGEST in research/docs/image-versions.env,
+    # agrees with research/docs/vllm-parameters.md:10. Bump both together.
+    image: ghcr.io/timothystewart6/vllm-gb10@sha256:fa87aea586e02719aba804f76e0895d1f096e8c387573e7981e2681589b3b712
     restart: unless-stopped
     command: ["--model", "${EMBED_MODEL}", "--port", "8001", "--runner", "pooling"]
     ipc: host
@@ -73,6 +74,8 @@ services:
       EMBEDDING_DIMS: ${EMBEDDING_DIMS}
     ports:
       - "127.0.0.1:${MEM0_PORT}:8000"
+    volumes:
+      - ./data/history:/data/history
     networks:
       - sparkmem
     healthcheck:

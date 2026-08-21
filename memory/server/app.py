@@ -3,6 +3,7 @@ the box's vLLM embeddings server. Replaces mem0/mem0-api-server (stale image,
 no `infer` support, hardcoded OpenAI embedder, requires a graph store).
 No auth: this only ever binds to 127.0.0.1 on the box.
 """
+import logging
 import os
 
 from fastapi import FastAPI, HTTPException
@@ -31,17 +32,21 @@ CONFIG = {
             "password": os.environ["POSTGRES_PASSWORD"],
             "dbname": os.environ["POSTGRES_DB"],
             "collection_name": os.environ.get("POSTGRES_COLLECTION_NAME", "memories"),
+            # This is the field that must match: it sizes the pgvector column.
             "embedding_model_dims": EMBEDDING_DIMS,
         },
     },
+    # No embedding_dims here - vLLM's pooling runner serves one fixed size;
+    # asking it to truncate via a "dimensions" request field can be rejected.
     "embedder": {
         "provider": "openai",
-        "config": {"model": EMBED_MODEL, "embedding_dims": EMBEDDING_DIMS, **_openai_local},
+        "config": {"model": EMBED_MODEL, **_openai_local},
     },
     "llm": {
         "provider": "openai",
         "config": {"model": EMBED_MODEL, **_openai_local},
     },
+    "history_db_path": "/data/history/history.db",
 }
 
 memory = Memory.from_config(CONFIG)
@@ -144,7 +149,8 @@ def delete_memory(memory_id: str):
 @app.get("/health")
 def health():
     try:
-        memory.vector_store.list(limit=1)
+        memory.vector_store.list(top_k=1)
         return {"status": "ok"}
     except Exception as e:
+        logging.exception("health check failed")
         raise HTTPException(status_code=503, detail=str(e)) from e
