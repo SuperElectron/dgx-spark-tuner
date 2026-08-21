@@ -8,6 +8,7 @@ services:
   postgres:
     image: pgvector/pgvector:pg17
     restart: unless-stopped
+    shm_size: 128mb
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -24,10 +25,16 @@ services:
       start_period: 10s
 
   embeddings:
-    image: vllm/vllm-openai:v0.27.1
+    # GB10 (sm_121a/arm64) needs the community image with source-built
+    # FlashInfer/NCCL for this arch - stock vllm/vllm-openai lacks the
+    # kernels. Digest pin from research/docs/image-versions.env's lineage.
+    image: ghcr.io/timothystewart6/vllm-gb10@sha256:54be6cb24d33d6ca9ba2438ca294cbc8d827ddcd0ca1cb141a3563c47e154aa4
     restart: unless-stopped
-    command: ["--model", "${EMBED_MODEL}", "--port", "8001", "--task", "embed"]
+    command: ["--model", "${EMBED_MODEL}", "--port", "8001", "--runner", "pooling"]
     ipc: host
+    # No nvidia docker runtime on this box - GPU access is CDI-only.
+    devices:
+      - nvidia.com/gpu=all
     ports:
       - "127.0.0.1:${EMBED_PORT}:8001"
     volumes:
@@ -42,7 +49,11 @@ services:
       start_period: 60s
 
   mem0:
-    image: mem0/mem0-api-server:latest
+    # Our own thin FastAPI wrapper around mem0ai (see server/) - the
+    # published mem0/mem0-api-server image is a stale build that doesn't
+    # support `infer`, hardcodes the OpenAI embedder, and needs a graph
+    # store. This gives us the exact config we need instead.
+    build: ./server
     restart: unless-stopped
     depends_on:
       postgres:
@@ -56,19 +67,15 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_COLLECTION_NAME: memories
-      # Embedder points at the box's vLLM server (OpenAI-compatible).
-      # infer=false on every call, so the LLM path is effectively unused -
-      # it shares the same base_url rather than needing a real chat model.
-      OPENAI_API_KEY: sparkmem-local
-      OPENAI_BASE_URL: http://embeddings:8001/v1
-      EMBEDDING_MODEL_DIMS: ${EMBEDDING_DIMS}
-      AUTH_DISABLED: "true"
+      EMBED_BASE_URL: http://embeddings:8001/v1
+      EMBED_MODEL: ${EMBED_MODEL}
+      EMBEDDING_DIMS: ${EMBEDDING_DIMS}
     ports:
       - "127.0.0.1:${MEM0_PORT}:8000"
     networks:
       - sparkmem
     healthcheck:
-      test: ["CMD", "python3", "-c", "import urllib.request as u; u.urlopen('http://localhost:8000/docs', timeout=3)"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 10s
       timeout: 5s
       retries: 30
