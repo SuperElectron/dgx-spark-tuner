@@ -1,0 +1,188 @@
+sparkrun_benchmark:
+  version: '1'
+  timestamp: '2026-08-21T21:16:59.471017+00:00'
+  recipe:
+    name: recipe
+    qualified_name: research/qwen35-08b-tg128-c1/recipe.yaml
+    type: sparkrun
+    model: Qwen/Qwen3.5-0.8B
+    container: vllm-node
+    runtime: vllm-distributed
+    registry: null
+    registry_git: ''
+    text: "recipe_version: '1'\nmodel: Qwen/Qwen3.5-0.8B\nruntime: vllm-distributed\n\
+      builder: eugr\ncontainer: vllm-node\nmetadata:\n  model_dtype: bfloat16\n  num_layers:\
+      \ 24\n  num_kv_heads: 2\n  head_dim: 256\n  model_type: qwen3_5\n  description:\
+      \ Qwen3.5-0.8B\nmods:\n- mods/fix-qwen3.5-chat-template\ndefaults:\n  port:\
+      \ 8000\n  max_num_batched_tokens: 8192\n  max_model_len: 262144\n  gpu_memory_utilization:\
+      \ 0.8\n  max_num_seqs: 4\n  host: 0.0.0.0\nenv:\n  VLLM_MARLIN_USE_ATOMIC_ADD:\
+      \ '1'\ncommand: |\n  vllm serve Qwen/Qwen3.5-0.8B \\\n    --host {host} \\\n\
+      \    --port {port} \\\n    --language-model-only \\\n    --max-model-len {max_model_len}\
+      \ \\\n    --max-num-batched-tokens {max_num_batched_tokens} \\\n    --max-num-seqs\
+      \ {max_num_seqs} \\\n    --gpu-memory-utilization {gpu_memory_utilization} \\\
+      \n    --load-format fastsafetensors \\\n    --attention-backend flash_attn \\\
+      \n    --enable-prefix-caching \\\n    --enable-chunked-prefill \\\n    --trust-remote-code\
+      \ \\\n    --dtype auto \\\n    --reasoning-parser qwen3 \\\n    --enable-auto-tool-choice\
+      \ \\\n    --tool-call-parser qwen3_coder \\\n"
+    hash: 0d05b5850e219753c1f08c58fe81672fe73c94506edd61d202de0a634c97bbb8
+  model:
+    dtype: bfloat16
+    num_layers: 24
+    num_kv_heads: 2
+    head_dim: 256
+  cluster:
+    tp: 1
+    cluster_id: sparkrun_16cb04640222c2d3_313596140c4f
+    runtime_info:
+      cuda: '13.0'
+      nccl: (2, 29, 7)
+      python: 3.12.3
+      torch: 2.13.0+cu130
+      vllm: 0.27.2rc1.dev360+ge85d1b69c.d20260821
+      build_build_date: '2026-08-21 10:10:35+00:00'
+      build_build_script_commit: 44774ef2c51ffb782ad0f35637b239be1e54c1d1
+      build_vllm_version: 0.27.2rc1.dev360+ge85d1b69c.d20260821
+      build_vllm_commit: e85d1b69cf2f1c6101cfc7c799bb0c457cacc4b3
+      build_flashinfer_commit: 4927c0e15cb63a2abb6df09019c39a172222f0eb
+      build_gpu_arch: 12.1a
+      build_base_image: ${CUDA_IMAGE}
+      build_build_args_vllm_repo: https://github.com/vllm-project/vllm.git
+      build_build_args_vllm_ref: main
+      build_build_args_torch_version: 2.13.0
+      build_build_args_torchvision_version: 0.28.0
+      build_build_args_torchaudio_version: 2.11.0
+      build_build_args_cutlass_dsl_version: 4.7.0
+      build_build_args_b12x_repo: disabled
+      build_build_args_b12x_ref: disabled
+      build_build_args_transformers_5: 'True'
+      build_build_args_exp_mxfp4: 'False'
+      build_build_args_vllm_prs: ''
+      build_build_args_build_jobs: '16'
+      container_dev_sparkrun_build_flags: ''
+      container_dev_sparkrun_flashinfer_hash: 4927c0e15cb63a2abb6df09019c39a172222f0eb
+      container_dev_sparkrun_repo_commit: 44774ef2c51ffb782ad0f35637b239be1e54c1d1
+      container_dev_sparkrun_source_digest: sha256:19d2158d320ca4c8704ebf56990de2a40b71055d6d7a5a6829a877db6a1e9125
+      container_dev_sparkrun_source_image: docker.io/eugr/spark-vllm
+      container_dev_sparkrun_source_tag: nightly-20260821
+      container_dev_sparkrun_vllm_hash: e85d1b69cf2f1c6101cfc7c799bb0c457cacc4b3
+      container_dev_sparkrun_vllm_version: 0.27.2rc1.dev360+ge85d1b69c.d20260821
+      container_maintainer: NVIDIA CORPORATION <cudatools@nvidia.com>
+      container_org_opencontainers_image_ref_name: ubuntu
+      container_org_opencontainers_image_version: '24.04'
+      container_sparkrun_cluster_id: sparkrun_16cb04640222c2d3_313596140c4f
+      container_sparkrun_intent_id: 16cb04640222c2d3
+      container_sparkrun_model: Qwen/Qwen3.5-0.8B
+      container_sparkrun_recipe: research/qwen35-08b-tg128-c1/recipe.yaml
+      container_sparkrun_runtime: vllm-distributed
+      container_sparkrun_served_model_name: Qwen/Qwen3.5-0.8B
+  benchmark:
+    framework: llama-benchy
+    profile: null
+    args:
+      pp:
+      - 2048
+      depth:
+      - 0
+      prefix_caching: true
+      tg:
+      - 128
+      concurrency:
+      - 1
+      runs: 3
+  results:
+    json:
+      model: Qwen/Qwen3.5-0.8B
+      max_concurrency: 1
+      benchmarks:
+      - concurrency: 1
+        context_size: 0
+        prompt_size: 2048
+        response_size: 128
+        is_context_prefill_phase: false
+        pp_throughput:
+          mean: 17777.386901360067
+          std: 4732.856803776431
+          values:
+          - 21189.516195611603
+          - 11084.54668809317
+          - 21058.097820375424
+        pp_req_throughput:
+          mean: 17777.386901360067
+          std: 4732.856803776431
+          values:
+          - 21189.516195611603
+          - 11084.54668809317
+          - 21058.097820375424
+        tg_throughput:
+          mean: 108.34793705438022
+          std: 0.2672344634716608
+          values:
+          - 108.44166741390666
+          - 108.61814024654609
+          - 107.98400350268791
+        tg_req_throughput:
+          mean: 108.34793705438022
+          std: 0.2672344634716608
+          values:
+          - 108.44166741390666
+          - 108.61814024654609
+          - 107.98400350268791
+        peak_throughput:
+          mean: 109.33333333333333
+          std: 0.4714045207910317
+          values:
+          - 109.0
+          - 110.0
+          - 109.0
+        peak_req_throughput:
+          mean: 109.33333333333333
+          std: 0.4714045207910317
+          values:
+          - 109.0
+          - 110.0
+          - 109.0
+        ttfr:
+          mean: 140.61530539765954
+          std: 41.42554323715588
+          values:
+          - 110.99829198792577
+          - 199.19866602867842
+          - 111.64895817637444
+        est_ppt:
+          mean: 126.26858303944269
+          std: 41.42554323715587
+          values:
+          - 96.65156962970893
+          - 184.85194367046157
+          - 97.3022358181576
+        e2e_ttft:
+          mean: 140.61530539765954
+          std: 41.42554323715588
+          values:
+          - 110.99829198792577
+          - 199.19866602867842
+          - 111.64895817637444
+        throughput_over_time: null
+        requests_throughput_over_time: null
+    csv: "model,test_name,t_s_mean,t_s_std,t_s_req_mean,t_s_req_std,peak_ts_mean,peak_ts_std,peak_ts_req_mean,peak_ts_req_std,ttfr_mean,ttfr_std,est_ppt_mean,est_ppt_std,e2e_ttft_mean,e2e_ttft_std\r\
+      \nQwen/Qwen3.5-0.8B,pp2048,17777.386901360067,4732.856803776431,17777.386901360067,4732.856803776431,,,,,140.61530539765954,41.42554323715588,126.26858303944269,41.42554323715587,140.61530539765954,41.42554323715588\r\
+      \nQwen/Qwen3.5-0.8B,tg128,108.34793705438022,0.2672344634716608,108.34793705438022,0.2672344634716608,109.33333333333333,0.4714045207910317,109.33333333333333,0.4714045207910317,,,,,,\r\
+      \n"
+    stdout: '{"model": "Qwen/Qwen3.5-0.8B", "max_concurrency": 1, "benchmarks": [{"concurrency":
+      1, "context_size": 0, "prompt_size": 2048, "response_size": 128, "is_context_prefill_phase":
+      false, "pp_throughput": {"mean": 17777.386901360067, "std": 4732.856803776431,
+      "values": [21189.516195611603, 11084.54668809317, 21058.097820375424]}, "pp_req_throughput":
+      {"mean": 17777.386901360067, "std": 4732.856803776431, "values": [21189.516195611603,
+      11084.54668809317, 21058.097820375424]}, "tg_throughput": {"mean": 108.34793705438022,
+      "std": 0.2672344634716608, "values": [108.44166741390666, 108.61814024654609,
+      107.98400350268791]}, "tg_req_throughput": {"mean": 108.34793705438022, "std":
+      0.2672344634716608, "values": [108.44166741390666, 108.61814024654609, 107.98400350268791]},
+      "peak_throughput": {"mean": 109.33333333333333, "std": 0.4714045207910317, "values":
+      [109.0, 110.0, 109.0]}, "peak_req_throughput": {"mean": 109.33333333333333,
+      "std": 0.4714045207910317, "values": [109.0, 110.0, 109.0]}, "ttfr": {"mean":
+      140.61530539765954, "std": 41.42554323715588, "values": [110.99829198792577,
+      199.19866602867842, 111.64895817637444]}, "est_ppt": {"mean": 126.26858303944269,
+      "std": 41.42554323715587, "values": [96.65156962970893, 184.85194367046157,
+      97.3022358181576]}, "e2e_ttft": {"mean": 140.61530539765954, "std": 41.42554323715588,
+      "values": [110.99829198792577, 199.19866602867842, 111.64895817637444]}, "throughput_over_time":
+      null, "requests_throughput_over_time": null}]}'
