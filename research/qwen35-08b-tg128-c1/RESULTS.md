@@ -21,3 +21,4 @@ the run into `experiements/<benchId>/`.
 | bench_4f9da10931e0-clocks | 2026-08-21 | none (incumbent re-run + clock telemetry) | 115.22 | 4.84 | — | — | — | instrumentation — SM capped 2405/3003 MHz under load, 43°C, P0; one run hit 122.0 |
 | bench_7a7591590f70 | 2026-08-21 | +--disable-log-stats | 117.95 | 8.41 | 22113 | — | 105.6 | verify — runs 113.0/111.0/129.8, high-run outlier again; repeat pending |
 | bench_7a7591590f70-verify | 2026-08-21 | --disable-log-stats (repeat) | 110.81 | 0.87 | — | — | — | revert — 6-run median ≈ incumbent; no-op |
+| bench_0b07765e053f | 2026-08-21 | spec n=6, lookup 4 | 112.44 | 5.79 | — | — | — | revert — median 108.5 < incumbent ~112; n=4 optimal on n axis |

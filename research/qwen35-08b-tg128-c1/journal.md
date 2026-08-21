@@ -236,3 +236,14 @@ and always verify.
 n=4 keeps; n=8+lookup8 regressed — but two variables changed there. Test the n
 axis alone: n=6, lookup stays 4, min 2. If acceptance depth > 4 exists on book
 text, deeper drafts pay; verify overhead at 0.8B is trivial.
+
+## Round 13 outcome — spec n=6 (bench_0b07765e053f) — revert
+
+108.2/108.5/120.6, median 108.5. Deeper drafts lose even with lookup fixed at 4.
+n axis settled: 4.
+
+## Round 14 hypothesis — prompt_lookup_min=1
+
+min=2 requires a 2-gram match to trigger drafting; min=1 lets any single-token
+match draft, raising draft frequency at some acceptance cost. On book text with
+common words, frequency win may dominate. Mutation: prompt_lookup_min 2→1.
