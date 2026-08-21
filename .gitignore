@@ -1,4 +1,8 @@
 .cache/
+.claude/box.json
 .DS_Store
 __pycache__/
 .omc/
+# experiment run data stays local
+research/*/experiments/*
+!research/_template/experiments/.gitkeep
