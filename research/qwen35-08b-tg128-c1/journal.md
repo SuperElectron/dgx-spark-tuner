@@ -258,3 +258,19 @@ knob space (n, lookup_max, lookup_min) now swept — n=4/4/2 stands.
 Last untried template-level lever: attention backend. flash_attn → flashinfer.
 FlashInfer's decode kernels are often faster for small batch/head counts, and
 it's the only backend swap available in this image. Crash → lesson, revert.
+
+## Round 15 outcome — flashinfer (bench_7270eca7baa2) — revert
+
+109.4/111.4/114.8, median 111.4 ≈ incumbent. Backend no-op at this size.
+
+## Round 16 hypothesis — runtime FP8 weight quantization
+
+Bandwidth math: decode reads ~1.63GB of BF16 weights per token; at arena's
+121 t/s that's ~200GB/s — near GB10's practical memory bandwidth. We are
+weights-BW-bound, which is why every scheduler/kernel flag lands ~112. The one
+runtime lever that halves weight traffic: --quantization fp8 (online FP8 of the
+same Qwen/Qwen3.5-0.8B checkpoint). Ceiling roughly doubles; even 60% efficiency
+lands >130. Same model name, standard vLLM runtime param, recipe stays
+transparent. Risks: conflict with fastsafetensors load or Marlin atomic-add env
+(crash → lesson); arena-fairness is Mat's call before any submission (flagged).
+Mutation: add --quantization fp8 to incumbent (spec decode stays).

@@ -23,3 +23,4 @@ the run into `experiements/<benchId>/`.
 | bench_7a7591590f70-verify | 2026-08-21 | --disable-log-stats (repeat) | 110.81 | 0.87 | — | — | — | revert — 6-run median ≈ incumbent; no-op |
 | bench_0b07765e053f | 2026-08-21 | spec n=6, lookup 4 | 112.44 | 5.79 | — | — | — | revert — median 108.5 < incumbent ~112; n=4 optimal on n axis |
 | bench_c2ed1165fcfc | 2026-08-21 | prompt_lookup_min=1 | 113.74 | 2.21 | — | — | — | revert — median 112.3 ≈ incumbent; no clear gain |
+| bench_7270eca7baa2 | 2026-08-21 | --attention-backend flashinfer | 111.87 | 2.24 | 23134 | — | 102.6 | revert — median 111.4 ≈ incumbent; backend swap no-op |
