@@ -86,3 +86,17 @@ benchmark validity holds. Mutation (candidate recipe, new template flag):
   --speculative-config '{"method":"ngram","num_speculative_tokens":4,"prompt_lookup_max":4,"prompt_lookup_min":2}'
 Expect: anywhere from -3 (overhead, low acceptance) to +30 tg. High variance,
 high ceiling — the first lever with headroom to actually reach 121.19.
+
+## Round 5 outcome — ngram spec decode (bench_4f9da10931e0) — KEEP
+
+tg 112.61 ± 1.94 (+3.9 over 108.7 band, clears >109.5 rule). pp also up
+(24986 — spec config doesn't touch prefill; likely run variance). σ grew 10x:
+throughput now depends on per-prompt ngram acceptance — expected. Folded
+--speculative-config into recipe.yaml. Incumbent = 112.61. Gap to 121.19: 8.6.
+
+## Round 6 hypothesis — deeper speculation (n=8, lookup max 8)
+
+Acceptance was good enough to net +3.9 despite verify overhead. Raising
+num_speculative_tokens 4→8 and prompt_lookup_max 4→8 raises the per-step
+ceiling; cost is wasted verify FLOPs on rejection — cheap at 0.8B (GPU idles
+anyway at c1). Expect +2–8 tg if acceptance holds; regression if rejections dominate.
