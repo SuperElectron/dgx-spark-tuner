@@ -100,3 +100,16 @@ Acceptance was good enough to net +3.9 despite verify overhead. Raising
 num_speculative_tokens 4→8 and prompt_lookup_max 4→8 raises the per-step
 ceiling; cost is wasted verify FLOPs on rejection — cheap at 0.8B (GPU idles
 anyway at c1). Expect +2–8 tg if acceptance holds; regression if rejections dominate.
+
+## Round 6 outcome — spec n=8 (bench_0b93f5cfe862) — revert
+
+tg 111.68 ± 1.75, −0.9 vs incumbent 112.61. Deeper drafts don't pay: rejections
+waste verify steps, ttfr degraded (117 vs 104). n=4 stays. Fine-tuning n further
+(3, 5) parks until orthogonal levers exhausted — σ~2 makes small deltas invisible.
+
+## Round 7 hypothesis — --async-scheduling stacked on spec decode
+
+Round 3 showed async-scheduling as no-op pre-spec-decode. But ngram drafting adds
+per-step CPU work (prompt lookup), raising scheduler overhead — overlap may pay
+now. Risk: some vLLM versions reject async + spec decode combo; if launch fails,
+that's the lesson, run dir stays. Mutation: add --async-scheduling to candidate.

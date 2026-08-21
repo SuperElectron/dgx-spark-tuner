@@ -12,3 +12,4 @@ the run into `experiements/<benchId>/`.
 | bench_eb6e39538b5e | 2026-08-21 | --async-scheduling (candidate recipe) | 108.96 | 0.28 | 21274 | 243 | 110.0 | revert — +0.61 tg (~1.6σ); third straight ~+0.6 result, baseline suspect |
 | bench_59e87386d131-rebaseline | 2026-08-21 | none (re-run incumbent) | 108.67 | 0.17 | 21580 | 402 | 107.2 | re-baseline — incumbent band 108.4–109.0; rounds 1–3 flags = no-ops |
 | bench_4f9da10931e0 | 2026-08-21 | +ngram spec decode (n=4, lookup 2-4) | 112.61 | 1.94 | 24986 | 595 | 103.7 | KEEP — +3.9 tg over band; first winner; σ up (acceptance-dependent) |
+| bench_0b93f5cfe862 | 2026-08-21 | spec decode n=8, lookup 8 | 111.68 | 1.75 | 20064 | 2482 | 117.0 | revert — −0.9 vs n=4; deeper drafts waste verify, ttfr worse |
