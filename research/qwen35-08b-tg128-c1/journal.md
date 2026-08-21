@@ -64,3 +64,25 @@ Action: round 4 re-runs the incumbent recipe UNCHANGED to re-baseline. If it
 lands ~108.9, epoch resets: incumbent reference becomes ~108.9 and the three
 flags are true no-ops for this cell; next mutations must target bigger levers
 (cuda graphs, attention backend, batched-tokens) to move toward 121.19.
+
+## Round 4 outcome — re-baseline (bench_59e87386d131 re-run, archived as -rebaseline)
+
+tg 108.67 ± 0.17. Lands inside the 108.35–108.96 spread. Conclusion: incumbent
+reference is a BAND, ~108.7 ± 0.3 across runs; max_num_seqs=1, max_model_len=8192,
+--async-scheduling are all no-ops for this cell. Note: sparkrun reuses benchId for
+identical recipe+params, so the re-run reused bench_59e87386d131 — archived
+separately as experiements/bench_59e87386d131-rebaseline/.
+Decision rule from here: keep only if tg mean > 109.5 (clears band + drift).
+Micro-flags can't close a 12% gap to 121.19. Next: big levers.
+
+## Round 5 hypothesis — ngram speculative decoding
+
+tg128 c1 is pure greedy decode of book-corpus continuations. vLLM V1 supports
+lossless ngram (prompt-lookup) speculation: draft tokens copied from prompt
+matches, verified in one batched step. With pp=2048 of book text and on-topic
+continuation, acceptance should be decent; each accepted draft token is nearly
+free decode throughput. Greedy + spec decode = identical outputs (lossless), so
+benchmark validity holds. Mutation (candidate recipe, new template flag):
+  --speculative-config '{"method":"ngram","num_speculative_tokens":4,"prompt_lookup_max":4,"prompt_lookup_min":2}'
+Expect: anywhere from -3 (overhead, low acceptance) to +30 tg. High variance,
+high ceiling — the first lever with headroom to actually reach 121.19.
