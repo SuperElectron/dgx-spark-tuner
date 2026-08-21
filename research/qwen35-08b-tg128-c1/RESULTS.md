@@ -7,3 +7,4 @@ the run into `experiements/<benchId>/`.
 | benchId | date | mutation | tg t/s | tg σ | pp t/s | pp σ | ttfr ms | verdict |
 |---|---|---|---:|---:|---:|---:|---:|---|
 | bench_59e87386d131 | 2026-08-21 | baseline (arena recipe verbatim) | 108.35 | 0.27 | 17777 | 4733 | 140.6 | baseline — repro gap −10.6% vs 121.19 |
+| bench_129a556cce47 | 2026-08-21 | max_num_seqs=1 | 108.90 | 0.09 | 23195 | 266 | 102.3 | revert — +0.55 tg (~1.9σ, inconclusive); pp normalized to arena level, round-0 pp dip was anomaly |

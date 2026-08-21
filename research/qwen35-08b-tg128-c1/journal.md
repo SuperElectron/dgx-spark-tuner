@@ -6,3 +6,28 @@ The last synthesis is the handoff every new session starts from.
 ## Round 0 — baseline
 
 (reproduce the arena recipe verbatim; record the reproduction gap here)
+
+## Round 1 — 2026-08-21
+
+**Hypothesis:** `max_num_seqs=4` (recipe default) makes the scheduler
+reserve batch slots for 4 concurrent sequences while the probe runs
+exactly 1. Setting `-o max_num_seqs=1` should remove batching slack in
+the decode path. Expected: small tg gain, +1–4 tok/s over 108.35.
+Baseline: bench_59e87386d131 (108.35 ± 0.27).
+
+**Round 1 outcome:** tg 108.90 ± 0.09 vs baseline 108.35 ± 0.27 — +0.55,
+~1.9σ combined: not beyond noise, recipe unchanged. Two real lessons:
+(1) pp jumped to 23195 ± 266, matching the arena's 23284 — round 0's
+17777 ± 4733 contained one bad run (likely cold page cache); pp repro
+gap is CLOSED, only the tg gap (-10.6%) remains. (2) tg σ collapsed
+0.27→0.09 with max_num_seqs=1 — worth re-testing later stacked on a
+real winner.
+
+## Round 2 — 2026-08-21
+
+**Hypothesis:** recipe serves --max-model-len 262144; KV/block tables and
+scheduler are sized for 256k context while the cell needs ~2.2k. Setting
+-o max_model_len=8192 shrinks KV bookkeeping and may enable tighter CUDA
+graphs. Expected: +2-6 tg tok/s. Caveat (journaled for promotion): a
+submitted recipe must serve the full arena grid depths, so this flag
+must be re-raised or cell-scoped at promotion time.
