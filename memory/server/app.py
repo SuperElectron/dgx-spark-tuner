@@ -67,9 +67,34 @@ class SearchRequest(BaseModel):
     filters: dict | None = None
 
 
+class ListRequest(BaseModel):
+    user_id: str
+    filters: dict | None = None
+    limit: int = 100
+
+
+def _entity_filters(user_id: str, extra: dict | None) -> dict:
+    """Merge the user_id scope with caller-supplied metadata filters. mem0's
+    local pgvector store matches filter keys directly against the stored
+    payload (entity ids and metadata fields alike), so no "metadata" nesting."""
+    return {"user_id": user_id, **(extra or {})}
+
+
+def _find_by_sha256(user_id: str, sha256: str) -> dict | None:
+    existing = memory.get_all(filters=_entity_filters(user_id, {"sha256": sha256}), top_k=1)
+    results = existing.get("results", [])
+    return results[0] if results else None
+
+
 @app.post("/memories")
 def add_memory(req: MemoryCreate):
     try:
+        sha256 = (req.metadata or {}).get("sha256")
+        if sha256:
+            dupe = _find_by_sha256(req.user_id, sha256)
+            if dupe:
+                return {"results": [{"id": dupe["id"]}], "deduped": True}
+
         return memory.add(
             [m.model_dump() for m in req.messages],
             user_id=req.user_id,
@@ -84,8 +109,26 @@ def add_memory(req: MemoryCreate):
 def search_memory(req: SearchRequest):
     try:
         return memory.search(
-            req.query, user_id=req.user_id, limit=req.limit, filters=req.filters
+            req.query, filters=_entity_filters(req.user_id, req.filters), top_k=req.limit
         )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@app.post("/memories/list")
+def list_memories(req: ListRequest):
+    try:
+        raw = memory.get_all(filters=_entity_filters(req.user_id, req.filters), top_k=req.limit)
+        results = [
+            {
+                "id": r["id"],
+                "memory": r.get("memory"),
+                "created_at": r.get("created_at"),
+                "metadata": r.get("metadata"),
+            }
+            for r in raw.get("results", [])
+        ]
+        return {"results": results}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 

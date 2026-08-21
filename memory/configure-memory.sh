@@ -60,13 +60,21 @@ if [ "$dims" != "$EMBEDDING_DIMS" ]; then
   wait_for "${MEM0_URL}/health" "mem0 server (post-reset)"
 fi
 
-log "round-tripping a probe memory (add -> search -> delete)"
-add_resp=$(curl -fsS -X POST "${MEM0_URL}/memories" \
-  -H 'Content-Type: application/json' \
-  -d '{"messages":[{"role":"user","content":"[LESSON] configure-memory.sh probe - safe to ignore"}],"user_id":"'"${PROBE_USER}"'","infer":false}')
+PROBE_SHA="configure-memory-probe-$(date +%s)"
+probe_payload='{"messages":[{"role":"user","content":"[LESSON] configure-memory.sh probe - safe to ignore"}],"user_id":"'"${PROBE_USER}"'","metadata":{"sha256":"'"${PROBE_SHA}"'"},"infer":false}'
+
+log "round-tripping a probe memory (add -> list -> search -> dedupe -> delete)"
+add_resp=$(curl -fsS -X POST "${MEM0_URL}/memories" -H 'Content-Type: application/json' -d "$probe_payload")
 
 memory_id=$(echo "$add_resp" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d["results"][0]["id"])') \
   || die "add response had no results[0].id: $add_resp"
+
+list_resp=$(curl -fsS -X POST "${MEM0_URL}/memories/list" \
+  -H 'Content-Type: application/json' \
+  -d '{"user_id":"'"${PROBE_USER}"'","filters":{"sha256":"'"${PROBE_SHA}"'"}}')
+
+echo "$list_resp" | python3 -c 'import json,sys; d=json.load(sys.stdin); r=d.get("results",[]); sys.exit(0 if len(r)==1 and r[0]["id"]!="" else 1)' \
+  || die "/memories/list did not return exactly one match for the probe sha256: $list_resp"
 
 search_resp=$(curl -fsS -X POST "${MEM0_URL}/search" \
   -H 'Content-Type: application/json' \
@@ -75,7 +83,13 @@ search_resp=$(curl -fsS -X POST "${MEM0_URL}/search" \
 echo "$search_resp" | python3 -c 'import json,sys; d=json.load(sys.stdin); sys.exit(0 if d.get("results") else 1)' \
   || die "probe memory not found on search-back: $search_resp"
 
+log "checking server-side dedupe (re-adding the same sha256)"
+dedupe_resp=$(curl -fsS -X POST "${MEM0_URL}/memories" -H 'Content-Type: application/json' -d "$probe_payload")
+
+echo "$dedupe_resp" | python3 -c 'import json,sys; d=json.load(sys.stdin); sys.exit(0 if d.get("deduped") is True and d["results"][0]["id"]=="'"$memory_id"'" else 1)' \
+  || die "duplicate add did not return deduped:true with the original id: $dedupe_resp"
+
 curl -fsS -X DELETE "${MEM0_URL}/memories/${memory_id}" >/dev/null \
   || die "delete of probe memory ${memory_id} failed"
 
-log "OK: mem0 healthy, embedder dims match (${dims}), add/search/delete verified"
+log "OK: mem0 healthy, embedder dims match (${dims}), add/list/search/dedupe/delete verified"
