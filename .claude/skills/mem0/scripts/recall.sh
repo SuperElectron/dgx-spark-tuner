@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
-# Search memories. Prints newest-first "- <text>" bullets, capped at ~1200
-# chars. Never blocks: empty output + exit 0 on no hits or service down.
+# Search memories. Prints "- <text>" bullets in the server's relevance
+# order, capped at ~1200 total chars. Never blocks: empty output + exit 0
+# on no hits, a down service, or a missing box config.
 #
 # Usage: recall.sh "<query>" [entity] [k]
 
 set -uo pipefail
-cd "$(dirname "${BASH_SOURCE[0]}")" || exit 1
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=./_common.sh
-source ./_common.sh
+source "$SCRIPT_DIR/_common.sh"
 
 CHAR_CAP=1200
 
@@ -21,25 +22,30 @@ QUERY="$1"
 ENTITY="${2:-}"
 K="${3:-10}"
 [ -n "$QUERY" ] || usage
+[[ "$K" =~ ^[0-9]+$ ]] || usage
 
-BODY="$(jq -nc --arg q "$QUERY" --arg uid "$MEM0_USER_ID" --argjson k "$K" \
-  '{query: $q, filters: {user_id: $uid}, top_k: $k}')"
+if [ -z "$BOX_HOST" ]; then
+  echo "mem0: search unavailable (no box configured)" >&2
+  exit 0
+fi
+
+BODY="$(jq -nc --arg q "$QUERY" --arg uid "$MEM0_USER_ID" --argjson k "$K" --arg entity "$ENTITY" \
+  '{query: $q, user_id: $uid, limit: $k}
+   + (if $entity == "" then {} else {filters: {entity: $entity}} end)')"
 
 mem0_search "$BODY"
-RESPONSE="$CURL_BODY"
 
 if [[ ! "$CURL_STATUS" =~ ^2 ]]; then
   echo "mem0: search unavailable (status ${CURL_STATUS})" >&2
   exit 0
 fi
 
-MEMORIES="$(jq -r --arg entity "$ENTITY" '
+# Server already applied relevance ranking and the entity filter; we only
+# select the .memory field here — never re-sort before the char cap.
+MEMORIES="$(jq -r '
   (if type == "array" then . else (.results // []) end)
-  | map(select($entity == "" or ((.metadata.entity // "") == $entity)))
-  | sort_by(.created_at // "")
-  | reverse
   | .[].memory // empty
-' <<<"$RESPONSE" 2>/dev/null)"
+' <<<"$CURL_BODY" 2>/dev/null)"
 
 [ -n "$MEMORIES" ] || exit 0
 

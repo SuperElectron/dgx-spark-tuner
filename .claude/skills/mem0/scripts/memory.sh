@@ -4,9 +4,10 @@
 # Usage: memory.sh start|stop|status|logs [service]
 
 set -uo pipefail
-cd "$(dirname "${BASH_SOURCE[0]}")" || exit 1
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=./_common.sh
-source ./_common.sh
+source "$SCRIPT_DIR/_common.sh"
+require_box_host
 
 usage() {
   echo "usage: memory.sh start|stop|status|logs [service]" >&2
@@ -15,14 +16,16 @@ usage() {
 
 compose() {
   # shellcheck disable=SC2029  # intentional client-side expansion of $*
-  ssh -o ConnectTimeout=10 "$BOX_HOST" "cd ${MEM0_BOX_DIR} && docker compose -p ${COMPOSE_PROJECT} $*"
+  # MEM0_BOX_DIR is intentionally unquoted on the remote side so a leading
+  # "~" (the documented default, ~/spark-tuner/memory) tilde-expands there.
+  ssh -o ConnectTimeout=10 -o BatchMode=yes "$BOX_HOST" "cd ${MEM0_BOX_DIR} && docker compose -p '${COMPOSE_PROJECT}' $*"
 }
 
 poll_health() {
   local label="$1" fn="$2" tries=30 i
   printf 'waiting for %s' "$label"
   for ((i = 0; i < tries; i++)); do
-    "$fn" >/dev/null
+    "$fn"
     if [[ "$CURL_STATUS" =~ ^2 ]]; then
       echo " OK (${CURL_STATUS})"
       return 0
@@ -66,14 +69,14 @@ cmd_status() {
   echo "box: reachable ($BOX_HOST)"
   compose ps || true
 
-  mem0_health >/dev/null
+  mem0_health
   if [[ "$CURL_STATUS" =~ ^2 ]]; then
     echo "mem0 (:${MEM0_PORT}): healthy (${CURL_STATUS})"
   else
     echo "mem0 (:${MEM0_PORT}): unhealthy (${CURL_STATUS})"
   fi
 
-  embed_health >/dev/null
+  embed_health
   if [[ "$CURL_STATUS" =~ ^2 ]]; then
     echo "embeddings (:${EMBED_PORT}): healthy (${CURL_STATUS})"
   else

@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 # Self-heal chain for the mem0 stack. Runs a sequence of checks, attempts a
-# fix for each, prints PASS/FIXED/FAIL per step, and drains the memory
+# fix for each, prints PASS/FIXED/FAIL/SKIP per step, and drains the memory
 # outbox at the end. Idempotent; exits nonzero only if still broken.
 #
 # Usage: memory-doctor.sh
 
 set -uo pipefail
-cd "$(dirname "${BASH_SOURCE[0]}")" || exit 1
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=./_common.sh
-source ./_common.sh
+source "$SCRIPT_DIR/_common.sh"
 
 BROKEN=0
 
@@ -30,12 +30,16 @@ step() {
   return 1
 }
 
+skip() { echo "SKIP  $1 (box unreachable)"; }
+
 compose() {
   # shellcheck disable=SC2029
-  ssh -o ConnectTimeout=10 "$BOX_HOST" "cd ${MEM0_BOX_DIR} && docker compose -p ${COMPOSE_PROJECT} $*"
+  # MEM0_BOX_DIR is intentionally unquoted on the remote side so a leading
+  # "~" (the documented default, ~/spark-tuner/memory) tilde-expands there.
+  ssh -o ConnectTimeout=10 -o BatchMode=yes "$BOX_HOST" "cd ${MEM0_BOX_DIR} && docker compose -p '${COMPOSE_PROJECT}' $*"
 }
 
-check_box() { box_reachable; }
+check_box() { [ -n "$BOX_HOST" ] && box_reachable; }
 fix_box() { :; } # nothing we can do from here; ssh reachability is external
 
 check_containers() {
@@ -46,21 +50,21 @@ check_containers() {
 fix_containers() { compose up -d; sleep 3; }
 
 check_mem0() {
-  mem0_health >/dev/null
+  mem0_health
   [[ "$CURL_STATUS" =~ ^2 ]]
 }
 fix_mem0() { compose restart mem0 2>/dev/null || compose up -d; sleep 5; }
 
 check_embed() {
-  embed_health >/dev/null
+  embed_health
   [[ "$CURL_STATUS" =~ ^2 ]]
 }
-fix_embed() { compose restart vllm 2>/dev/null || compose restart embeddings 2>/dev/null || compose up -d; sleep 5; }
+fix_embed() { compose restart embeddings 2>/dev/null || compose up -d; sleep 5; }
 
 check_roundtrip() {
   local body id resp status
-  body="$(jq -nc --arg uid "$MEM0_USER_ID" \
-    '{messages: [{role: "user", content: "[LESSON] memory-doctor roundtrip probe"}], user_id: $uid, metadata: {entity: "doctor:probe"}, infer: false}')"
+  body="$(jq -nc --arg uid "$MEM0_USER_ID" --arg sha "$(sha256_of "[LESSON] memory-doctor roundtrip probe")" \
+    '{messages: [{role: "user", content: "[LESSON] memory-doctor roundtrip probe"}], user_id: $uid, metadata: {entity: "doctor:probe", sha256: $sha}, infer: false}')"
   mem0_add "$body"
   resp="$CURL_BODY"
   status="$CURL_STATUS"
@@ -70,14 +74,14 @@ check_roundtrip() {
 
   local search_body search_resp found
   search_body="$(jq -nc --arg uid "$MEM0_USER_ID" \
-    '{query: "memory-doctor roundtrip probe", filters: {user_id: $uid}, top_k: 5}')"
+    '{query: "memory-doctor roundtrip probe", user_id: $uid, limit: 5}')"
   mem0_search "$search_body"
   search_resp="$CURL_BODY"
   [[ "$CURL_STATUS" =~ ^2 ]] || return 1
   found="$(jq -r '(if type == "array" then . else (.results // []) end) | map(select(.memory // "" | test("roundtrip probe"))) | length' <<<"$search_resp" 2>/dev/null)"
 
   if [ -n "$id" ]; then
-    mem0_delete "$id" >/dev/null || true
+    mem0_delete "$id" || true
   fi
 
   [ "${found:-0}" -gt 0 ]
@@ -88,14 +92,23 @@ check_outbox_drained() {
   local outbox="$REPO_ROOT/.cache/memory-outbox.jsonl"
   [ ! -s "$outbox" ]
 }
-fix_outbox_drained() { ./remember.sh --drain; }
+fix_outbox_drained() { "$SCRIPT_DIR/remember.sh" --drain; }
 
-step "box reachable"           check_box          fix_box
-step "containers up"           check_containers   fix_containers
-step "mem0 :${MEM0_PORT} healthy"    check_mem0    fix_mem0
-step "embeddings :${EMBED_PORT} healthy" check_embed fix_embed
-step "add/search/delete roundtrip"   check_roundtrip fix_roundtrip
-step "outbox drained"          check_outbox_drained fix_outbox_drained
+step "box reachable" check_box fix_box
+
+if [ "$BROKEN" -ne 0 ]; then
+  skip "containers up"
+  skip "mem0 :${MEM0_PORT} healthy"
+  skip "embeddings :${EMBED_PORT} healthy"
+  skip "add/search/delete roundtrip"
+else
+  step "containers up" check_containers fix_containers
+  step "mem0 :${MEM0_PORT} healthy" check_mem0 fix_mem0
+  step "embeddings :${EMBED_PORT} healthy" check_embed fix_embed
+  step "add/search/delete roundtrip" check_roundtrip fix_roundtrip
+fi
+
+step "outbox drained" check_outbox_drained fix_outbox_drained
 
 if [ "$BROKEN" -ne 0 ]; then
   echo "memory-doctor: unresolved failures above"

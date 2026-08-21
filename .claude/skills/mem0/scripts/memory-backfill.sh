@@ -1,15 +1,17 @@
 #!/usr/bin/env bash
-# Backfill mem0 from an experiment's canonical files: RESULTS.md table rows
-# and journal.md "## Round N outcome ... — keep/revert/crash" headings.
-# Dedupes by exact memory text (searches before adding).
+# Backfill mem0 from an experiment's canonical RESULTS.md table. Every row
+# becomes a one-liner ([CRASH] when the verdict column starts with
+# "crash", [VERDICT] otherwise), deduped server-side by exact sha256 of
+# the text via POST /memories/list (never adds on an uncertain dedupe
+# check — a failed check is a skip, not an add).
 #
 # Usage: memory-backfill.sh [-n] <experiment-dir>
-#   -n  dry run: print the one-liners instead of posting them
+#   -n  dry run: print the one-liners instead of posting them (no network)
 
 set -uo pipefail
-cd "$(dirname "${BASH_SOURCE[0]}")" || exit 1
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=./_common.sh
-source ./_common.sh
+source "$SCRIPT_DIR/_common.sh"
 
 DRY_RUN=0
 
@@ -32,7 +34,8 @@ EXP_DIR="${1%/}"
 EXP_NAME="$(basename "$EXP_DIR")"
 ENTITY="experiment:${EXP_NAME}"
 RESULTS_FILE="$EXP_DIR/RESULTS.md"
-JOURNAL_FILE="$EXP_DIR/journal.md"
+
+[ "$DRY_RUN" -eq 1 ] || require_box_host
 
 trim() {
   local s="$1"
@@ -43,31 +46,28 @@ trim() {
 
 lower() { printf '%s' "$1" | tr '[:upper:]' '[:lower:]'; }
 
-already_exists() {
-  local text="$1" body resp hit
-  body="$(jq -nc --arg q "$text" --arg uid "$MEM0_USER_ID" '{query: $q, filters: {user_id: $uid}, top_k: 10}')"
-  mem0_search "$body"
-  resp="$CURL_BODY"
-  [[ "$CURL_STATUS" =~ ^2 ]] || return 1
-  hit="$(jq -r --arg t "$text" '
-    (if type == "array" then . else (.results // []) end)
-    | map(select(.memory == $t)) | length
-  ' <<<"$resp" 2>/dev/null)"
-  [ "${hit:-0}" -gt 0 ]
-}
-
 emit() {
-  local text="$1" body
+  local text="$1" sha add_body hit
+  sha="$(sha256_of "$text")"
+
   if [ "$DRY_RUN" -eq 1 ]; then
     printf '%s\n' "$text"
     return
   fi
-  if already_exists "$text"; then
+
+  mem0_list "$(jq -nc --arg uid "$MEM0_USER_ID" --arg sha "$sha" '{user_id: $uid, filters: {sha256: $sha}, limit: 1}')"
+  if [[ ! "$CURL_STATUS" =~ ^2 ]]; then
+    echo "mem0: dedupe check failed (status ${CURL_STATUS}); skipping without adding: $text" >&2
     return
   fi
-  body="$(jq -nc --arg text "$text" --arg entity "$ENTITY" --arg uid "$MEM0_USER_ID" \
-    '{messages: [{role: "user", content: $text}], user_id: $uid, metadata: {entity: $entity}, infer: false}')"
-  mem0_add "$body" >/dev/null
+  hit="$(jq -r '(if type == "array" then . else (.results // []) end) | length' <<<"$CURL_BODY" 2>/dev/null)"
+  if [ "${hit:-0}" -gt 0 ]; then
+    return
+  fi
+
+  add_body="$(jq -nc --arg text "$text" --arg entity "$ENTITY" --arg sha "$sha" --arg uid "$MEM0_USER_ID" \
+    '{messages: [{role: "user", content: $text}], user_id: $uid, metadata: {entity: $entity, sha256: $sha}, infer: false}')"
+  mem0_add "$add_body"
   if [[ ! "$CURL_STATUS" =~ ^2 ]]; then
     echo "mem0: failed to add memory (status ${CURL_STATUS}): $text" >&2
   fi
@@ -94,34 +94,12 @@ parse_results() {
     esac
     mutation="$(trim "${cols[2]:-}")"
     verdict="$(trim "${cols[$((n - 1))]:-}")"
-    [ -z "$verdict" ] && continue
     tag="VERDICT"
-    case "$(lower "$benchid") $(lower "$verdict")" in
-      *crash*) tag="CRASH" ;;
+    case "$(lower "$verdict")" in
+      crash*) tag="CRASH" ;;
     esac
     emit "[$tag] ${benchid}: ${mutation} — ${verdict}"
   done <"$RESULTS_FILE"
 }
 
-parse_journal() {
-  [ -f "$JOURNAL_FILE" ] || return 0
-  local line last last_lc tag heading
-  while IFS= read -r line; do
-    case "$line" in
-      '## Round '*) ;;
-      *) continue ;;
-    esac
-    last="$(trim "${line##*" — "}")"
-    last_lc="$(lower "$last")"
-    case "$last_lc" in
-      keep|revert) tag="VERDICT" ;;
-      crash) tag="CRASH" ;;
-      *) continue ;;
-    esac
-    heading="$(trim "${line#"## "}")"
-    emit "[$tag] ${heading}"
-  done <"$JOURNAL_FILE"
-}
-
 parse_results
-parse_journal
