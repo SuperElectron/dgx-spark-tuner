@@ -247,3 +247,14 @@ n axis settled: 4.
 min=2 requires a 2-gram match to trigger drafting; min=1 lets any single-token
 match draft, raising draft frequency at some acceptance cost. On book text with
 common words, frequency win may dominate. Mutation: prompt_lookup_min 2→1.
+
+## Round 14 outcome — prompt_lookup_min=1 (bench_c2ed1165fcfc) — revert
+
+116.9/112.3/112.0, median 112.3 ≈ incumbent. No-op within noise. Spec-decode
+knob space (n, lookup_max, lookup_min) now swept — n=4/4/2 stands.
+
+## Round 15 hypothesis — --attention-backend flashinfer
+
+Last untried template-level lever: attention backend. flash_attn → flashinfer.
+FlashInfer's decode kernels are often faster for small batch/head counts, and
+it's the only backend swap available in this image. Crash → lesson, revert.
