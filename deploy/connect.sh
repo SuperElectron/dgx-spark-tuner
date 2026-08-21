@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # The laptop's one entry point to the DGX Spark box.
 #
-#   ./deploy/spark sync              # rsync deploy/box/ -> box:~/spark-tuner/
-#   ./deploy/spark ssh <cmd...>      # run anything on the box
-#   ./deploy/spark setup             # one-time box verification (may prompt sudo)
-#   ./deploy/spark start [env...]    # start benchmark engine, e.g. start MODEL=... PORT=8100
-#   ./deploy/spark stop [--restore]  # stop it; --restore also brings runKali engines back
-#   ./deploy/spark status            # JSON env fingerprint
+#   ./deploy/connect.sh sync              # rsync deploy/box/ -> box:~/spark-tuner/
+#   ./deploy/connect.sh ssh <cmd...>      # run anything on the box
+#   ./deploy/connect.sh setup             # one-time box verification (may prompt sudo)
+#   ./deploy/connect.sh start [env...]    # start benchmark engine, e.g. start MODEL=... PORT=8100
+#   ./deploy/connect.sh stop [--restore]  # stop it; --restore also brings runKali engines back
+#   ./deploy/connect.sh status            # JSON env fingerprint
 #
 # Connection config: .claude/box.json (gitignored). Overrides:
 #   BOX_TARGET=user@host  SSH_KEY=~/.ssh/other  BOX_DOMAIN=other.ts.net

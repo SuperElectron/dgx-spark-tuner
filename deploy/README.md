@@ -1,15 +1,15 @@
 # deploy/ — box access + lifecycle
 
 Everything that touches the DGX Spark box. The rest of the repo runs on the
-laptop and reaches the box only through `./deploy/spark`.
+laptop and reaches the box only through `./deploy/connect.sh`.
 
 ```
-./deploy/spark sync              # rsync deploy/box/ -> box:~/spark-tuner/
-./deploy/spark setup             # one-time box verification (sudo prompt)
-./deploy/spark start MODEL=...   # start benchmark engine (parks standing ones)
-./deploy/spark stop [--restore]  # stop it; --restore brings runKali engines back
-./deploy/spark status            # JSON env fingerprint
-./deploy/spark ssh <cmd...>      # anything else
+./deploy/connect.sh sync              # rsync deploy/box/ -> box:~/spark-tuner/
+./deploy/connect.sh setup             # one-time box verification (sudo prompt)
+./deploy/connect.sh start MODEL=...   # start benchmark engine (parks standing ones)
+./deploy/connect.sh stop [--restore]  # stop it; --restore brings runKali engines back
+./deploy/connect.sh status            # JSON env fingerprint
+./deploy/connect.sh ssh <cmd...>      # anything else
 ```
 
 Connection config lives in `.claude/box.json` (gitignored — never
@@ -34,7 +34,7 @@ and page cache. Rules the scripts encode (learned the hard way):
 
 | File | Runs on | Does |
 |---|---|---|
-| `spark` | laptop | the entry point above |
+| `connect.sh` | laptop | the entry point above |
 | `box/setup.sh` | box | one-time: docker, CDI, image, HF cache, drop-caches sudo helper |
 | `box/start.sh` | box | park standing `vllm-*` → drop caches → boot `vllm-bench` → wait → fingerprint |
 | `box/stop.sh` | box | kill `vllm-bench` + drop caches; `--restore` reruns runKali's start-models.sh |
