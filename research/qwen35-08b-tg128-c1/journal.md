@@ -47,3 +47,20 @@ scheduling with GPU execution — exactly the bottleneck class for tiny models.
 This is a command-template flag, not a recipe default, so mutation = candidate
 recipe copy (recipe-candidate.yaml) with the flag added; -o can't inject new
 flags. Expect: +2–8 tg if not already default in this vLLM build; no-op if it is.
+
+## Round 3 outcome — --async-scheduling (bench_eb6e39538b5e)
+
+tg 108.96 ± 0.28. Again ~+0.6 over baseline, ~1.6σ — inconclusive alone, revert.
+
+## Synthesis after 3 rounds — baseline is suspect
+
+Three different mutations (max_num_seqs=1, max_model_len=8192, --async-scheduling)
+all landed 108.90–108.96, tightly clustered, each ~+0.6 over baseline's 108.35.
+Odds that three unrelated flags give identical gains: low. Simpler explanation:
+round-0 baseline was a low outlier — it also showed the pp anomaly (17777 ± 4733
+vs ~22–23k everywhere since), consistent with first-run interference (cold page
+cache after model download, container image pull in same cycle).
+Action: round 4 re-runs the incumbent recipe UNCHANGED to re-baseline. If it
+lands ~108.9, epoch resets: incumbent reference becomes ~108.9 and the three
+flags are true no-ops for this cell; next mutations must target bigger levers
+(cuda graphs, attention backend, batched-tokens) to move toward 121.19.
