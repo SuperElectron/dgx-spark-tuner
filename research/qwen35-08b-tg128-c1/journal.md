@@ -71,7 +71,7 @@ tg 108.67 ± 0.17. Lands inside the 108.35–108.96 spread. Conclusion: incumben
 reference is a BAND, ~108.7 ± 0.3 across runs; max_num_seqs=1, max_model_len=8192,
 --async-scheduling are all no-ops for this cell. Note: sparkrun reuses benchId for
 identical recipe+params, so the re-run reused bench_59e87386d131 — archived
-separately as experiements/bench_59e87386d131-rebaseline/.
+separately as experiments/bench_59e87386d131-rebaseline/.
 Decision rule from here: keep only if tg mean > 109.5 (clears band + drift).
 Micro-flags can't close a 12% gap to 121.19. Next: big levers.
 

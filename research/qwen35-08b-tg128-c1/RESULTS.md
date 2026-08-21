@@ -2,7 +2,7 @@
 
 Target cell: tg128 (c1). Arena reference: 121.19 ± 0.23 tok/s
 (docs/arena-recipe.md). One row per benchmark run, appended after archiving
-the run into `experiements/<benchId>/`.
+the run into `experiments/<benchId>/`.
 
 | benchId | date | mutation | tg t/s | tg σ | pp t/s | pp σ | ttfr ms | verdict |
 |---|---|---|---:|---:|---:|---:|---:|---|

@@ -25,13 +25,13 @@ research/<name>/
 │                                #   synthesis every ~5 rounds (decisions only)
 ├── RESULTS.md                   # one table row per run (human comparison view)
 ├── docs/                        # model-card.md, arena-recipe.md (source URL + scrape date)
-└── experiements/<benchId>/      # one dir per benchmark run: exported YAML/JSON/CSV
+└── experiments/<benchId>/      # one dir per benchmark run: exported YAML/JSON/CSV
                                  #   + full sparkrun state dir contents
 ```
 
 ## One round
 
-1. Read journal.md + prior `experiements/*/`. Pick ONE mutation. Journal the
+1. Read journal.md + prior `experiments/*/`. Pick ONE mutation. Journal the
    hypothesis BEFORE running.
 2. Run (mutation = `-o key=value`; template-flag change = edit a candidate
    recipe copy, e.g. `recipe-candidate.yaml`):
@@ -78,7 +78,7 @@ Kill the waiting benchmark task, `docker rm -f` the container, archive with
 
 ## Hard rules
 
-- Never edit past `experiements/` contents; never hand-maintain results
+- Never edit past `experiments/` contents; never hand-maintain results
   tables — numbers live in the exported files only.
 - Transient benchmark failures (e.g. corpus download 504): re-run with
   `--resume`, same benchId continues.

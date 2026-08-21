@@ -3,5 +3,6 @@
 .DS_Store
 __pycache__/
 .omc/
-research/*/experiements/
-!research/_template/experiements/.gitkeep
+# experiment run data stays local
+research/*/experiments/*
+!research/_template/experiments/.gitkeep

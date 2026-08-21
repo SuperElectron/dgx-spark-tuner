@@ -10,7 +10,7 @@ promotion, hard rules) lives in the `spark-autoresearch` skill
 - `scripts/archive-round.sh <experiment-dir> <benchId> [suffix]` — archive a benchmark run
 - `scripts/parse-round.py <round-tmp.json>` — per-run tg/pp/ttfr with medians
 
-`research/*/experiements/` run data is gitignored — numbers live in the local
+`research/*/experiments/` run data is gitignored — numbers live in the local
 exported files; journal.md and RESULTS.md carry the conclusions.
 
 ## GitHub issues
