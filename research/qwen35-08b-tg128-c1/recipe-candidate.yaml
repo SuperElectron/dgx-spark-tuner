@@ -10,7 +10,7 @@ command: |
     --load-format fastsafetensors \
     --attention-backend flash_attn \
     --enable-prefix-caching \
-    --compilation-config '{"cudagraph_mode":"FULL_AND_PIECEWISE"}' \
+    --disable-log-stats \
     --speculative-config '{"method":"ngram","num_speculative_tokens":4,"prompt_lookup_max":4,"prompt_lookup_min":2}' \
     --enable-chunked-prefill \
     --trust-remote-code \

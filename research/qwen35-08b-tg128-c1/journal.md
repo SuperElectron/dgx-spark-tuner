@@ -198,3 +198,19 @@ power) at 1Hz on the box. If sustained SM clock < ~2900MHz under decode →
 power/thermal cap explains the ~10% gap (their unit boosts higher). Not a
 recipe mutation — instrumentation round. benchId collides with
 bench_4f9da10931e0 → archive as -clocks.
+
+## Round 11 outcome — clock telemetry (bench_4f9da10931e0-clocks)
+
+FINDING: under decode load, SM clock sustains 2405 MHz vs 3003 MHz max — an
+~80% policy cap (43°C, ~11W GPU rail, pstate P0 — not thermal). This is the
+prime suspect for the 121-vs-109 environment gap: a unit boosting to ~3000
+would land right around arena's number. Changing clock policy (nvidia-smi -lgc
+/ power profiles) is a system-state change — PARKED FOR MAT, not done
+autonomously. Bonus: incumbent re-run gave 112.5/111.2/122.0 (mean 115.22) —
+spec-decode incumbent occasionally touches 122; pooled incumbent estimate now
+~113.9 over 6 runs.
+
+## Round 12 hypothesis — --disable-log-stats
+
+Per-step stats logging adds CPU work on the hot loop; at 0.8B every ms counts.
+Small expected gain (+0–2), cheap to test. Mutation: add --disable-log-stats.

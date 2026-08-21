@@ -18,3 +18,4 @@ the run into `experiements/<benchId>/`.
 | bench_bf8f0926acb8-verify | 2026-08-21 | ngram_gpu + async (repeat) | 106.69 | 2.92 | — | — | 114.8 | revert — 6-run picture: 153.7 was outlier; combo worse than CPU ngram |
 | bench_2e246bc5b280 | 2026-08-21 | +cudagraph FULL_AND_PIECEWISE | 107.54 | 5.64 | 20620 | — | 111.2 | revert — no gain, one 99.7 run; likely already default or spec-decode-limited |
 | bench_185d381aeeb2 | 2026-08-21 | EPOCH: plain recipe on image 2026052903 (May) | 109.33 | 0.39 | 25816 | — | 105.3 | epoch test — same band as latest image; version regression ruled out |
+| bench_4f9da10931e0-clocks | 2026-08-21 | none (incumbent re-run + clock telemetry) | 115.22 | 4.84 | — | — | — | instrumentation — SM capped 2405/3003 MHz under load, 43°C, P0; one run hit 122.0 |
