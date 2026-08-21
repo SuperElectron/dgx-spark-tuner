@@ -154,3 +154,19 @@ decode at 0.8B is launch-overhead-bound, so full-graph capture of the decode
 step is a big lever. Mutation: add
   --compilation-config '{"cudagraph_mode":"FULL_AND_PIECEWISE"}'
 to the incumbent. No-op if already default; crash → lesson.
+
+## Round 9 outcome — cudagraph FULL_AND_PIECEWISE (bench_2e246bc5b280) — revert
+
+tg 107.54 ± 5.64 (110.2/112.7/99.7). No gain; either already default or full
+graphs don't apply under spec decode. Revert.
+
+## Direction check after 9 rounds
+
+Incumbent 112.61 (spec decode). Gap to 121.19: 8.6. Key fact: arena hit 121.19
+with the PLAIN recipe — no speculation — on identical hardware. Our plain-recipe
+band is 108.7. So a ~12% environment/version regression separates us, and the
+biggest single lever is reproducing their runtime: the recipe's container
+(vllm-node → ghcr.io/spark-arena/dgx-vllm-eugr-nightly:latest) resolves to
+nightly 2026082102 today; their run used an older build. Next: find how to pin
+an older image tag (sparkrun container override or candidate recipe container
+field), pick a tag near their run date, benchmark plain recipe on it.
