@@ -138,3 +138,19 @@ OR genuine prompt-dependent acceptance swing. Runs 2–3 sit at incumbent level.
 Not keepable on this evidence. Action: repeat the identical candidate (same probe
 args, runs=3) for 3 more samples; decide on the 6-run picture. benchId will
 collide → archive as -verify.
+
+## Round 8 verify (bench_bf8f0926acb8-verify) — revert
+
+Repeat gave 103.9 / 105.5 / 110.7 (mean 106.69 ± 2.92). Six-run picture: one
+153.7 outlier, rest 104–115. ngram_gpu+async is WORSE than CPU ngram (112.61).
+GPU drafting overhead not worth it at this model size. Revert; incumbent stands.
+Lesson: single-run outliers can fake a keep — verify any win with a repeat when
+σ is large.
+
+## Round 9 hypothesis — force FULL_AND_PIECEWISE cudagraphs
+
+With spec decode active, vLLM may fall back to piecewise-only cudagraphs;
+decode at 0.8B is launch-overhead-bound, so full-graph capture of the decode
+step is a big lever. Mutation: add
+  --compilation-config '{"cudagraph_mode":"FULL_AND_PIECEWISE"}'
+to the incumbent. No-op if already default; crash → lesson.

@@ -15,3 +15,4 @@ the run into `experiements/<benchId>/`.
 | bench_0b93f5cfe862 | 2026-08-21 | spec decode n=8, lookup 8 | 111.68 | 1.75 | 20064 | 2482 | 117.0 | revert — −0.9 vs n=4; deeper drafts waste verify, ttfr worse |
 | bench_03b5a04e760a-crash | 2026-08-21 | --async-scheduling + ngram (cpu) | — | — | — | — | — | crash — vLLM rejects async sched with CPU ngram; NGram GPU variant exists |
 | bench_bf8f0926acb8 | 2026-08-21 | ngram_gpu + --async-scheduling | 124.88 | 20.69 | 15971 | 7083 | 196.9 | verify — per-run tg 153.7/114.9/106.0, one outlier run; repeat before verdict |
+| bench_bf8f0926acb8-verify | 2026-08-21 | ngram_gpu + async (repeat) | 106.69 | 2.92 | — | — | 114.8 | revert — 6-run picture: 153.7 was outlier; combo worse than CPU ngram |
