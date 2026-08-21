@@ -19,3 +19,4 @@ the run into `experiements/<benchId>/`.
 | bench_2e246bc5b280 | 2026-08-21 | +cudagraph FULL_AND_PIECEWISE | 107.54 | 5.64 | 20620 | — | 111.2 | revert — no gain, one 99.7 run; likely already default or spec-decode-limited |
 | bench_185d381aeeb2 | 2026-08-21 | EPOCH: plain recipe on image 2026052903 (May) | 109.33 | 0.39 | 25816 | — | 105.3 | epoch test — same band as latest image; version regression ruled out |
 | bench_4f9da10931e0-clocks | 2026-08-21 | none (incumbent re-run + clock telemetry) | 115.22 | 4.84 | — | — | — | instrumentation — SM capped 2405/3003 MHz under load, 43°C, P0; one run hit 122.0 |
+| bench_7a7591590f70 | 2026-08-21 | +--disable-log-stats | 117.95 | 8.41 | 22113 | — | 105.6 | verify — runs 113.0/111.0/129.8, high-run outlier again; repeat pending |

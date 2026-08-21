@@ -214,3 +214,11 @@ spec-decode incumbent occasionally touches 122; pooled incumbent estimate now
 
 Per-step stats logging adds CPU work on the hot loop; at 0.8B every ms counts.
 Small expected gain (+0–2), cheap to test. Mutation: add --disable-log-stats.
+
+## Round 12 outcome — --disable-log-stats (bench_7a7591590f70) — verifying
+
+tg 117.95 ± 8.41 (113.0/111.0/129.8). Third sighting of a ~122-130 high run
+among ~111-113 runs. Hypothesis forming: some benchmark prompts hit high ngram
+acceptance (repetitive book text) — the distribution is bimodal by prompt, and
+run-level means swing on the draw. Repeat run to decide keep; also confirms
+whether log-stats matter at all.
