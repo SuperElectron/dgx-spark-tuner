@@ -1,0 +1,79 @@
+name: sparkmem
+
+# Independent long-lived memory stack for the box. Kept out of sparkrun_*
+# naming (project name "sparkmem") so `sparkrun ... --fresh` never touches it.
+# mem0 is a derived index; research journal/RESULTS files stay canonical.
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+    networks:
+      - sparkmem
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  embeddings:
+    image: vllm/vllm-openai:v0.27.1
+    restart: unless-stopped
+    command: ["--model", "${EMBED_MODEL}", "--port", "8001", "--task", "embed"]
+    ipc: host
+    ports:
+      - "127.0.0.1:${EMBED_PORT}:8001"
+    volumes:
+      - ./data/hf-cache:/root/.cache/huggingface
+    networks:
+      - sparkmem
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request as u; u.urlopen('http://localhost:8001/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 60
+      start_period: 60s
+
+  mem0:
+    image: mem0/mem0-api-server:latest
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      embeddings:
+        condition: service_healthy
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_COLLECTION_NAME: memories
+      # Embedder points at the box's vLLM server (OpenAI-compatible).
+      # infer=false on every call, so the LLM path is effectively unused -
+      # it shares the same base_url rather than needing a real chat model.
+      OPENAI_API_KEY: sparkmem-local
+      OPENAI_BASE_URL: http://embeddings:8001/v1
+      EMBEDDING_MODEL_DIMS: ${EMBEDDING_DIMS}
+      AUTH_DISABLED: "true"
+    ports:
+      - "127.0.0.1:${MEM0_PORT}:8000"
+    networks:
+      - sparkmem
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request as u; u.urlopen('http://localhost:8000/docs', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+networks:
+  sparkmem:
+    name: sparkmem_net
