@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# Start ONE benchmark vLLM engine (container: vllm-bench). Steps, in order:
-# park any standing vllm-* engines, drop the page cache, boot the engine
-# detached, wait until it answers, print the env fingerprint.
+# Start ONE benchmark vLLM engine (container: vllm-bench): drop the page
+# cache, boot the engine detached, wait until it answers, print the env
+# fingerprint. Assumes the box is otherwise idle — benchmarks need the
+# whole GPU.
 #
 #   MODEL=Qwen/Qwen3-... PORT=8100 KV_CACHE_MEMORY_BYTES=... ./start.sh
 #
@@ -23,20 +24,10 @@ MAX_BATCHED_TOKENS="${MAX_BATCHED_TOKENS:-}"
 KV_CACHE_MEMORY_BYTES="${KV_CACHE_MEMORY_BYTES:-}"
 EXTRA_VLLM_ARGS="${EXTRA_VLLM_ARGS:-}"
 WAIT_SECS="${WAIT_SECS:-600}"
-# Engines we stop to free the GPU, recorded so `stop.sh --restore` knows
-# to bring them back.
-STOPPED_ENGINES_FILE=/tmp/spark-tuner-stopped-engines.txt
 
 if docker ps --format '{{.Names}}' | grep -q '^vllm-bench$'; then
   echo "start: vllm-bench already running — run stop.sh first" >&2
   exit 1
-fi
-
-RUNNING_ENGINES="$(docker ps --filter 'name=vllm-' --format '{{.Names}}')"
-if [ -n "$RUNNING_ENGINES" ]; then
-  echo "start: stopping running engines: $(echo "$RUNNING_ENGINES" | tr '\n' ' ')"
-  echo "$RUNNING_ENGINES" > "$STOPPED_ENGINES_FILE"
-  echo "$RUNNING_ENGINES" | xargs -r docker stop >/dev/null
 fi
 
 sudo -n /usr/local/bin/spark-tuner-dropcaches 2>/dev/null || {

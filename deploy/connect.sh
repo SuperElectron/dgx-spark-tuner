@@ -5,7 +5,7 @@
 #   ./deploy/connect.sh ssh <cmd...>      # run anything on the box
 #   ./deploy/connect.sh setup             # one-time box verification (may prompt sudo)
 #   ./deploy/connect.sh start [env...]    # start benchmark engine, e.g. start MODEL=... PORT=8100
-#   ./deploy/connect.sh stop [--restore]  # stop it; --restore also brings runKali engines back
+#   ./deploy/connect.sh stop              # stop it
 #   ./deploy/connect.sh status            # JSON env fingerprint
 #
 # Connection config: .claude/box.json (gitignored). Overrides:

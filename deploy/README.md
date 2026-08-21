@@ -6,8 +6,8 @@ laptop and reaches the box only through `./deploy/connect.sh`.
 ```
 ./deploy/connect.sh sync              # rsync deploy/box/ -> box:~/spark-tuner/
 ./deploy/connect.sh setup             # one-time box verification (sudo prompt)
-./deploy/connect.sh start MODEL=...   # start benchmark engine (parks standing ones)
-./deploy/connect.sh stop [--restore]  # stop it; --restore brings runKali engines back
+./deploy/connect.sh start MODEL=...   # start the benchmark engine
+./deploy/connect.sh stop              # stop it
 ./deploy/connect.sh status            # JSON env fingerprint
 ./deploy/connect.sh ssh <cmd...>      # anything else
 ```
@@ -36,17 +36,16 @@ and page cache. Rules the scripts encode (learned the hard way):
 |---|---|---|
 | `connect.sh` | laptop | the entry point above |
 | `box/setup.sh` | box | one-time: docker, CDI, image, HF cache, drop-caches sudo helper |
-| `box/start.sh` | box | park standing `vllm-*` → drop caches → boot `vllm-bench` → wait → fingerprint |
-| `box/stop.sh` | box | kill `vllm-bench` + drop caches; `--restore` reruns runKali's start-models.sh |
+| `box/start.sh` | box | drop caches → boot `vllm-bench` → wait healthy → fingerprint |
+| `box/stop.sh` | box | kill `vllm-bench` + drop caches |
 | `box/status.sh` | box | JSON fingerprint (temp, driver, free mem, running engines, image digest) |
 
 ## Benchmark round shape
 
 ```
-spark start MODEL=... → [benchmark against :PORT] → spark stop → next round …
-finally: spark stop --restore
+connect.sh start MODEL=... → [benchmark against :PORT] → connect.sh stop → next round …
+finally: connect.sh stop
 ```
 
-`stop --restore` returns the box to normal serving via runKali's own
-`start-models.sh` (called in place, never copied — that config belongs to
-runKali and drifts with it), and only if `start` actually parked something.
+The box is expected to be idle before a session — benchmarks need the
+whole GPU, and shared-load numbers are worthless.
