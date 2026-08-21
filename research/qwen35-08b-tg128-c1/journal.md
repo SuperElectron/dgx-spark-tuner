@@ -274,3 +274,36 @@ lands >130. Same model name, standard vLLM runtime param, recipe stays
 transparent. Risks: conflict with fastsafetensors load or Marlin atomic-add env
 (crash → lesson); arena-fairness is Mat's call before any submission (flagged).
 Mutation: add --quantization fp8 to incumbent (spec decode stays).
+
+## Round 16 outcome — runtime FP8 (bench_c6db5d02e496) — revert
+
+107.3/109.0/111.3, median 109.0 — WORSE. Kills the weights-BW theory: if decode
+were bandwidth-bound, halving weight reads would win big. It lost — so decode at
+0.8B on this box is compute/launch-bound, consistent with the 2405/3003 MHz SM
+clock cap being the binding constraint.
+
+## SYNTHESIS — 16 rounds, epoch 2026-08-21
+
+Incumbent recipe = arena baseline + ngram spec decode (n=4, lookup 4, min 2).
+Pooled incumbent: median ~112, occasional 122–130 runs on high-acceptance prompts.
+
+Keeps: 1 (ngram spec decode, +~4 t/s median).
+No-ops (all ~112 median): max_num_seqs=1, max_model_len=8192, async-scheduling,
+cudagraph FULL_AND_PIECEWISE, --disable-log-stats, flashinfer, lookup_min=1.
+Regressions: spec n=8 and n=6, ngram_gpu+async (~107-110), FP8 runtime quant (109).
+Crashes: async + CPU ngram (incompatible).
+Environment: May-era image ≈ latest image → version ruled out.
+
+Conclusion: the BF16 flag space on this box saturates at ~112 t/s. Arena's
+121.19 (plain recipe, σ 0.23) exceeds our PLAIN-recipe band (108.7) by ~11% —
+an environment gap. Prime suspect, measured: SM clock sustains 2405 MHz vs
+3003 max under load at 43°C/11W (policy cap, not thermal). A unit boosting to
+~3000 lands at ≈121 exactly. Decisions for Mat:
+1. Clock/power policy change (e.g. nvidia-smi -lgc, power profile) — system
+   state change, not done autonomously. If unlocked, re-run baseline; expect
+   ~121 plain, ~125+ with spec decode.
+2. Whether ngram spec decode is fair game for an arena submission (it is a
+   published-recipe runtime param, lossless w/ greedy; but changes the spirit
+   of "same config" comparison). --arena only on Mat's go.
+Loop paused (idle-hold): no untested lever with >noise expected value remains
+at capped clocks.
