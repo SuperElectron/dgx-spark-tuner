@@ -222,3 +222,17 @@ among ~111-113 runs. Hypothesis forming: some benchmark prompts hit high ngram
 acceptance (repetitive book text) — the distribution is bimodal by prompt, and
 run-level means swing on the draw. Repeat run to decide keep; also confirms
 whether log-stats matter at all.
+
+## Round 12 verdict — --disable-log-stats — revert
+
+Repeat 110.5/110.0/112.0. Six-run median 111.5 ≈ incumbent median ~112. No-op;
+the 129.8 was another high-acceptance-prompt draw. Confirmed pattern: both
+incumbent and candidates occasionally draw a 122–130 run — llama-benchy prompt
+selection, not config. Means over 3 runs are unreliable here; compare medians
+and always verify.
+
+## Round 13 hypothesis — spec n=6, lookup 4
+
+n=4 keeps; n=8+lookup8 regressed — but two variables changed there. Test the n
+axis alone: n=6, lookup stays 4, min 2. If acceptance depth > 4 exists on book
+text, deeper drafts pay; verify overhead at 0.8B is trivial.
