@@ -11,7 +11,7 @@ command: |
     --attention-backend flash_attn \
     --enable-prefix-caching \
     --async-scheduling \
-    --speculative-config '{"method":"ngram","num_speculative_tokens":4,"prompt_lookup_max":4,"prompt_lookup_min":2}' \
+    --speculative-config '{"method":"ngram_gpu","num_speculative_tokens":4,"prompt_lookup_max":4,"prompt_lookup_min":2}' \
     --enable-chunked-prefill \
     --trust-remote-code \
     --dtype auto \

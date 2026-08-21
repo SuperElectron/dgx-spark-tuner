@@ -1,0 +1,7 @@
+Round 7: --async-scheduling + ngram spec decode (CPU) — engine crash loop at config validation.
+
+pydantic_core._pydantic_core.ValidationError: 1 validation error for VllmConfig
+  Value error, Currently, async scheduling is only supported with EAGLE/MTP/Draft Model/NGram GPU/DSpark kind of speculative decoding
+
+(from /tmp/sparkrun_serve.log inside container sparkrun_16cb04640222c2d3_313596140c4f_solo;
+vLLM 0.27.2rc1 nightly. sparkrun kept waiting on the server; task killed, container removed.)

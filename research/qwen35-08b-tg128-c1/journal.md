@@ -113,3 +113,19 @@ Round 3 showed async-scheduling as no-op pre-spec-decode. But ngram drafting add
 per-step CPU work (prompt lookup), raising scheduler overhead — overlap may pay
 now. Risk: some vLLM versions reject async + spec decode combo; if launch fails,
 that's the lesson, run dir stays. Mutation: add --async-scheduling to candidate.
+
+## Round 7 outcome — async + CPU ngram (bench_03b5a04e760a) — crash
+
+Engine died at config validation: "async scheduling is only supported with
+EAGLE/MTP/Draft Model/NGram GPU/DSpark kind of speculative decoding". Lesson:
+CPU ngram blocks async scheduling; a GPU ngram drafter exists in this build.
+Killed the waiting sparkrun task, removed the container by hand.
+
+## Round 8 hypothesis — ngram_gpu spec method (+ async-scheduling)
+
+The validation error advertises "NGram GPU" as async-compatible. GPU ngram
+drafting moves prompt-lookup onto the GPU and unlocks async scheduling — two
+wins in one flag if it works: same lossless speculation, less CPU per step,
+overlapped scheduling. Mutation: method "ngram" → "ngram_gpu" plus
+--async-scheduling. If method name invalid → fast config error, journal, fall
+back to testing ngram_gpu alone next.
