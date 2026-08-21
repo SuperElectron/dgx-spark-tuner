@@ -129,3 +129,12 @@ wins in one flag if it works: same lossless speculation, less CPU per step,
 overlapped scheduling. Mutation: method "ngram" → "ngram_gpu" plus
 --async-scheduling. If method name invalid → fast config error, journal, fall
 back to testing ngram_gpu alone next.
+
+## Round 8 outcome — ngram_gpu + async (bench_bf8f0926acb8) — needs verification
+
+Mean tg 124.88 but per-run values 153.7 / 114.9 / 106.0 (σ 20.7). Run 1 also had
+ttfr 361ms vs 115ms after — looks like warmup/compile artifact inflating run 1,
+OR genuine prompt-dependent acceptance swing. Runs 2–3 sit at incumbent level.
+Not keepable on this evidence. Action: repeat the identical candidate (same probe
+args, runs=3) for 3 more samples; decide on the 6-run picture. benchId will
+collide → archive as -verify.
