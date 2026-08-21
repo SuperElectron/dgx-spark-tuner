@@ -182,3 +182,19 @@ If tg ≈ 121 → regression confirmed; new plan: old image + spec decode stacke
 If tg ≈ 108.7 → gap is not image version (look at driver/kernel/llama-benchy).
 Epoch rule: different image = different epoch — this row compares to arena's
 number, not our incumbent.
+
+## Round 10 outcome — May-era image (bench_185d381aeeb2) — hypothesis dead
+
+Plain recipe on 2026052903: tg 109.33 ± 0.39 ≈ current-image band 108.7. Image/
+vLLM version is NOT the 121-vs-109 gap. Their raw log confirms same metric
+(t/s total = per-req at c1), σ 0.23, peak 122 — their silicon sustained ~121
+where ours sustains ~109. Remaining suspects: GPU clock/power/thermal profile,
+driver, kernel config. Idle check: P8 208MHz, max SM 3003MHz, 42°C — normal.
+
+## Round 11 hypothesis — clock telemetry under load
+
+Re-run the incumbent (spec n=4) while sampling nvidia-smi (SM clock, temp,
+power) at 1Hz on the box. If sustained SM clock < ~2900MHz under decode →
+power/thermal cap explains the ~10% gap (their unit boosts higher). Not a
+recipe mutation — instrumentation round. benchId collides with
+bench_4f9da10931e0 → archive as -clocks.
