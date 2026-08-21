@@ -31,3 +31,19 @@ scheduler are sized for 256k context while the cell needs ~2.2k. Setting
 graphs. Expected: +2-6 tg tok/s. Caveat (journaled for promotion): a
 submitted recipe must serve the full arena grid depths, so this flag
 must be re-raised or cell-scoped at promotion time.
+
+## Round 2 outcome — max_model_len=8192 (bench_1851f83d3653)
+
+tg 108.95 ± 0.23 vs incumbent 108.35 ± 0.27. +0.60, ~1.7σ combined — inconclusive, revert.
+Notable: rounds 1 and 2 both nudged +0.55–0.60. Either both give a small real
+overhead reduction, or day-to-day drift. If a clear winner emerges later, retest
+these stacked on it.
+
+## Round 3 hypothesis — --async-scheduling
+
+At 0.8B, decode is CPU-overhead-bound (each step ~1ms of GPU work; scheduler +
+API overhead eats the rest). vLLM V1's --async-scheduling overlaps CPU
+scheduling with GPU execution — exactly the bottleneck class for tiny models.
+This is a command-template flag, not a recipe default, so mutation = candidate
+recipe copy (recipe-candidate.yaml) with the flag added; -o can't inject new
+flags. Expect: +2–8 tg if not already default in this vLLM build; no-op if it is.
