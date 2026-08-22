@@ -1,0 +1,58 @@
+# R13b INSTRUMENT-ONLY CANDIDATE — NOT a tuning mutation, NOT for folding.
+# Identical to recipe.yaml except for `--per-request-spec-decode-metrics detailed`,
+# which turns on vLLM's per-request speculative-decoding accumulator. The metrics
+# land in the RESPONSE BODY under `metrics.speculative_decoding` (streaming: on the
+# final usage chunk, which requires `stream_options.include_usage`) — NOT in the
+# engine log. That is why R13b could not be run the way QUEUE.md specified it.
+# Run at `-o max_num_batched_tokens=98304 -o max_num_seqs=5` to match R13.
+command: |
+  vllm serve nvidia/Qwen3.6-35B-A3B-NVFP4 \
+    --host {host} \
+    --port {port} \
+    --trust-remote-code \
+    --kv-cache-dtype fp8 \
+    --attention-backend flashinfer \
+    --moe-backend marlin \
+    --gpu-memory-utilization {gpu_memory_utilization} \
+    --max-model-len {max_model_len} \
+    --max-num-seqs {max_num_seqs} \
+    --max-num-batched-tokens {max_num_batched_tokens} \
+    --enable-chunked-prefill \
+    --async-scheduling \
+    --enable-prefix-caching \
+    --speculative-config '{{"method":"mtp","num_speculative_tokens":3,"moe_backend":"triton"}}' \
+    --load-format fastsafetensors \
+    --reasoning-parser qwen3 \
+    --tool-call-parser qwen3_xml \
+    --enable-auto-tool-choice \
+    --per-request-spec-decode-metrics detailed \
+recipe_version: '1'
+model: nvidia/Qwen3.6-35B-A3B-NVFP4
+solo_only: false
+container: vllm-node
+cluster_only: false
+env:
+  VLLM_MARLIN_USE_ATOMIC_ADD: '1'
+description: Qwen3.6-35B-A3B-NVFP4 single-node (de-rayed from @eugr recipe)
+name: Qwen3.6-35B-A3B-NVFP4-solo
+defaults:
+  port: 8000
+  # FOLDED BY R11 (2026-08-22): was 8192 for rounds R1-R13d.
+  # 65536 is the knee of the token-budget curve measured at c4 by R13c — 8192 ->
+  # 65536 is +233% on `tg128 @ d16384 c4` and 65536 -> 131072 is -1.4%, i.e.
+  # nothing. R11 measured the c1 anchor at this value to check the change is
+  # inert where the campaign's baselines live: `tg128 @ d16384 c1` reads 112.92
+  # against the 112.62 anchor (+0.27%) and the Phase-1 partner is inside its own
+  # noise, so no c1 baseline moves and no depth-curve point is invalidated.
+  # THIS IS A CONFIG EPOCH BOUNDARY: every RESULTS.md row labelled "mnbt 8192
+  # (pre-fold recipe)" was measured BEFORE this change and is not reproducible
+  # from this file. See RESULTS.md and the Round 11 outcome in journal.md.
+  max_num_batched_tokens: 65536
+  max_model_len: 32768
+  gpu_memory_utilization: 0.8
+  # NOT folded. R11 changed ONE flag. The c4 rows at mnbt 65536 were measured at
+  # max_num_seqs 5; at c4 the width is worth <=2.9% (mnbt 32768 measured at
+  # mns 4/5/16 reads 143.08/143.83/147.25) and mns 4 reaches full residency at
+  # c4, but `mnbt 65536 + mns 4` has not itself been measured.
+  max_num_seqs: 4
+  host: 0.0.0.0

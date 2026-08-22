@@ -68,7 +68,9 @@ them retired figures this file had published:**
 1. **R13** took `tg128 @ d16384 c4` to a claimed 3.74x and set a record 6.16x —
    and **refuted the campaign's own "admission stagger" model**: with
    `Waiting: 0` in 100% of samples the span ratio barely moved. Whatever the
-   denominator is charging for, it is not admission.
+   denominator is charging for, it is not admission. ⚠️ **R13b then named what it
+   IS — prefill-completion stagger — and refuted the replacement candidate (MTP
+   acceptance dispersion) on the way.** See the R13b section.
 2. **The `ctx_` PHASE-LABEL CORRECTION.** llama-benchy labels its two phases
    backwards. `ctx_` is the **uncached** Phase-1 context load; the rows this file
    called "cold" are the cache-*eligible* Phase 2 — and the two are charged
@@ -298,6 +300,20 @@ leading candidate for the residual span is MTP acceptance dispersion across the
 batch (acceptance samples span 2.77-4.00, a 1.44x spread against a measured
 1.54); it is **not established** — see the journal for what would settle it.
 
+⚠️ **ANSWERED BY R13b, AND THAT CANDIDATE IS REFUTED TOO.** Measured per request,
+acceptance dispersion acting alone gives a span ratio of **1.085** against
+**1.499** observed — 17% of the excess. Within one batch, per-request acceptance
+max/min is **1.167**; the 2.77–4.00 range was between-sample, and max/**min** is
+not the statistic that enters the span (max/**harmonic-mean** is, and it reaches
+only 1.19 even on that range). **The residual is prefill-completion stagger**:
+the first request to finish prefill decodes at **88.5 ms/verify-step** against
+55–58 ms for the other four, because its verify steps are co-scheduled with the
+batch's remaining chunked prefill — and the batch span is measured from its first
+token. `corr(start stagger, ms/step) = −0.980`; `corr(verify steps, decode
+duration) = +0.142`. **`Waiting: 0` was never evidence against this, because
+`Running` counts a prefilling request the same as a decoding one.** See the R13b
+section below.
+
 📊 **What Round 13 actually bought, at `mnbt 98304 + mns 5`, runs=7, one engine
 start.** The gain came from per-request decode, not from the span:
 
@@ -398,6 +414,10 @@ falling from 1.654 to **1.505** between 32768 and 65536 with nothing waiting at
 either, then stops dead. **That is R13's `Waiting: 0` finding seen from the other
 side, and the second independent confirmation that the ratio this file called
 "admission stagger" for four rounds is not admission.** Its floor is ~1.50.
+⚠️ **R13b identified that floor: prefill-completion stagger.** More budget means
+fewer prefill chunks and a tighter first-token spread, which is why the ratio
+keeps falling with nothing waiting — and it floors because the prefill *work*
+cannot be made simultaneous across the batch by any budget.
 
 ✅ **ROUND 13d SETTLED THE MARGIN R13c REFUSED TO PROMOTE — the title moves, by
 0.83%.** R13c measured `ctx_tg @ d16384 c4` at mnbt 131072 as **175.40 = 6.34x**
@@ -1163,6 +1183,62 @@ decomposition does change is **language, not arithmetic**: any sentence anywhere
 that explains a `c>1` margin by "prefix caching" is wrong twice — the cache never
 hits (R9b) and 83% of the flag's value is the batch-span denominator (R9c). The
 margins themselves stand at exactly the recorded values.
+
+### R13b — the span-ratio mechanism round: one engine start, `mnbt 98304` + `mns 5`, a probe of our own, 7 batches
+
+**CONFIGURATION BEHIND EVERY ROW BELOW:** `max_num_batched_tokens 98304`
+(**pinned by `-o`, NOT the shipped 65536**, to sit on R13's condition),
+`max_num_seqs 5` (**NOT the shipped 4**), `max_model_len 32768`,
+`gpu_memory_utilization 0.8`, image `dgx-vllm-eugr-nightly:latest`
+(vLLM `0.27.2rc1.dev360+ge85d1b69c`), plus the instrument flag
+`--per-request-spec-decode-metrics detailed`. Recipe:
+`recipe-r13b-perreq.yaml`. Archive: `experiments/r13b-perreq-probe/`.
+
+⚠️ **BOTH ROWS ARE NOT SCOREABLE, AND NOT ONLY FOR THE CONFIGURATION.** They were
+not measured by llama-benchy. **There is no sparkrun benchId for this round** —
+R13b ran no benchy grid, because the per-request metric it needed is delivered in
+the HTTP response body and llama-benchy discards it. The numbers come from
+`r13b-probe.py`, an independent client written from llama-benchy's source
+(same corpus, same `PromptGenerator`, same payload, same throughput arithmetic
+re-derived from `llama_benchy/results.py`). **They are quoted to establish that
+the probe reproduces the cell, and for nothing else. No standing moves.**
+
+⚠️ Each column is its own median over the 7 batches, so **the span column is the
+median of the per-batch span ratios, not `5 x tg_req_median / tg_median`** — the
+two differ by ~0.6% here. R13's row is built the same way; do not "correct" one
+against the other.
+
+| source | date | cell (configuration) | tg median | tg σ | tg_req median | span ratio | verdict |
+|---|---|---|---|---|---|---|---|
+| `r13b-perreq-probe` | 2026-08-22 | tg128 @ d16384 c5 (**mnbt 98304 + mns 5**, instrument flag, 7 batches, OUR CLIENT) | **167.14** | 11.20 | 49.76 | **1.499** | **NOT SCOREABLE — reproduction check only.** vs R13's benchy `bench_433eeaf9827e`: `tg` **+1.75%**, `tg_req` **−1.46%**, span **−2.63%**. The campaign's first cross-client reproduction |
+| `r13b-perreq-probe` | 2026-08-22 | ctx_tg128 @ d16384 c5 (**mnbt 98304 + mns 5**, instrument flag, 7 batches, OUR CLIENT) | **161.68** | 5.13 | 46.72 | **1.439** | **NOT SCOREABLE.** vs R13: `tg` **+0.63%**, `tg_req` **−4.13%** — the round's one figure outside 3% |
+
+**WHAT THE ROUND ESTABLISHED, which is a mechanism and not a row.** The span
+ratio's ~1.50 floor is **prefill-completion stagger**, not admission stagger
+(refuted R13) and not MTP acceptance dispersion (refuted here):
+
+| quantity | reading |
+|---|---|
+| span ratio if MTP acceptance dispersion were the only term | **1.085** (vs 1.499 observed) — **17% of the excess** |
+| per-request acceptance spread *within* one batch, max/min | **1.167** median, 35 requests, range 2.224–3.657 |
+| `corr(start stagger, ms per verify step)` | **−0.980** (Phase 2), −0.986 (Phase 1) |
+| `corr(verify steps, decode duration)` | **+0.142** — decode time is not set by step count |
+| ms per verify step, **first** request to finish prefill | **88.5 ms** |
+| ms per verify step, the other four in the same batch | **55.4 / 56.4 / 57.8 / 56.8 ms** |
+| first-token spread across the batch | **1.26 s** median, on a clean decode of ~2.3 s |
+| zero-parameter check `1 + 1.26/2.30` | **1.548** vs observed **1.499** |
+| residency | **`Running: 5, Waiting: 0`** in 28 of 30 loaded samples |
+| exact-length gate | **70 of 70** requests returned exactly 128 tokens |
+| prefix cache hit rate | **0.0% in all 53 samples** — campaign total 374, seven budgets, zero hits ever |
+
+⚠️ **The three terms are substitutes, not addends.** Removing the first-starter
+penalty alone *raises* the span ratio to 1.634, because the span then passes to
+the last starter. Do not quote a three-way percentage partition.
+
+⚠️ **`recipe-r13b-perreq.yaml` IS AN INSTRUMENT, NOT A CANDIDATE.** It must never
+be folded: `--per-request-spec-decode-metrics detailed` appends per verify step
+and its overhead was never measured.
+
 
 ## Prefill cells (pp2048)
 

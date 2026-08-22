@@ -3721,7 +3721,15 @@ rounds above have been read. Where a round's headline was later retracted, the
 retraction is here rather than the headline — and this campaign retracted a lot,
 including two of its own widest wins and its central mechanism.
 
-**The six things that landed after the round-12 checkpoint, since they change
+> **SIXTH REVISION — CURRENT AS OF 2026-08-22, post-R13b.** R13b answered
+> **open question 7**, the section's sharpest open mechanism, and the deltas are:
+> the R13 bullet in *the central methodological result* (its trailing candidate
+> is refuted), **open question 7 itself** (closed, with a third mechanism), the
+> landed-items list below (a seventh entry), *what to run next* item 7 (done, do
+> not re-queue), and an **R13b cost-ledger row**. No standing moves; R13b is a
+> mechanism round and scored nothing.
+
+**The seven things that landed after the round-12 checkpoint, since they change
 how the rest of this section reads:**
 
 - **R13** widened the contested `c4` cell and set a record margin — and
@@ -3758,6 +3766,17 @@ how the rest of this section reads:**
   draw it looked like, the standings did not move (**still 8 won / 12 lost**),
   and the downward-reproduction systematic is now **8 of 8 same-sign, mean
   −1.88%**. It closed the last scoreable cell in the queue.
+- **R13b** closed **open question 7**, the campaign's sharpest open mechanism,
+  and **refuted its own candidate before finding the real one.** Per-request MTP
+  acceptance — read from the **response body**, not the engine log, via
+  `--per-request-spec-decode-metrics detailed` — would produce a span ratio of
+  **1.085** against an observed **1.499**, so acceptance dispersion is 17% of the
+  excess. The floor is **prefill-completion stagger**: the first request to
+  finish prefill decodes at **88.5 ms/verify-step** against 55–58 ms for the rest
+  of its batch, and the batch span is measured from it. Its probe reproduced
+  R13's c5 cell from an **independent client** to **+1.75% / −1.46% / −2.63%** on
+  `tg` / `tg_req` / span — the campaign's first cross-client reproduction, and
+  tighter than several of its cross-invocation ones.
 
 ### What the campaign set out to do, and whether the thesis held
 
@@ -3897,9 +3916,16 @@ round-12 checkpoint could not include, and they follow.
   metric's arithmetic, not of a physical cause. R13c then confirmed it from a
   second direction: residency is full from 32768 up, yet the span ratio keeps
   tightening to 65536 with nothing waiting at either budget, and then stops dead
-  at a floor of ~1.50. The leading candidate for the residual is MTP acceptance
-  dispersion across the batch (samples span 2.77-4.00, a 1.44x spread against a
-  measured 1.54) and it is **not established**.
+  at a floor of ~1.50. ⚠ **REVISED BY R13b, WHICH ANSWERED IT.** The candidate
+  this section carried — MTP acceptance dispersion — is **refuted**: measured
+  per request, it would produce a span ratio of **1.085** against an observed
+  1.499, i.e. 17% of the excess. The residual is **prefill-completion stagger**.
+  The batch's five prefills do not finish together; the first request to finish
+  starts decoding while the others still prefill, and its verify steps cost
+  **88.5 ms against 55–58 ms** for every other request in the same batch — and it
+  is the request the batch decode span is measured from. `Waiting: 0` is true and
+  irrelevant, because **`Running` counts a prefilling request and a decoding one
+  the same**. See item 7 below.
 - **R13c measured the cross-invocation error the whole campaign had been
   assuming.** Six protected `c4` rows, re-run from separate engine starts at
   runs=7 against a ±10% band declared before the run. **All six stood** — gaps
@@ -4369,6 +4395,7 @@ round agent's own accounting; R1, R2 and R5b did not record theirs.
 | **ctx-CORRECTION** | **0 s** | **0** | not recorded | every `ctx_` row audited; the token-count error measured at 29 of 30 pairs; six claims withdrawn | **yes, free, and the largest single retraction batch of the campaign** — it reaches every `ctx_` row ever written |
 | **R11** | **73.9 s** | 1 | ~70k | **the fold** — the c1 anchor at the knee value, `recipe.yaml` changed for the first time in the campaign; open question 13 answered free; R6's runs-budget rule refuted free | **the campaign's best ratio after R6** — 74 seconds of grid time to move the largest lever it found from a footnote into the shipped config, plus two by-products that cost nothing |
 | **R9c** | 883.8 s | 4 | ~95k | `--enable-prefix-caching` priced at **2.414x on 14 runs** and decomposed **83% span / 17% decode / 0.7% hardware**; both endpoints re-measured in one session; the 2048x premise corrected to 15.3x; the queued arm shown to be validator-refused; **a proof that the flag's four effects cannot be separated in this engine**; the engine-log capture's third failure mode found and fixed | **yes, and not for the reason it ran** — its declared primary instrument landed inside its own dead zone and its deciding arm was confounded, yet **three of its five results cost no box time at all** and it retired two claims this synthesis was carrying |
+| **R13b** | ~420 s (2 probe passes, 1 discarded) | 1 | ~120k | **open question 7 CLOSED** — acceptance dispersion refuted at **1.085 vs 1.499 observed**, and the floor identified as **prefill-completion stagger** (first starter 88.5 ms/verify-step vs 55–58 for its batch, corr −0.980); R13's "1.44x" retired as the wrong statistic on the wrong samples; **the campaign's first cross-client reproduction** (+1.75% / −1.46% / −2.63%); a fifth engine-log failure mode found from source at zero cost | **BEST MECHANISM RATIO OF THE CAMPAIGN** — ~7 min of grid to settle the question four rounds had been circling, and it refuted its own candidate rather than confirming it |
 | **R13c** | 1353.5 s | 6 | ~90k | all six `c4` headline rows protected and standing; two tightened to pooled 14-run medians; **the budget curve and its knee at 65536**; the ~2% single-measurement error bar | **the campaign's best round on evidence per second** — it is the only systematic protection sweep, it told R11 which value to fold, and it corrected two of R13's own notes |
 
 **Totals:** ~6,624 s of measurement grid time (≈110 minutes) across 28 engine
@@ -4486,16 +4513,39 @@ regularities; and one campaign `[COST]` total.
 6. **Is the box's 80%-of-ceiling clock a fleet-wide arena condition or a local
    one?** Closed as a *measurement* question — the clock is flat policy — but the
    headroom question behind it was never asked of anyone who would know.
-7. **NEW, and it is the campaign's sharpest open mechanism. What is the span
-   ratio's ~1.50 floor made of?** For four rounds the answer was "admission
-   stagger"; R13 refuted that with `Waiting: 0` in every sample and R13c
-   confirmed it from the curve — the ratio keeps falling from 1.654 to 1.505
-   between two budgets that both hold full residency, and then stops dead. The
-   leading candidate is **MTP acceptance dispersion across the batch** (samples
-   span 2.77-4.00, a 1.44x spread against a measured 1.54), and it is a
-   candidate, not a finding. Settling it needs per-request acceptance rather than
-   the batch mean the engine log prints — **that is R13b**, and nobody has
-   established the measurement is even available.
+7. ✅ **ANSWERED BY R13b — CLOSE THIS. What is the span ratio's ~1.50 floor made
+   of?** It is **prefill-completion stagger**, and it is the third candidate, not
+   either of the first two. For four rounds the answer was "admission stagger";
+   R13 refuted that with `Waiting: 0` in every sample. The replacement candidate
+   was **MTP acceptance dispersion**, and **R13b refutes that too**: measured per
+   request through `--per-request-spec-decode-metrics detailed`, acceptance
+   dispersion acting alone gives a span ratio of **1.085** against an observed
+   **1.499** — 17% of the excess. Within one batch, per-request acceptance
+   max/min is **1.167** (35 requests); R13's "1.44x" was max/**min** of pooled
+   between-sample readings, and the statistic that enters the span is
+   max/**harmonic-mean**, which even on R13's own widest range reaches only 1.19.
+
+   What it actually is, measured directly: `corr(start stagger, ms per verify
+   step) = −0.980` and `corr(verify steps, decode duration) = +0.142` over 35
+   requests. **The five prefills do not complete together.** The first request to
+   finish prefill decodes at **88.5 ms/step** while the other four run at
+   **55–58 ms/step**, because its verify steps are co-scheduled with the batch's
+   remaining chunked prefill — and the batch decode span is measured from that
+   request's first token. First-token spread **1.26 s** on a clean decode of
+   ~2.3 s gives `1 + 1.26/2.30 = 1.548` against the observed 1.499, no fitted
+   parameter.
+
+   **`Waiting: 0` was never evidence against this**, because `Running` counts a
+   prefilling request and a decoding one identically and the engine log has no
+   column that separates them. It also explains R13c's curve: more budget means
+   fewer prefill chunks and a tighter spread, so the ratio falls to 65536 with
+   nothing waiting — then floors, because the prefill work itself cannot be made
+   simultaneous across five requests by any budget.
+
+   ⚠ **The terms are substitutes, not addends.** Removing the first-starter
+   penalty alone *raises* the ratio to 1.634, the span passing to the last
+   starter. Do not quote a three-way partition. **Nobody should re-open this as
+   an acceptance question.**
 8. **NEW. Are single measurements in this campaign systematically ~2% high, and
    if so why?** Six of six protected rows reproduced low, mean −1.94%, p ≈ 3% on
    a coin. Decode-side session effect and first-measurement bias are both live
@@ -4569,11 +4619,14 @@ regularities; and one campaign `[COST]` total.
    capture command is proven (`docker exec <container> tail -f
    /tmp/sparkrun_serve.log`; `docker logs -f` does NOT work on this image and
    cost R12 its occupancy instrument).
-7. **R13b — per-request MTP acceptance at `c>1`.** The only live candidate for
-   open question 7, the ~1.50 span floor. Establish first whether per-request
-   acceptance is available at all from the engine log; if it is only the batch
-   mean, say so and close the question as unmeasurable rather than running a
-   round that cannot answer it.
+7. ✅ **DONE — R13b. Do not re-queue.** Per-request MTP acceptance at `c>1`, and
+   it **refuted the candidate and closed open question 7 anyway**. This item's
+   own instruction — check the engine log first — was answered "no, and it does
+   not matter": the field goes to the **response body**, not the log, so the
+   measurement was available all along through a client of our own.
+   `sparkrun benchmark perf` could never have delivered it, because llama-benchy
+   receives the field and discards it. The floor is prefill-completion stagger;
+   see item 7 of the numbered section above.
 
 **R13 as originally queued — "c5 at `max_num_batched_tokens 81920`" — is DONE
 and it did not take the cell.** It ran at 98304, reached 0.73x, and its premise
@@ -7096,3 +7149,363 @@ finding it inert (+0.27%)** — so the recipe is no longer the one the campaign
 opened with, and any row labelled "mnbt 8192 — PRE-FOLD recipe" now needs an
 explicit `-o` to reproduce. **Pick up at `mnbt 65536 + mns 4` at c4**, the config
 the recipe actually ships and the one cell nobody has measured it at.**
+
+## Round 13b hypothesis — per-request MTP acceptance, and whether it is what the span ratio is made of (2026-08-22)
+
+Branch `feature/thin-cell-r19`. Written BEFORE any box time. R13b was earned by
+R13 and is open question 7's only live candidate: **what is the span ratio's
+~1.50 floor made of?**
+
+### THE QUEUE'S INSTRUMENT IS WRONG, and this is the round's first result
+
+QUEUE.md specifies: enable `per_request_spec_decode_metrics`, re-run c5 at
+`mnbt 98304` with runs=3, and **"capture the engine log the proven way — R13
+shows it works."** The synthesis's own gate (what-to-run item 7) is stricter and
+right: *"Establish first whether per-request acceptance is available at all from
+the engine log; if it is only the batch mean, say so and close the question as
+unmeasurable rather than running a round that cannot answer it."*
+
+**Answered from the image, at zero box cost. The field is real and settable, and
+the engine log is the wrong place to look for its output.** From
+`ghcr.io/spark-arena/dgx-vllm-eugr-nightly:latest`:
+
+- `vllm/config/observability.py:48` —
+  `per_request_spec_decode_metrics: Literal["none","summary","detailed"] = "none"`,
+  so the CLI flag is `--per-request-spec-decode-metrics`. Confirms the campaign's
+  two prior readings of `'none'` in the config dump.
+- Its docstring: *"Include per-request speculative-decoding acceptance metrics
+  **in the response** under `metrics.speculative_decoding`"* — `summary` gives
+  mean acceptance length, draft acceptance rate and the step histogram;
+  `detailed` **additionally records the ordered per-step accepted/proposed
+  arrays**. Only for `n == 1`. **"Independent of `--disable-log-stats`."**
+- `vllm/config/vllm.py:1352` — raises unless `--speculative-config` is set. We
+  ship MTP, so the gate passes.
+- `vllm/entrypoints/openai/chat_completion/serving.py:837` and
+  `completion/serving.py:479` — the streaming path attaches it to the **final
+  usage chunk**, emitted only when `stream_options.include_usage=true`.
+  Non-streaming: `serving.py:1140` / `:637`, unconditional on the server flag.
+- `vllm/entrypoints/openai/engine/protocol.py:145` — the payload is
+  `num_spec_steps`, `num_accepted_draft_tokens`, `num_draft_tokens`,
+  `num_spec_tokens`, plus `per_step_accepted` / `per_step_drafted` at `detailed`.
+
+**So `num_spec_steps` — the per-request verify-step count — is readable
+directly.** That is better than acceptance: it is the exact quantity R13's
+candidate is about ("a request drawing 4.00 completes 128 tokens in ~32 verify
+steps, one drawing 2.77 needs ~46"). No modelling step is needed.
+
+**But nothing reaches the engine log, and nothing reaches llama-benchy's
+export** — benchy streams `/v1/chat/completions` with
+`stream_options.include_usage` (`client.py:_build_generation_payload`), so the
+server *would* send the field and benchy *would* discard it. **Running
+`sparkrun benchmark perf` with the flag on would therefore produce exactly the
+numbers we already have and none of the ones the round needs.** The round is
+run instead as: `sparkrun run` to hold the engine up, then a probe of our own
+that replicates benchy's request shape and reads the response bodies.
+
+**MUTATION, journalled**: `recipe-r13b-perreq.yaml` = `recipe.yaml` +
+`--per-request-spec-decode-metrics detailed`, run at
+`-o max_num_batched_tokens=98304 -o max_num_seqs=5` to sit on R13's config.
+Instrument only; **not for folding**, and no row it produces is scoreable.
+
+### The probe, and why it is faithful
+
+llama-benchy runs on the laptop over HTTP, so its client is readable and its
+workload reproducible exactly. The probe imports **llama-benchy's own**
+`TokenizedCorpus` + `PromptGenerator` (Sherlock Holmes,
+`gutenberg.org/files/1661/1661-0.txt`, model tokenizer) and copies
+`_build_generation_payload` verbatim: streaming chat completions,
+`stream_options.include_usage`, `return_token_ids`, and `exact_tg` →
+`max_tokens = min_tokens = 128, ignore_eos = true`. It reproduces both phases
+in benchy's order — Phase 1 the uncached context load (`prompt_text="."`), then
+Phase 2 the inference batch — with 5 concurrent requests fired by one
+`asyncio.gather`, each on its **own random corpus slice**, which is exactly
+benchy's `generate_batch`. Content variation across the batch is the thing under
+test, so it must not be removed.
+
+⚠ **The probe's span ratio is our instrument, not benchy's.** Its internal
+validity gate is declared below.
+
+### The arithmetic, and it is the reason I expect a refutation
+
+With 5 requests admitted in one scheduler step (`Waiting: 0`, R13) and each
+generating exactly 128 tokens, request *i* retires after its own `S_i` verify
+steps. Holding step time `t` constant:
+
+    tg      = 5*128 / (max(S) * t)
+    tg_req  = mean_i( 128 / (S_i * t) )
+    span ratio = 5 * tg_req / tg = **max_i(S_i) x mean_i(1/S_i)**
+
+i.e. **max / harmonic mean**, zero free parameters.
+
+**R13 compared the wrong statistic.** Its "1.44x spread against a measured 1.54"
+is max/**min** of the acceptance samples. The quantity that enters the span is
+max/**harmonic mean**, which is strictly smaller. Feeding R13's own full
+2.77–4.00 range into a single batch as `S = 128/a` = [32.0, 36, 40, 43, 46.2]
+gives `46.2 x mean(1/S)` = **1.19**, not 1.44 and not 1.54. **Even granting the
+candidate the widest dispersion the campaign has ever logged, and granting that
+all of it happens within one batch, the arithmetic reaches about a third of the
+excess span.**
+
+And that grant is itself too generous. Those 2.77–4.00 samples are 10-second
+batch aggregates taken across different runs and phases — between-run variation,
+which is the confound R13 admitted it could not remove. Within one batch, `a_i`
+is an average over ~42 steps, so sampling noise alone concentrates it hard: with
+acceptance 3.08 (R13d) and `k=3`, per-step accepted `j` has `E[j]=2.08`,
+`p≈0.78`, `Var[j]≈0.65`; by Wald `S ~ 41.6 ± 1.7 steps` (4.1%), and five draws
+give `max(S) x mean(1/S) ≈ **1.05**`. Real content variation sits somewhere
+between that 1.05 and the 1.19 ceiling.
+
+**So the prediction is that R13b refutes its own candidate.** Stated plainly
+because the campaign's rule is that the mechanism paragraph and the numeric band
+must be written together, and three rounds got the mechanism right and the band
+wrong by writing them apart.
+
+### Numeric predictions, declared before the run
+
+| Quantity | Band | Reasoning |
+|---|---|---|
+| per-request acceptance `a_i`, max/min within one c5 batch | **1.05 – 1.25** | ~42-step average concentrates it; I do NOT expect the log's 1.44 to appear within a batch |
+| **predicted span ratio** `max(S) x mean(1/S)` | **1.02 – 1.20** | the arithmetic above, 1.05 floor to 1.19 ceiling |
+| observed span ratio of the probe itself | **1.40 – 1.70** | brackets R13's 1.537 with room for probe-vs-benchy differences |
+| share of the excess span (0.537) explained by acceptance | **≤ 40%** | follows from the two bands above |
+| per-request `num_spec_steps` `S_i` | **36 – 48** | 128 tokens at acceptance 2.8–3.5 |
+| mean acceptance across the batch | **2.9 – 3.3** | flat for seven rounds (3.03–3.19, R13c; 3.08, R13d; 3.13 c1, R9c) |
+| `Running: 5, Waiting: 0` at `mnbt 98304` | full residency | R13 measured it; 5 x 16384 = 81920 < 98304 |
+
+### Verdict rule, declared before the run
+
+- predicted span ratio **≥ 1.45** → candidate **CONFIRMED**, open question 7 closes.
+- **1.20 – 1.45** → **PARTIAL**: acceptance is a major but incomplete term.
+- **< 1.20** → candidate **REFUTED as the dominant mechanism**; open question 7
+  stays open and loses its only live candidate.
+
+### Validity gates, declared before the run
+
+1. **The instrument gate.** `metrics.speculative_decoding` must be present and
+   populated on every one of the 5 Phase-2 responses. If the field is absent or
+   null, the round is a **refusal**, recorded with its evidence — not a result.
+2. **The fidelity gate.** The probe's own observed span ratio must land in
+   **1.40 – 1.70**. Outside that, the probe is not reproducing the cell R13
+   measured, and the decomposition is reported as the probe's own, explicitly
+   not transferable to R13's 1.537.
+3. **Exact-length gate.** Every request must report exactly 128 completion
+   tokens. Any shortfall means `ignore_eos`/`min_tokens` did not take, and
+   length dispersion — not acceptance — would be driving the span.
+4. `session_count`/engine start clean, no crash loop.
+
+Only the c5 Phase-2 cell is under test. `runs=3` in the queue text refers to
+benchy runs; the probe runs the 5-request batch **7 times** instead, because
+the campaign's rule is that 3-run medians are always too high and this costs
+nothing — the engine is already up and each batch is ~8 s of decode.
+
+Nothing here is scoreable and no standing can move.
+
+## Round 13b outcome — `experiments/r13b-perreq-probe/`, 2026-08-22
+
+Branch `feature/thin-cell-r19`. One engine start, `session_count: 1`,
+`crash_count: 0`, box released. **No sparkrun benchId exists for this round and
+that is not an omission** — R13b ran no llama-benchy grid, for the reason its
+hypothesis gives, so the archive directory is named for the round rather than a
+benchId.
+
+### THE CANDIDATE IS REFUTED, AND THE ROUND SAID SO BEFORE IT RAN
+
+**MTP acceptance dispersion is not what the span ratio is made of.** The
+pre-declared statistic — `max(S) x mean(1/S)` over the five requests' verify-step
+counts — reads a **median 1.085** across seven c5 batches, against an observed
+span ratio of **1.499**. The declared verdict rule put `< 1.20` at REFUTED and
+the measurement landed at 1.085, below even the 1.19 ceiling the hypothesis
+computed from R13's own widest logged spread.
+
+**Acceptance dispersion acting alone would produce a span ratio of 1.085. It
+accounts for 17% of the excess span and the other 83% is something else.**
+
+### AND THE ROUND FOUND WHAT IT ACTUALLY IS — a third mechanism, not either of the two on the table
+
+The campaign has now had three candidates for the span floor. R13 refuted
+admission stagger. R13b refutes acceptance dispersion. **The answer is neither,
+and the probe measured it directly rather than inferring it:**
+
+    corr(start stagger f_i, time per verify step d_i/S_i) = -0.980   (Phase 2)
+                                                          = -0.986   (Phase 1)
+    corr(verify steps S_i, decode duration d_i)           = +0.142   (Phase 2)
+
+Decode duration is **not** set by how many verify steps a request needs. It is
+set by **when the request started decoding**, at a correlation of −0.98 on 35
+requests. By start rank, Phase 2:
+
+| start rank | decode duration | verify steps | **ms per verify step** |
+|---|---|---|---|
+| 0 (first to emit) | 3.414 s | 39 | **88.5** |
+| 1 | 2.411 s | 42 | 55.4 |
+| 2 | 2.351 s | 41 | 56.4 |
+| 3 | 2.163 s | 39 | 57.8 |
+| 4 | 2.298 s | 40 | 56.8 |
+
+**The first request to finish prefill decodes at 88.5 ms per verify step; every
+other request in the same batch decodes at 55–58 ms.** A **1.57x penalty**, borne
+by exactly one request, and it is the one the batch decode span is measured
+from — `tg_duration = max(last token) − min(first token)`.
+
+The mechanism is plain once seen: **the batch's five prefills do not complete
+together.** The first request to finish begins decoding while the other four are
+still prefilling, so its verify steps are co-scheduled with chunked-prefill work
+and cost ~1.57x. The others start decoding after prefill has drained and run
+clean. First-token spread is **1.26 s median** against a clean decode of ~2.3 s,
+and `1 + 1.26/2.30 = 1.548` reproduces the observed **1.499** to 3% with no
+fitted parameter.
+
+**Call it prefill-completion stagger, or the first-starter penalty. Do not call
+it admission stagger** — that name is refuted and this is not it.
+
+**This is fully consistent with `Waiting: 0`, which is why R13 could not see it.**
+Nothing queues. All five requests are `Running`. But **`Running` counts a request
+that is still prefilling the same as one that is decoding**, and the engine log
+has no column that separates them. R13's instrument was not wrong; it was blind
+to the distinction the question turned on.
+
+It also explains the curve R13c measured and could not account for: a larger
+token budget means fewer prefill chunks and a tighter first-token spread, so the
+span ratio keeps falling to 65536 **with nothing waiting at any budget** — and
+then floors, because the prefill *work* still has to be done and cannot be made
+simultaneous across five requests by any budget.
+
+⚠ **The three terms are substitutes, not addends, and the counterfactuals say so.**
+Removing the first-starter penalty alone *raises* the span ratio to 1.634,
+because the span is then set by the last starter instead. The stagger is the
+irreducible term; the interference redistributes it. Do not quote the three
+percentages as a partition. The one clean statement is the counterfactual with
+both stagger terms removed: **span would be 1.085, all of it acceptance.**
+
+### AND IT IS THE SAME EFFECT R11 FOUND FROM THE OTHER SIDE — two instruments, one cause
+
+Recorded because the campaign has spent rounds treating these as separate
+puzzles. **Open question 13** — why does the token budget move per-request
+*decode* by +15.5% at `c>1` but only +0.27% at c1? — was answered by R11 as
+**"a request being stalled behind its neighbours' chunked prefills"**, inferred
+from the c1-vs-`c>1` asymmetry. **Open question 7** — what is the span ratio's
+floor? — is answered by R13b as **the first request to finish prefill paying
+1.57x per verify step because its steps are co-scheduled with its neighbours'
+remaining chunked prefill**, measured directly at `corr = −0.980`.
+
+**These are the same sentence.** R11 saw it in `tg_req` and had to infer it;
+R13b saw it in the span and measured it per request. Two open questions, two
+instruments, one physical cause: **at `c>1` on this engine, decode steps are
+priced by how much prefill is still in flight beside them.** That also makes
+R9b's "chunked prefill protects decode" the third view of it.
+
+### WHY THE QUEUE'S INSTRUMENT WOULD NOT HAVE WORKED — the round's zero-cost result
+
+Recorded because the campaign has now lost the engine-log instrument four times
+and this is a fifth distinct failure mode, found before it cost anything.
+`per_request_spec_decode_metrics` writes to the **HTTP response body**
+(`metrics.speculative_decoding`), never to `/tmp/sparkrun_serve.log`. QUEUE.md's
+"capture the engine log the proven way — R13 shows it works" would have produced
+a clean capture containing nothing the round needed. The full source trail is in
+the hypothesis above. **llama-benchy receives the field and discards it**, so
+`sparkrun benchmark perf` with the flag on would have returned exactly the
+numbers already in RESULTS.md.
+
+**Read the instrument's own source before pricing a round on it.** Three of this
+round's five results cost no box time, for the fourth consecutive round.
+
+### R13's "1.44x spread against a measured 1.54" COMPARED THE WRONG STATISTIC
+
+Retired. Max/**min** of pooled acceptance samples is not the quantity that enters
+the span; **max/harmonic-mean** is. Feeding R13's own 2.77–4.00 range into one
+batch gives 1.19, not 1.44. And the range itself was between-sample, not
+within-batch: measured **within** a batch, per-request acceptance max/min is
+**1.167 median** (35 requests, 2.224–3.657), and the engine log this round read a
+batch-aggregate spread of 3.18–3.83 alongside it. The dispersion was never large
+enough, and the statistic was never the right one.
+
+### THE PROBE REPRODUCED R13's CELL — the fidelity gate, and it is a real reproduction
+
+An independent client, written from llama-benchy's source rather than using it,
+on a separate engine start, against R13's `tg128 @ d16384 c5` at
+`mnbt 98304 + mns 5`:
+
+| | R13 (7 runs, benchy) | R13b probe (7 runs) | gap |
+|---|---|---|---|
+| `tg_throughput` | 164.27 | **167.14** | **+1.75%** |
+| `tg_req_throughput` | 50.50 | **49.76** | **−1.46%** |
+| span ratio | 1.537 | **1.499** | **−2.63%** |
+| Phase 1 `tg` | 160.67 | **161.68** | **+0.63%** |
+
+Gate 2 declared 1.40–1.70 for the span ratio; it read 1.499. **This is the
+campaign's first cross-client reproduction** and it is tighter than several of
+its cross-invocation ones. ⚠ Phase 1 `tg_req` came in **−4.13%**, the round's
+one figure outside 3%.
+
+**Note the direction: two of the four came in HIGH.** The −1.88% eight-of-eight
+downward systematic (open question 8) does not extend to this round, which is
+mild further evidence for the session-effect half over first-measurement bias —
+mild, and from a different client, so it is weak evidence at best.
+
+### VALIDITY — all four gates passed
+
+1. **Instrument gate PASSED.** `metrics.speculative_decoding` present and
+   populated on **70 of 70** requests. The engine config echoed
+   `per_request_spec_decode_metrics='detailed'` and `max_num_batched_tokens=98304`,
+   read from the capture **during the engine start**, per R13d's rule.
+2. **Fidelity gate PASSED**, 1.499 inside 1.40–1.70. See the table.
+3. **Exact-length gate PASSED.** All 70 requests returned exactly 128 completion
+   tokens, so no part of the span is length dispersion.
+4. **Engine clean.** One start, no crash loop, box released.
+
+**A DEFECT IN THE FIRST PROBE RUN, CAUGHT AND FIXED, RECORDED HERE.** The first
+pass computed the batch span from `min(start)` rather than `min(first token)`,
+which put the ~15 s prefill inside the decode denominator and read `tg` = 34
+instead of 167 — **5x low** — with a span ratio of 1.01. It was caught by the
+fidelity gate doing exactly its job, and the second pass was rewritten against
+`llama_benchy/results.py` line by line (decode tokens are those *strictly after*
+the first timestamp; the batch span is `max(last token) − min(first token)`; the
+per-request rate excludes the first token from both numerator and denominator).
+**The first pass cost one grid re-run on an engine that was already up, and no
+number from it is used.** The lesson generalises: `tg` at depth is dominated by
+prefill unless the denominator explicitly excludes it, and a probe that does not
+reproduce a known cell is a broken probe, not a discovery.
+
+### Predictions: 6 held, 2 missed
+
+**Held:** predicted span ratio 1.02–1.20 (**1.085**) · acceptance max/min within
+a batch 1.05–1.25 (**1.167**) · share of excess explained ≤40% (**17%**) ·
+`num_spec_steps` 36–48 (median 40, 35–58 range) · mean acceptance 2.9–3.3
+(**3.225** Phase 2, **2.932** Phase 1 — eighth consecutive flat round) ·
+`Running: 5, Waiting: 0` (**28 of 30 loaded samples**).
+
+**Missed:** the observed span ratio band 1.40–1.70 held at 1.499, but **Phase 1
+read 1.439 with two runs at 1.52–1.54**, straddling more than expected · and the
+implicit prediction that the three terms would decompose additively, which the
+counterfactuals refuted — they are substitutes. **The mechanism paragraph was
+right and one band was loose, for the fourth round running.**
+
+### Prefix caching and telemetry
+
+**`Prefix cache hit rate: 0.0%` in all 53 samples** at `mnbt 98304`, flag ON.
+Campaign total now **374 samples across seven budgets, zero hits ever**, and this
+is the first such count taken from a non-benchy client.
+
+Telemetry 884 samples: SM clock **2398 MHz** median (**nineteenth** session
+agreeing), 76 °C peak, ⚠ **99.83 W peak** — the third consecutive round at or
+above the old ceiling (99.79 R13d, 100.45 R9c). The clock is unmoved. Still not
+investigated; still not a finding.
+
+### What is NOT claimed
+
+**No standing moves and nothing here is scoreable.** Every number was taken at
+`mnbt 98304 + mns 5` against a recipe that ships `mnbt 65536 + mns 4`, and from a
+client that is not the one the board's figures come from. The probe's agreement
+with R13 licenses reading its *decomposition*; it does not make its `tg` a
+quotable row. **`recipe-r13b-perreq.yaml` is an instrument, not a candidate, and
+must not be folded** — `--per-request-spec-decode-metrics detailed` costs a list
+append per verify step and was never measured for overhead.
+
+The round did not measure `mnbt 65536 + mns 4` (R11b, still the cheapest
+consequential round left) and did not touch open question 8.
+
+### COST
+
+One engine start (~230 s), two probe passes (~7 min of grid total, the first
+discarded), **~22 min wall**, ~120k tokens, zero crashes. Cheapest mechanism
+result the campaign has bought.
