@@ -101,6 +101,18 @@ on disk (never held only in a shell variable); a leftover `.inflight` is
 folded back into the outbox at the start of the next `remember.sh` run,
 write or drain.
 
+Concurrent drains all peek the same `.inflight` head until one of them
+successfully removes it, so several concurrent `--drain`s can each POST
+the same line before it's removed (observed ~4.6x redundant traffic under
+5 concurrent drainers). Harmless — the server dedupes on `metadata.sha256`
+and just answers `deduped: true` — and not worth optimizing for a
+low-frequency guardrail script.
+
+`memory-doctor.sh`'s outbox-drained check looks at both
+`.cache/memory-outbox.jsonl` and its `.inflight` file — a drain that
+stalled mid-flight parks its backlog in `.inflight`, and checking only the
+outbox would let the doctor false-green with memories still stuck.
+
 Example: `remember.sh "[VERDICT] bench_4f9da10931e0: ngram spec decode (n=4) — KEEP: +3.9 tg over band" experiment:qwen35-08b-tg128-c1`
 
 ### `recall.sh "<query>" [entity] [k=10]`

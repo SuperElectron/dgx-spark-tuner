@@ -206,6 +206,12 @@ inflight_remove_line() {
   release_lock
 }
 
+# Note on concurrent drains: every drainer peeks the SAME .inflight head
+# until someone's remove succeeds, so N concurrent drains can each POST
+# the same line before it's removed - observed ~4.6x redundant traffic
+# under 5 concurrent drainers in testing. Harmless (server dedupes on
+# metadata.sha256, so the extras just come back "deduped": true) and not
+# worth optimizing for a low-frequency guardrail script.
 drain_outbox() {
   recover_inflight
   begin_drain || return 1
@@ -220,7 +226,7 @@ drain_outbox() {
     if [ -n "$BOX_HOST" ] && try_post_line "$INFLIGHT_LINE"; then
       inflight_remove_line "$INFLIGHT_LINE"
     else
-      echo "mem0: memory service unavailable (status ${CURL_STATUS:-000}); line(s) still pending in outbox" >&2
+      echo "mem0: memory service unavailable (status ${CURL_STATUS:-000}); line(s) still pending in ${INFLIGHT}" >&2
       break
     fi
   done

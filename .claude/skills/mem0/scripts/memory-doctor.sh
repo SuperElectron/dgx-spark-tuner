@@ -90,7 +90,9 @@ fix_roundtrip() { :; } # covered by the mem0/embed fixes above; nothing extra to
 
 check_outbox_drained() {
   local outbox="$REPO_ROOT/.cache/memory-outbox.jsonl"
-  [ ! -s "$outbox" ]
+  # A failed drain parks its backlog in outbox.inflight, not the outbox
+  # itself - check both, or a stuck drain false-greens this step.
+  [ ! -s "$outbox" ] && [ ! -s "$outbox.inflight" ]
 }
 fix_outbox_drained() { "$SCRIPT_DIR/remember.sh" --drain; }
 
