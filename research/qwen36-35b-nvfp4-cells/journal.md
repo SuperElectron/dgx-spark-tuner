@@ -367,3 +367,226 @@ clear the box's page cache (no passwordless sudo), so every round in this
 campaign carries the same uncontrolled cold-read state. It is uniform across
 rounds, so it does not bias comparisons between them, but it is a floor on how
 quiet any single measurement can be.
+
+## Round 4 hypothesis — tg128 @ d16384, c2 and c5
+
+Two concurrency points at the cell round 2 already owns at c4, chosen to put a
+shape on the scaling curve rather than to take a headline. Neither c2 nor c5 was
+scraped cleanly from the board, so this round has NO incumbent to beat at either
+point: the verdict is a curve, not a margin, and both rows will carry "not
+scraped" in the board column. That is stated up front so the round is not read
+in the morning as a failure to win anything.
+
+The reference points are ours. Per-request tg at this cell: 102.2 at c1,
+52.85 at c4 (pooled over six runs, round 2). Read PER-REQUEST throughout — the
+units correction in round 2 applies to every number below. Aggregate is the
+per-request figure times the concurrency: 102.2 at c1, ~211 at c4.
+
+Mechanism. A 35B-A3B MoE at c1 is memory-bound on a fixed ~1.7 GB weight read
+per decode step, and that read is shared by every sequence in the step. Adding
+sequences buys aggregate throughput for free until something else saturates —
+which is why c1 -> c4 bought 2.07x aggregate rather than 1x. The give-back is
+per-request: each sequence waits behind a wider step, and MTP acceptance falls
+because one speculative draft has to satisfy divergent sequences. If the c1->c4
+curve is roughly logarithmic in concurrency, c2 should sit between them nearer
+the top: predict per-request median 75-88, centre ~81 (aggregate ~162, 1.59x c1,
+79% scaling efficiency — better than c4's 52% because two sequences contend less
+than four).
+
+**c5 is the round's real question, and it is a scheduler question.** The recipe
+carries `--max-num-seqs 4`. Five concurrent requests therefore do NOT all run:
+four decode, the fifth queues until a slot frees. The decision made before the
+run is to measure BOTH arms rather than pick one, because either alone is
+misleading — the unmutated arm measures the recipe we actually campaign with,
+and the mutated arm measures the cell as a competitor with a matched scheduler
+would run it.
+
+- Arm A (no mutation): c2 and c5 in one invocation, incumbent recipe untouched.
+- Arm B (MUTATION, `-o max_num_seqs=5`): c5 only, everything else identical.
+  This is the campaign's first recipe mutation. It is journaled as one, it is
+  NOT folded into recipe.yaml whatever it measures, and arm A gives the honest
+  unmutated number for the same point.
+
+Predictions, and they differ per arm in a way that tests what llama-benchy's
+per-request metric actually measures:
+
+- Arm A c5: per-request median 48-54, centre ~51 — i.e. statistically the same
+  as c4's 52.85. The reasoning: `tg t/s` is tokens over the decode span of a
+  request, and the fifth request's queue wait lands in TTFT, not in its decode
+  rate. With the scheduler pinned at four running sequences, every request that
+  is decoding sees a c4-shaped step. So the per-request number should barely
+  move while e2e_ttft rises sharply — predict ttfr up ~20-30% on c4's ~10.2s.
+  Aggregate over wall time stays near c4's ~211 because the engine cannot do
+  more than four sequences of work at a time.
+- Arm B c5 (max_num_seqs=5): per-request FALLS, to 44-49, because now all five
+  genuinely share each step. Aggregate rises to ~225-245 (5 x ~46), continuing
+  the sublinear curve. TTFT closer to c4's than to arm A's.
+
+If arm A instead comes in near 42 (= ~211/5), the per-request metric is being
+computed over wall time including queue wait, and every per-request figure in
+this campaign at c>1 needs re-reading. That is the falsifiable version of the
+units story round 2 opened, and it is worth the second invocation on its own.
+
+Noise: predict both concurrency points quiet, σ under 2% of the median, per
+round 2's collapse from 18.38 at c1 to 0.43/0.75 at c4. c2 should be the noisier
+of the two — averaging two bimodal sequences per step suppresses less than
+averaging four — so predict σ ~1-3% at c2 and under 1.5% at c5. If c2 comes back
+as noisy as c1 did, the "averaging sequences kills the variance" story needs a
+threshold nobody has posited.
+
+ctx_ phases ride along as usual. At d16384 the cached-prefix phase has been at
+or ABOVE the cold one at both c1 (+0%) and c4 (+6.6%); the sign change to
+below-cold only appears at d32768 and deeper. Predict ctx above cold at both
+points here, by 5-8%, and quieter. Board figures not scraped: held, not claimed.
+
+Telemetry: `sample-telemetry.sh` runs alongside arm A and is archived with the
+round. Open question 2 has wanted a clock/power sample next to a benchmark since
+round 1; it costs no box time.
+
+Mutation: arm A none. Arm B `-o max_num_seqs=5`, not folded into recipe.yaml.
+Probe (arm A): -b tg=128 -b depth=16384 -b concurrency=2,5 -b runs=3
+(pp=2048 rides along). Arm B: identical, concurrency=5 alone.
+max_model_len stays at the recipe default 32768 — d16384 + pp 2048 + tg 128 fits
+with room, so no override is needed for the first time in three rounds.
+
+## Round 4 outcome — bench_0ef7af8997ce (arm A) + bench_858173ba5753-mns5 (arm B), 2026-08-22
+
+| Cell | arm | median | (mean) | σ | runs |
+|---|---|---:|---:|---:|---|
+| tg128 @ d16384 c2 | A | 84.00 | (83.50) | 1.18 | 81.86 / 84.00 / 84.63 |
+| ctx_tg128 @ d16384 c2 | A | 79.44 | (79.63) | 1.06 | 79.44 / 78.43 / 81.01 |
+| tg128 @ d16384 c5 (mns 4) | A | 45.60 | (45.77) | 0.26 | 45.60 / 45.57 / 46.13 |
+| ctx_tg128 @ d16384 c5 (mns 4) | A | 48.18 | (48.04) | 0.31 | 48.18 / 48.33 / 47.61 |
+| tg128 @ d16384 c5 (mns 5) | B | 48.12 | (48.13) | 0.07 | 48.12 / 48.22 / 48.04 |
+| ctx_tg128 @ d16384 c5 (mns 5) | B | 51.25 | (51.39) | 0.26 | 51.25 / 51.75 / 51.15 |
+
+Verdict: NO WIN AND NO LOSS, by construction. Neither c2 nor c5 has a scraped
+board figure, so both rows say "not scraped" and nothing is claimed. That was
+known before the run and is not a disappointment; the round was run for the
+curve, and the curve is what it produced. Nobody should read RESULTS.md in the
+morning and conclude we lost these cells — they are unscored, not lost.
+
+**The c2 prediction was the campaign's first accurate one.** Predicted 75-88,
+centre ~81; measured 84.00. Predicted aggregate ~162 at 79% scaling efficiency;
+measured 168.0 at 82%. After three rounds of predicting a slowdown and measuring
+the opposite, the one prediction built on our OWN measured points (102.2 at c1,
+52.85 at c4) instead of on architectural first principles landed inside its band
+on the first try. That contrast is the round's methodological lesson: on this
+box, interpolating between measured cells works and reasoning forward from the
+model card does not.
+
+The curve, per-request and aggregate:
+
+| c | max_num_seqs | per-request | aggregate | vs c1 | efficiency |
+|---:|---:|---:|---:|---:|---:|
+| 1 | 4 | 102.2 | 102.2 | 1.00x | 100% |
+| 2 | 4 | 84.00 | 168.0 | 1.64x | 82% |
+| 4 | 4 | 52.85 | 211.4 | 2.07x | 52% |
+| 5 | 4 | 45.60 | 228.0 | 2.23x | 45% |
+| 5 | 5 | 48.12 | 240.6 | 2.35x | 47% |
+
+The knee sits between c2 and c4, not above it. c1 -> c2 costs only 18% of
+per-request throughput to buy 64% more aggregate; c2 -> c4 costs another 37% to
+buy 26% more. Anyone tuning this model for a latency-sensitive service should
+run it at c2, and R7's remaining points (c8, c16) will map a curve whose
+interesting region has already been passed.
+
+**The c5 arm-A prediction was refuted, and the refutation is informative.**
+Predicted 48-54, on the argument that `--max-num-seqs 4` pins the engine at four
+running sequences, so a decoding request sees a c4-shaped step and the fifth
+request's wait lands in TTFT rather than in its decode rate. Measured 45.60 —
+below the band, and 13.7% under c4's 52.85. The named alternative, ~42
+(= 211/5, the signature of per-request being computed over wall time including
+queue wait), did not happen either. So the metric is NOT wall-time-with-queue —
+round 2's units reading survives — but the four running sequences are also not
+running at c4 speed.
+
+The mechanism the round exposes is prefill interference, and the prefill rows
+are what show it. `pp2048 @ d16384` reads 637.09 at c1, 634.04 at c2, 643.31 at
+c4 — flat to within 1.5% — and then falls to 581.44 at c5 under mns 4, a 9.6%
+drop, the only depressed prefill figure at this depth in the whole campaign. The
+cached counterpart falls the same way (5236.80 against 5810-5967 everywhere
+else). With `--enable-chunked-prefill` on, a queued fifth request does not wait
+politely outside the engine: its prefill is chunked into the ongoing decode
+steps as slots free, so the four decoding sequences share each step with prefill
+work. That costs decode throughput AND makes the interleaved prefill itself
+slower. At c4 every prefill happens in one batch up front and the decode phase
+is clean.
+
+**Arm B — the MUTATION — refuted its own prediction in the opposite direction,
+and this is the round's most useful finding.** `-o max_num_seqs=5` was predicted
+to LOWER per-request throughput to 44-49, because five sequences would genuinely
+share every step instead of four. It landed at 48.12: inside the predicted band
+by coincidence, but on the wrong side of arm A. Raising the scheduler width to
+match the probe is worth +5.5% per-request (45.60 -> 48.12) and +5.5% aggregate
+(228.0 -> 240.6) — the queueing penalty is larger than the wider-batch penalty.
+The prefill rows confirm the mechanism cleanly: pp2048 goes straight back to
+640.21, the c2/c4 level, once nothing has to be chunked in mid-decode.
+
+Confidence in that 5.5%: the two arms are separate invocations with separate
+engine starts, so this is not a within-invocation comparison. But the run ranges
+are disjoint (45.57-46.13 against 48.04-48.22), σ is 0.26 and 0.07, and round
+2's verify established that cross-invocation reproduction at c>1 is good to
+1.6% — well inside 5.5%. The effect is real. It is not verified to the standard
+the campaign uses for board wins, and it does not need to be, because nothing is
+being claimed against a board figure.
+
+**The mutation is NOT folded into recipe.yaml.** It is journaled, both arms are
+measured, and recipe.yaml is untouched — `--max-num-seqs 4` remains the campaign
+config. Folding it in would silently change every future round's meaning, and
+the honest reading of the result is narrower than "5 beats 4": it is "the
+scheduler width should match the concurrency the probe asks for". The general
+form of that claim is exactly what R7 exists to measure, one c value per round,
+and R7 should now be understood as requiring a matched `--max-num-seqs` at every
+point rather than treating that as an optional extra.
+
+The noise predictions held, both of them. σ at c2 is 1.18 (1.4% of the median),
+at c5 arm A 0.26 (0.57%), at c5 arm B 0.07 (0.15%) — all under the predicted
+ceilings, and c2 is the noisier point exactly as predicted, because averaging
+two bimodal sequences per step suppresses less than averaging five. This is the
+fifth consecutive round consistent with the MTP-acceptance story, and the c2
+point is the first evidence about the SHAPE of the suppression: 1.4% at c2
+against 14% at c1 means most of the variance is gone by the second sequence.
+
+**The ctx_ phases disagree with each other across concurrency, which is new.**
+At c2 the prefix-caching phase came in BELOW the cold phase — 79.44 against
+84.00, -5.4% — and the hypothesis predicted above, by 5-8%. At c5 it is ABOVE,
+by 5.7% (arm A) and 6.5% (arm B). Every prior observation at d16384 had ctx at
+or above cold. So the sign of the ctx-vs-cold gap now varies with BOTH depth
+(above at d8192/d16384, below at d32768/d65536, from round 3) and, at fixed
+depth, with concurrency (below at c2, above at c4 and c5). No single mechanism
+in the current picture produces both. What the c2 point does rule out is the
+tidiest explanation available after round 3 — that the inversion is a pure depth
+effect — because here it appears at a depth where the cold phase is otherwise
+the slower one. Open question 4 gets a third face and should stop being treated
+as a depth question.
+
+Telemetry, finally sampled alongside a round (204 s of load captured, archived
+as `experiments/bench_0ef7af8997ce/telemetry.log`, 339 samples at 1 Hz). Under
+load the SM clock sits at 2392 MHz median, 2385-2411 across the window, against
+a reported ceiling of 3003 MHz — 80% of maximum, pinned, with essentially no
+variance. GPU temperature peaked at 72 °C and power at 95 W (57 W median), so
+the box is neither thermally throttled nor near a power wall; the clock is held
+down by policy, not by heat. This does NOT resolve open question 2 — the board's
+116.03 presumably came off a box under the same fleet-wide policy — but it does
+close off the two explanations that would have been visible here: no thermal
+throttling, no clock instability during a run. It also contradicts round 1's
+2554 MHz reading, so the clock figure is not stable across sessions and any
+future use of it needs its own sample. Never changed, never to be changed
+autonomously: no clock, power-policy, driver or kernel setting was touched.
+
+Config notes: this was the first round in three to need no `max_model_len`
+override — d16384 + pp 2048 + tg 128 fits the recipe default 32768, and
+sparkrun's estimate put the KV cache at 1.25 GB against 75.0 GB available (60x
+context multiplier). Same epoch as every prior round: both arms ran under
+`ghcr.io/spark-arena/dgx-vllm-eugr-nightly:2026082102`, checked in both
+state.yaml files. The page cache again could not be cleared (no passwordless
+sudo) — uniform across rounds, so it biases nothing between them.
+
+Cost: two benchmark invocations, 173.3 s and 142.4 s of benchmark time plus two
+engine starts; ~470 s of box time in total. Roughly 55k harness tokens for
+read-in, hypothesis, two runs, parse, telemetry analysis and close-out — higher
+than R3's ~35k because of the second arm and the telemetry pass. Four board
+cells' worth of measurement (c2 cold, c2 ctx, c5 cold, c5 ctx) produced no
+claimable standing, which is the price of running a cell whose board figure was
+never scraped. R5b is now the round with the best ratio left in the queue.
