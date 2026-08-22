@@ -23,20 +23,24 @@ Procedures live in the skills; see `## Skills`.
   orchestrator's call, and it verifies what the branch landed before merging.
 - Never commit `QUEUE.md` (gitignored).
 
-## Layout
+## A series
 
-- A series is `research/<series>/`: `recipe.yaml`, `RESULTS.md`, `docs/`,
-  `scripts/`, `experiments/`. Creating any other file at that level is a bug.
-- Runs live under the hypothesis that produced them:
-  `experiments/<hypothesisId>/bench_<id>-<label>/`.
-- `experiments/<hypothesisId>/HYPOTHESIS.md` is written before the runs and
-  becomes `EXPERIMENT.md` when the conclusion is written.
-- Hypothesis directories are named for the claim, not the cell.
-- `recipe.yaml` is the only artifact we tune.
-- Never edit anything inside a `bench_*` directory — those exports are immutable.
-- `RESULTS.md` is Mat's lookup table. Nothing derives from it: not memories, not
-  conclusions, not tooling. Tooling reads the `bench_*` archives.
-- `.gitignore` allow-lists what is tracked per run and says why, inline.
+```
+research/<series>/
+├── recipe.yaml                        the tuned config
+├── RESULTS.md                         Mat's lookup table
+├── docs/  scripts/
+└── experiments/<hypothesisId>/
+    ├── HYPOTHESIS.md → EXPERIMENT.md  the claim, then its conclusion
+    └── bench_<id>-<label>/            one archive per invocation
+```
+
+- Write only to `recipe.yaml`, `HYPOTHESIS.md` / `EXPERIMENT.md`, and
+  `RESULTS.md`. Everything else in a series is read-only, archives included.
+- Create no other files. Analysis belongs in `EXPERIMENT.md`.
+- `recipe.yaml` changes only when a fold rule declared before the run fires.
+- `RESULTS.md` is Mat's. Nothing derives from it — tooling reads the archives.
+- Name a hypothesis directory for the claim, not the cell.
 
 ## The box
 
