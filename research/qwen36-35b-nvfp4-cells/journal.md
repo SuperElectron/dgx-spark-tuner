@@ -11261,3 +11261,58 @@ campaign's last untested one-dimensional recipe knob is measured, the "the
 ceiling binds so there is headroom" reading is separated into a true half and a
 false half, and the shipped value is promoted from inherited to defended — for
 fifteen minutes of box time.**
+
+## Round 25 ride-along outcome — `--moe-backend`: THREE ALTERNATIVES, THREE REFUSALS, and `marlin` is the only one this engine will run (2026-08-22)
+
+**Ran LAST, after all three R25 arms had landed cleanly, exactly as the
+hypothesis block required. Three engine starts, 20:25:11 → 20:30:26 UTC, ~5
+minutes. All three crashed at engine init before a single token was generated,
+so none of them touched the R25 arms above.** Box idle clocks at each start:
+20:25:11Z **2398 MHz / 50 °C**, 20:28:22Z **2398 / 43**, 20:29:41Z **2398 / 43**
+— identical clocks, nothing thermal, and the crashes are configuration
+refusals rather than failures under load.
+
+### THE RESULT — the engine enumerated the answer for us
+
+| attempt | `--moe-backend` | archive | what the engine said |
+|---|---|---|---|
+| 1 | `triton` | `bench_be900399e857-r25-ridealong-moetriton-crash` | `ValueError: moe_backend='triton' is not supported for NvFP4 MoE. Expected one of ['cutlass', 'flashinfer_trtllm', 'flashinfer_cutlass', 'flashinfer_cutedsl', 'flashinfer_b12x', 'marlin', 'humming', 'emulation']` — `fused_moe/oracle/nvfp4.py:161` |
+| 2 | `flashinfer_trtllm` | `bench_5eea211b9a30-r25-ridealong-moefitrtllm-crash` | `ValueError: NvFp4 MoE backend 'FLASHINFER_TRTLLM' does not support the deployment configuration since kernel does not support current device cuda` — `oracle/nvfp4.py:256` |
+| 3 | `cutlass` | `bench_a062dab1eed0-r25-ridealong-moecutlass-crash` | `ValueError: NvFp4 MoE backend 'VLLM_CUTLASS' does not support the deployment configuration since kernel does not support quantization scheme QuantKey(u8,scale(f8e4m3fn,static,GroupShape(row=1, col=16)),scale2(f32,static,per_tensor),symmetric)xNone` — `oracle/nvfp4.py:256` |
+
+**Attempt 1 was the round's own error and it is recorded as one.** `triton` was
+picked because the shipped recipe already runs `"moe_backend":"triton"` inside
+`--speculative-config`, and the inference was that the kernel therefore exists
+for this model. It does not: the MTP draft module is **not** NVFP4 and takes a
+different backend path from the NVFP4 MoE layers. **The refusal is worth more
+than the arm was**, because it prints the entire legal set — which nothing in
+this repo had ever recorded.
+
+**Attempts 2 and 3 are the real measurement, and they are decisive in the
+opposite direction from the one the round expected.** Both are on the legal
+list, both were refused by vLLM's NVFP4 backend oracle, and **for two different
+reasons**: `flashinfer_trtllm` has no kernel for **this device** (GB10), and
+`cutlass` has no kernel for **this quantisation scheme** (the u8 + per-16-column
+fp8e4m3 scale + per-tensor fp32 scale2 layout this checkpoint ships).
+
+### WHAT THIS SETTLES
+
+⚠ **`--moe-backend marlin` is NOT an untested inherited default any more. It is
+the backend the engine's own oracle selects for this model on this device**, and
+the three cheapest alternatives are refused by that oracle at init — not slower,
+**unavailable**. The `--moe-backend` lever is **closed for this campaign** at a
+cost of five minutes.
+
+Untested and left untested, on the record: `flashinfer_cutlass`,
+`flashinfer_cutedsl`, `flashinfer_b12x`, `humming`, `emulation`. The first three
+are flashinfer variants and share the device gate that refused
+`flashinfer_trtllm`; `emulation` is by name a correctness path, not a
+performance one. **The prior that any of them is both admissible and faster than
+the oracle's own choice is low, and none is worth box time unless something else
+motivates it.**
+
+### NO FOLD, EITHER WAY
+
+The hypothesis block declared that a `--moe-backend` change would need its own
+round and its own rule. Nothing is folded; `recipe.yaml` is untouched. What the
+ride-along produces is a **closed lever and a recorded legal set**.
