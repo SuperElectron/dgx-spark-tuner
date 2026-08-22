@@ -3657,12 +3657,35 @@ interfering with it — and, chasing a validity gate that failed, discovered tha
 prefix caching has never once hit on this benchmark and that the campaign has had
 its two measurement phases labelled backwards since Round 1.**
 
-## CAMPAIGN SYNTHESIS — rounds 1 through 12 (2026-08-22)
+## CAMPAIGN SYNTHESIS — the whole campaign, R1 through R13c
 
-Twelve rounds, one model, one box, one image epoch. This section is the handoff:
-it is written to be read by someone who was not here, and it does not assume any
-of the rounds above have been read. Where a round's headline was later retracted,
-the retraction is here rather than the headline.
+**Written after R12 on 2026-08-22 and REVISED the same day, after R13, the `ctx_`
+phase-label correction, R5c and R13c all landed. This revision replaces the
+round-12 checkpoint; there is no second synthesis and there must never be one.
+It is the ONE authoritative handoff — read it instead of the round blocks, and
+read `RESULTS.md` for the standings.**
+
+Thirteen rounds plus three no-box-time passes, one model, one box, one image
+epoch. Written to be read by someone who was not here; it assumes none of the
+rounds above have been read. Where a round's headline was later retracted, the
+retraction is here rather than the headline — and this campaign retracted a lot,
+including two of its own widest wins and its central mechanism.
+
+**The four things that landed after the round-12 checkpoint, since they change
+how the rest of this section reads:**
+
+- **R13** widened the contested `c4` cell and set a record margin — and
+  **refuted the campaign's own admission-stagger model** with the instrument it
+  had spent four rounds failing to capture.
+- **The `ctx_` phase-label correction** found the two measurement phases labelled
+  backwards since R1 and charged different token counts, which makes the ~9x
+  `ctx_pp` advantage read for twelve rounds a **denominator artefact**. Prefix
+  caching never engaged at all.
+- **R5c** confirmed from 34 archived records that the board's `c>1` `tg` figure
+  is a **batch aggregate**, closing the units question from a second direction.
+- **R13c** put all six `c4` headline rows back on the box — **all six stood**,
+  all six came in ~2% low, two were tightened to pooled 14-run medians, and the
+  token-budget curve was found to **knee at 65536**.
 
 ### What the campaign set out to do, and whether the thesis held
 
@@ -3681,8 +3704,9 @@ be tuned.
 the campaign's real story.**
 
 It held where it was aimed: the thin `tg32` cells at c1 fell by 4-5x on the
-untouched recipe, and the deep cells at d65536 fell by 4.5-5.7x. Nine of the ten
-cells we hold were taken with `recipe.yaml` exactly as it started.
+untouched recipe, and the deep cells at d65536 fell by 4.5-5.7x. **All eight
+cells we hold were first taken with `recipe.yaml` exactly as it started** — the
+mutations widened two of them, they did not win any.
 
 It failed in two distinct ways. First, thin does not mean weak — `ctx_tg` at
 d8192/d16384/d32768 c1 are thin-looking on the surface but crowded underneath
@@ -3690,50 +3714,71 @@ d8192/d16384/d32768 c1 are thin-looking on the surface but crowded underneath
 runtime by two orders of magnitude, so those were never reachable. Second, and
 more important: **where the incumbent was our own model, the gap turned out to be
 config, and probe-only variation could not touch it.** At c2 and c5 the board's
-own `Qwen3.6-35B-A3B-NVFP4` on vLLM beat us 2-5x. R10 and R12 then closed most of
-that gap with a single scheduler flag the campaign had never moved. So from R9
-onward the campaign's largest results came from **mutations**, not from probes —
-`tg128 @ d16384 c4` went from 1.13x to 3.15x on `max_num_batched_tokens` alone.
+own `Qwen3.6-35B-A3B-NVFP4` on vLLM beat us 2-5x. R10, R12 and R13 then closed
+most of that gap with a single scheduler flag the campaign had never moved — and
+still did not take either cell. So from R9 onward the campaign's largest results
+came from **mutations**, not from probes — `tg128 @ d16384 c4` went from 1.13x to
+**3.71x** on `max_num_batched_tokens` alone.
 
 `recipe.yaml` is still untouched, deliberately (see R10's fold argument and R11).
-But four headline figures now depend on mutations that are not in it, and that is
-an unresolved tension a future session inherits rather than a finished state.
+But **ten of the eighteen win rows now depend on mutations that are not in it**,
+and that is an unresolved tension a future session inherits rather than a
+finished state. R13c at least tells R11 which value to test: **65536**.
 
-### The standings, wins and losses both
+### The standings, wins and losses both — FINAL
 
 Eight board cells won, twelve lost, and a long tail that cannot be scored because
-the board publishes no figure for it. (The wins occupy ten rows in RESULTS.md,
-because two of the eight cells carry both a campaign-config and a raised-budget
-figure.) Full rows with configurations in `RESULTS.md`;
-the shape of it:
+the board publishes no figure for it. **Those counts did not move after the
+round-12 checkpoint** — R13, R13c and the `ctx_` correction changed figures,
+retired claims and added rows, but no cell changed side. The wins occupy
+**eighteen rows** in `RESULTS.md`, because the two `c4` cells each carry a
+campaign-config figure plus five token-budget points from R13c's curve. Full rows
+with configurations in `RESULTS.md`; the shape of it:
 
-- **Widest wins:** `tg128 @ d65536 c1` 94.10 vs 16.48 (**5.71x**),
-  `tg32 @ d32768 c1` 115.56 vs 23.31 (**4.96x**), `ctx_tg @ d16384 c4` at the
-  raised budget 126.35 vs 27.68 (**4.56x**), `ctx_tg @ d65536 c1` 92.98 vs 20.70
-  (**4.49x**), `tg32 @ d16384 c1` 116.43 vs 28.11 (**4.14x**).
+- **Widest margin, and it is a mutation:** `ctx_tg @ d16384 c4` at
+  `mnbt 98304 + mns 5`, **170.36 vs 27.68 = 6.15x**, pooled over 14 runs from two
+  engine starts. Its neighbour at `mnbt 65536` reads 5.96x on 7 runs.
+- **Widest CAMPAIGN-CONFIG win:** `tg128 @ d65536 c1` 94.10 vs 16.48 (**5.71x**),
+  then `tg32 @ d32768 c1` 115.56 vs 23.31 (**4.96x**), `ctx_tg @ d65536 c1` 92.98
+  vs 20.70 (**4.49x**), `tg32 @ d16384 c1` 116.43 vs 28.11 (**4.14x**).
 - **The transformed cell:** `tg128 @ d16384 c4` — the only contested cell we won
-  (8 entries, a real field) — 1.13x on the campaign config, **3.15x** on the
-  raised token budget, verified across two engine starts at runs=7.
+  (8 entries, a real field) — **1.13x** on the campaign config, **3.67x** at
+  `mnbt 98304` (pooled 14 runs), **3.71x** at the knee value 65536. Reproduced
+  across four engine starts and three scheduler widths.
 - **Losses:** `tg128 @ d131072 c1` 0.95x, short by 5.5% (queued as a probable
-  loss, run for the curve, never tuned for). `tg128 @ d16384` c2 and c5 at 0.86x
-  and 0.57x against the board's own like-for-like entry — improved from 0.51x and
-  0.21x, and still losses. `ctx_tg` c1 at d8192/d16384/d32768, 0.61x/0.64x/0.72x.
-  All six prefill cells at c1, by 15x-200x. Nine of those twelve losses were
-  scored for the first time by this synthesis pass, from a scrape R5b took on
-  2026-08-21 that no round ever carried into the standings.
+  loss, run for the curve, never tuned for). `tg128 @ d16384` c2 and c5 against
+  the board's own like-for-like entry: c2 0.51x → **0.86x**, c5 0.21x → 0.57x →
+  **0.73x** across three budgets, and **still losses at every one of them**.
+  `ctx_tg` c1 at d8192/d16384/d32768, 0.61x/0.64x/0.72x. All six prefill cells at
+  c1, by 15x-200x. Nine of those twelve losses were scored for the first time by
+  the synthesis pass, from a scrape R5b took on 2026-08-21 that no round ever
+  carried into the standings.
 - **Unscoreable:** c8 and c16 at any budget, every `c>1` prefill and context cell,
-  and all sixteen R9b rows.
+  `ctx_tg @ d131072 c1`, `pp2048 @ d65536 c1` (the board has zero entries at that
+  depth — an empty cell, not a won one), and all sixteen R9b rows.
+
+**c5 is the loss worth naming.** It was the only cell with a live route to a win,
+it got a round of its own (R13), and it ended at 0.73x against the board's own
+`Qwen3.6-35B-A3B-NVFP4` on vLLM — and 0.38x against the cell's actual top. Even
+clearing the like-for-like incumbent would not have taken the cell.
 
 Two of the losing figures and three of the winning ones are still 3-run medians.
 They are flagged in `RESULTS.md` and they should be read as provisional, for the
-reason the next section gives.
+reason the next section gives. **And R13c added a measured error bar on top of
+that:** every figure in this campaign taken exactly once carries a **~2%
+downward** correction of unknown origin — six of six protected rows reproduced
+low, mean −1.94%, which on a coin is p ≈ 3%. No verdict changes sign at that
+size, but no decimal should be quoted as if it were exact.
 
 ### THE CENTRAL METHODOLOGICAL RESULT — single-invocation controls kept overturning cross-invocation inference
 
 This is what the campaign found out that generalises past this model, this box
-and this board. Four times, a conclusion drawn by comparing numbers from
-*different benchmark invocations* was overturned by a round that put the compared
-quantities under **one engine start**:
+and this board. **Six times**, a conclusion drawn by comparing numbers from
+*different benchmark invocations*, or inferred from the instrument instead of
+read out of it, was overturned by a round that put the compared quantities under
+**one engine start** or read the source. Four of those six are below; R13's
+refutation of the stagger model and R13c's reproduction sweep are the two the
+round-12 checkpoint could not include, and they follow.
 
 - **R6 retired R1's `tg32 @ d16384 c1` figure.** R1 measured 129.32 against an
   inherited tg128 baseline of 102.2 and read a 26.5% generation-length effect.
@@ -3761,10 +3806,37 @@ quantities under **one engine start**:
   `tg_throughput` is a **batch aggregate**: total decode tokens over the span from
   the first request's first token to the last request's last token. Nine rounds of
   `c>1` interpretation rested on a check that could not fail.
+- **R13 refuted the campaign's own "admission stagger" mechanism, using the
+  instrument the campaign had lost three times.** From R10 to R12 this file said
+  the `c>1` gap was admission stagger, and R12 priced it at 83% (c2) and 93%
+  (c5). R13 raised the budget to 98304 — enough to admit a whole 5-request batch
+  in one scheduler step — and the engine log read **`Waiting: 0` in 100% of
+  loaded samples**. With literally nothing queueing, the span ratio fell only
+  1.70 → 1.54 at c5 and 1.57 → 1.53 at c4. **Most of what four rounds called
+  admission stagger is not admission.** R12's split is a description of the
+  metric's arithmetic, not of a physical cause. R13c then confirmed it from a
+  second direction: residency is full from 32768 up, yet the span ratio keeps
+  tightening to 65536 with nothing waiting at either budget, and then stops dead
+  at a floor of ~1.50. The leading candidate for the residual is MTP acceptance
+  dispersion across the batch (samples span 2.77-4.00, a 1.44x spread against a
+  measured 1.54) and it is **not established**.
+- **R13c measured the cross-invocation error the whole campaign had been
+  assuming.** Six protected `c4` rows, re-run from separate engine starts at
+  runs=7 against a ±10% band declared before the run. **All six stood** — gaps
+  −0.48% to −3.18% — which is the campaign's only systematic protection sweep and
+  the reason its headline figures can be quoted at all. But **all six came in
+  low**, mean −1.94%, six of six the same sign. Two candidates and R13c cannot
+  separate them: a decode-side session effect on the night, or a
+  first-measurement bias in a campaign that promotes the figure from the run that
+  motivated the round. The `pp2048` session control passed at five of six arms,
+  so no night-wide slowdown is visible — but `pp` is prefill and `tg` is decode,
+  so a decode-only session effect would not show there.
 
-**And here is the part worth carrying forward as a warning: BOTH retired 3-run
-medians were TOO HIGH.** R1's tg32 was 11% above its 7-run value; R3's d65536 was
-13% above. That is not chance. A 3-run median at a cell whose σ is ~9% has a
+**And here is the part worth carrying forward as a warning: EVERY 3-run median
+this campaign promoted and later re-measured was TOO HIGH, and every one of them
+was eventually retired.** R1's tg32 was 11% above its 7-run value; R3's d65536
+was 13% above; R13's 174.68 and 170.59 were 2.9% and 1.3% above their pooled
+14-run values. Four for four, always in the same direction. That is not chance. A 3-run median at a cell whose σ is ~9% has a
 standard error near 6.5%, so draws land on both sides — but a high draw becomes a
 claimed win and gets defended, while a low draw looks like a bad run and gets
 re-measured. **The sampling error is symmetric and the surviving error is
@@ -3776,7 +3848,15 @@ taken under two engine starts if the design can put them under one; declare the
 resolution budget and the reading thresholds **before** the run (R8, R9, R9b, R10
 and R12 all did, and it is what made their refutations worth anything); and put
 an identical-work control (`pp2048`, `ttfr`) in every multi-arm invocation, so the
-arm-to-arm systematic is priced instead of assumed away.
+arm-to-arm systematic is priced instead of assumed away. **And add the rule R13c
+earned: schedule a protection round.** Re-measure the headline figures from a
+separate engine start against a band declared in advance, and pool same-config
+repeats rather than picking a draw. R13c cost 45 minutes and is the only reason
+any figure in this file can be quoted with a number attached to its uncertainty.
+Its corollary is that **a single 7-run median at a configuration measured once is
+not a claim** — which is why R13c measured a 6.34x margin, wider than the
+campaign's title-holder, and **deliberately did not promote it**. Promoting the
+best first measurement of a cell is exactly what retired R1's and R3's figures.
 
 ### R6's sampling result: σ is set by verify steps and acceptance quality, NOT by concurrency
 
@@ -3834,20 +3914,49 @@ once in occupancy and once in the denominator:
 | c5 | 48.12 | **128.93** | +168% | 265 -> 290 (+9.4%) |
 | c16 | 40.47 | 53.45 | +32% | 440 -> **515** (+17.0%) |
 
+**AND R13c CURVED IT. THE CURVE KNEES AT 65536 — this is the single most
+actionable number the campaign produced.** Six budgets at c4, d16384, tg128,
+`mns 5`, runs=7 each, one invocation per budget:
+
+| mnbt | admission steps | `tg` | σ/med | `tg_req` | span ratio | `peak_thr` | scheduler |
+|---:|---:|---:|---:|---:|---:|---:|---|
+| 8192 | 9 | 52.07 | 1.03% | 33.00 | 2.535 | 271 | **partial occupancy** |
+| 16384 | 5 | 85.90 | 2.08% | 43.99 | 2.048 | 277 | **partial occupancy** |
+| 32768 | 3 | 143.83 | 3.87% | 59.48 | 1.654 | 288 | `(4,0)` 13/13 |
+| **65536** | 2 | **173.34** | 4.39% | **65.24** | **1.505** | 308 | `(4,0)` 10/10 |
+| 98304 | 1 | 169.69 | 4.01% | 64.02 | 1.509 | 302 | `(4,0)` 11/11 |
+| 131072 | 1 | 170.89 | 3.89% | 64.14 | 1.501 | 304 | `(4,0)` 12/13 |
+
+8192 → 65536 is **+233%**; 65536 → 131072 is **−1.4%**, i.e. nothing — the top
+three budgets span 2.1% against a per-arm σ/med of ~4% and are one point.
+**`max_num_batched_tokens 98304`, which R13 derived from one-step-admission
+arithmetic and paid a torch.compile rebuild for, is not needed.** The ceiling is
+reached at 65536, a **two**-step configuration, so removing the last admission
+step is not what the gain was made of — which is the same result as R13's
+`Waiting: 0` finding, seen from the other side. The curve also separates two
+thresholds this campaign had conflated: **residency** saturates at 32768, the
+**span ratio** does not, and it keeps falling to 65536 with nothing waiting at
+either.
+
 **What it implies for the recipe.** The lever is real, verified at runs=7 across
-separate engine starts, and it is the difference between 1.13x and 3.15x on our
-best contested cell. It is still NOT folded into `recipe.yaml`, for one good
-reason: at d16384 a prefill is two chunks at 8192 and one at 32768, so the change
-is not inert at c1 either, and the c1 anchor (112.62, pooled over R6+R8) that
-every depth and concurrency comparison hangs from was measured at 8192. Folding
-without re-measuring that anchor silently creates a new epoch. **R11 is exactly
-that measurement and it is the highest-value round left.** Two things must go into
-the recipe note whichever way R11 lands: at c2 the hardware ceiling did not move
-at all (181 vs 182) while the board metric rose two thirds, so this buys a
-*ranking*, not throughput; and **time-to-first-response gets worse at every
-concurrency tested** (+7.3% c2, +15.6% c4, +19.8% c5, +32.4% c16 — c16 becomes a
-39-second cell). It is a throughput-versus-latency trade and must be written as
-one.
+four separate engine starts and three scheduler widths, and it is the difference
+between 1.13x and 3.71x on our best contested cell. It is still NOT folded into
+`recipe.yaml`, for one good reason: at d16384 a prefill is two chunks at 8192 and
+one at 32768, so the change is not inert at c1 either, and the c1 anchor (112.62,
+pooled over R6+R8) that every depth and concurrency comparison hangs from was
+measured at 8192. Folding without re-measuring that anchor silently creates a new
+epoch. **R11 is exactly that measurement and it is the highest-value round left —
+and R13c has now told it which value to test: 65536, not 32768 and not 98304.**
+Three things must go into the recipe note whichever way R11 lands: at c2 the
+hardware ceiling did not move at all (181 vs 182) while the board metric rose two
+thirds, so this buys a *ranking*, not throughput; **time-to-first-response gets
+worse at every concurrency and at every budget increase tested** (+7.3% c2,
++15.6% c4, +19.8% c5, +32.4% c16; ttfr rose for the sixth consecutive budget step
+at R13, 12102 ms at c4 and 15126 ms at c5); and a budget sweep is **cheap** —
+R13c measured engine-start cost as a function of budget SIZE, not novelty,
+~110–190 s across 8192–98304 with a step up to 310 s at 131072, correcting R13's
+warning that each new value costs a full rebuild. It is a throughput-versus-latency
+trade and must be written as one.
 
 **2. Prefix caching has never once hit on this benchmark — and the flag is worth
 57% of the headline metric anyway.** vLLM's own counter reads `Prefix cache hit
@@ -3873,12 +3982,25 @@ Two consequences, and both are corrections rather than discoveries:
   `16384/2048` and not a cache effect. Every ctx-versus-cold reading in this
   journal before R9b is mislabelled; the `tg` comparisons survive the token-count
   problem but not the labelling.
-  **Since measured, not just asserted:** `ctx_pp / pp = (depth+2048)/2048` holds
-  in **29 of 30** archived phase pairs across five depths, residuals −0.7% to +3.6%.
-  The two phases prefill at the same rate to within 4% and **no prefill speedup
-  exists anywhere in this campaign's data.** Two of the 18 are the
-  prefix-caching-OFF arms and they do not move, which is an independent proof
-  that the cache never hits. Full audit at the end of this file.
+  **Since measured, not just asserted, and then extended:** `ctx_pp / pp =
+  (depth+2048)/2048` — a prediction with **no free parameters** — holds in **35 of
+  36** archived phase pairs across five depths, residuals −0.7% to +6.4%. R13c's
+  six budget arms added the one dimension the audit lacked: the ratio reads
+  9.21 / 9.11 / 9.12 / 9.23 / 9.58 / 9.20 against a predicted 9.00 while the
+  scheduler's token budget moves **16x**, which is what a pure denominator
+  artefact must do and what a real prefill effect could not. The two phases
+  prefill at the same rate to within 4% and **no prefill speedup exists anywhere
+  in this campaign's data, at any depth, concurrency or budget, and there never
+  was.** Two of the pairs are the prefix-caching-OFF arms and they do not move,
+  which is an independent proof that the cache never hits — **the archives were
+  carrying proof that prefix caching never hits, in the very column the campaign
+  was reading as proof that it did.** Full audit later in this file.
+  **AND THE MOST DANGEROUS MISREADING OF THIS CORRECTION IS DISARMED THERE:** the
+  obvious move on learning that `pp2048` is charged 2048 tokens for `depth + 2048`
+  of real work is to rescale our prefill figures and declare the six prefill
+  losses void. That is wrong — the board's entries come through the same
+  llama-benchy CSV and carry the identical understatement, so the artefact
+  cancels. **The prefill cells remain losses at exactly the recorded margins.**
 
 ### The depth curve, as finally measured
 
@@ -3957,9 +4079,31 @@ the largest single batch the campaign has retired at once:**
     their own tuning?" They are not prefix-caching phases and the cache never
     hits. The cells stay worth winning; the framing is dead.
 
+**Added by R13 and R13c. Three more, and the first is the campaign's central
+mechanism:**
+
+16. **"The `c>1` gap is admission stagger, and it is 83-93% of what remains"** —
+    R10 through R12, the campaign's explanation for every `c>1` result it had.
+    **Refuted by R13 with the instrument.** At `mnbt 98304` the scheduler reads
+    `Waiting: 0` in 100% of loaded samples and the span ratio barely moves (1.70
+    → 1.54 at c5). R13c confirmed it independently: the span keeps tightening
+    between 32768 and 65536 with nothing waiting at either, then hits a floor of
+    ~1.50 that no budget touches. The ratio is real and it is charged to the
+    metric; **calling it admission is what is withdrawn.** No replacement
+    mechanism is asserted — MTP acceptance dispersion is a candidate, not a
+    finding.
+17. **"`tg128 @ d16384 c4` is 3.74x and `ctx_tg @ d16384 c4` is 6.16x"** — R13,
+    superseded by R13c the same night. Same configuration, second engine start,
+    pooled 14-run medians: **3.67x** and **6.15x**. The margins survive; the
+    decimals were a single draw.
+18. **"Each new `max_num_batched_tokens` value costs a full torch.compile
+    rebuild"** — R13's cost note, corrected by R13c at no cost. Start time tracks
+    the **size** of the budget, not its novelty. Sweeping the flag is affordable.
+
 Note what is NOT on this list: **any board margin.** Both sides of every `ctx_`
 comparison are Phase 1 against Phase 1, so the standings are untouched at 8 won
-/ 12 lost. Item 7's premise also failed retrospectively — "removing prefill
+/ 12 lost — and R13c's protection sweep then held all six `c4` rows in place from
+separate engine starts. Item 7's premise also failed retrospectively — "removing prefill
 removes the variance" was retired for breaking three times, and it turns out
 nothing was being removed.
 
@@ -3982,22 +4126,37 @@ round agent's own accounting; R1, R2 and R5b did not record theirs.
 | R9 | 442.5 s | 3 (1 refused to start) | ~70k | the deficit confirmed within one invocation; the mechanism proved untestable by the obvious route; **the token budget discovery** | **yes, accidentally** — nothing it set out to do worked, and its by-product is the campaign's biggest lever |
 | R9b | 440.4 s | 2 | ~85k | R4's mechanism refuted; prefix caching never hits; the phase labels are backwards | **yes** — most expensive in tokens, zero claimable cells, and two corrections that reach every `ctx_` row |
 | R10 | 923.4 s | 1 | ~75k | units settled from source; c4 1.13x -> 3.15x; c16 gate halved | **best standings round** — and its largest result cost no box time at all |
-| R12 | 359 s | 1 | ~65k | c2 and c5 transformed; the gap priced as 83-93% stagger | **yes** — the decomposition is worth more than either cell |
+| R12 | 359 s | 1 | ~65k | c2 and c5 transformed; the gap priced as 83-93% stagger | **yes** — the decomposition is worth more than either cell, even though R13 then refuted the "stagger" label on it |
+| **R5c** | **0 s** | **0** | ~25k | the board-metric question closed against 34 archived records; the stagger proxy's validity limit found | **yes, free** — no box, no re-scrape, and it corroborated R10's source read from a second direction |
+| **R13** | 490.1 s | 1 | ~85k | c4 to a claimed 3.74x and a record 6.16x; c5 to 0.73x and still lost; **the stagger model refuted with the occupancy log** | **yes, and not for the reason it ran** — it failed to take its target cell and its most valuable output is the refutation of the campaign's own mechanism |
+| **ctx-CORRECTION** | **0 s** | **0** | not recorded | every `ctx_` row audited; the token-count error measured at 29 of 30 pairs; six claims withdrawn | **yes, free, and the largest single retraction batch of the campaign** — it reaches every `ctx_` row ever written |
+| **R13c** | 1353.5 s | 6 | ~90k | all six `c4` headline rows protected and standing; two tightened to pooled 14-run medians; **the budget curve and its knee at 65536**; the ~2% single-measurement error bar | **the campaign's best round on evidence per second** — it is the only systematic protection sweep, it told R11 which value to fold, and it corrected two of R13's own notes |
 
-**Totals:** ~4,460 s of measurement grid time (≈74 minutes) across 19 engine
+**Totals:** ~6,300 s of measurement grid time (≈105 minutes) across 26 engine
 starts, of which two produced nothing (R5's aborted invocation, R9's arm B that
-refused to start). Roughly 4-5 hours of box wall clock. ~595k harness tokens
-across the ten rounds that recorded them. Twenty board cells scored.
+refused to start). Roughly 6-7 hours of box wall clock. ~795k harness tokens
+across the thirteen entries that recorded them (R1, R2, R5b and the `ctx_`
+correction pass did not). Twenty board cells scored, eighteen win
+rows and twelve loss rows carried. **Zero arena submissions — there is no login
+and none was ever attempted.**
 
 **The pattern in that table is the campaign's most reusable cost lesson: the
 cheapest rounds were the most valuable ones.** R6 (124 s) and R8 (322 s) each
-corrected a headline figure. The two single largest results — what
-`tg_throughput` measures, and that prefix caching never hits — **cost zero box
-time**, and came from reading llama-benchy's source and a counter that was
-already in the engine log. Meanwhile the most expensive round by box time (R5)
-and the most expensive by tokens (R9b) produced no claimable cell between them.
-**Read the instrument before spending the box.** This queue under-scheduled
-control rounds and source-reading for nine rounds running.
+corrected a headline figure. **Three of the campaign's four largest results cost
+ZERO box time** — what `tg_throughput` measures (R10, from the source), that
+prefix caching never hits and the phases are labelled backwards (R9b + the
+correction pass), and the board-metric closure (R5c) — and all three came from
+reading the instrument or re-reading the archives rather than running the box.
+Meanwhile the most expensive round by box time (R5) and the most expensive by
+tokens (R9b) produced no claimable cell between them. **Read the instrument
+before spending the box.** This queue under-scheduled control rounds and
+source-reading for nine rounds running.
+
+**The one place box time was unambiguously well spent is R13c**, and it is the
+counter-example worth keeping: 22 minutes of grid time plus 18 of engine starts
+bought a protection sweep on six published figures, a six-point curve that
+retired R13's own fold value, and the campaign's only *measured* error bar. A
+campaign that publishes figures should budget one round like this per dozen.
 
 ### OBSERVATIONS — campaign-wide sweep (per the `observe` skill)
 
@@ -4005,15 +4164,15 @@ Wider scopes (`stack:`, `box:`, `family:`, `model:`) were recalled before this
 pass; most per-round facts were already stored by the round agents and are not
 re-stored here. What follows is what was new at campaign level.
 
-**Hardware.** Eleven telemetry sessions across nine rounds agree: SM clock **2392-2398 MHz** median against a reported 3003 MHz ceiling, ≤79 °C, ≤97.3 W, under every load the campaign produced — from a 7-minute shallow grid to 16-way concurrency to a 400-second d131072 run. The clock never moved with temperature or load. R1's outlying 2554 MHz is a bad reading, outnumbered ten to one. *Surprise: none left — this is the campaign's most reproduced fact.* *Headroom: the box runs at 80% of its clock ceiling by policy; if that policy is a fleet-wide arena condition then it is not headroom at all, and if it is local then ~20% of decode is sitting on the table. Nobody has established which, and changing it is Mat's call, not the loop's.* *Blindness: no memory-bandwidth counter was ever sampled — every bandwidth argument in twelve rounds is arithmetic, never measurement, which is precisely why the naive depth model went unchecked for so long.*
+**Hardware.** Telemetry sessions across every round that sampled it agree — eleven at the round-12 checkpoint, and R13 and R13c added more without breaking the run: SM clock **2392-2398 MHz** median against a reported 3003 MHz ceiling, ≤79 °C, ≤97.3 W, under every load the campaign produced — from a 7-minute shallow grid to 16-way concurrency to a 400-second d131072 run. The clock never moved with temperature or load. R1's outlying 2554 MHz is a bad reading, outnumbered ten to one. *Surprise: none left — this is the campaign's most reproduced fact.* *Headroom: the box runs at 80% of its clock ceiling by policy; if that policy is a fleet-wide arena condition then it is not headroom at all, and if it is local then ~20% of decode is sitting on the table. Nobody has established which, and changing it is Mat's call, not the loop's.* *Blindness: no memory-bandwidth counter was ever sampled — every bandwidth argument in twelve rounds is arithmetic, never measurement, which is precisely why the naive depth model went unchecked for so long.*
 
-**System.** `sparkrun` cannot clear the page cache (no passwordless sudo), so every round in the campaign carries the same uncontrolled cold-read state. Uniform across rounds, so it biases nothing between them, but it is a floor on how quiet any single measurement can be and it is not measured. Image epoch was pinned and identical (`dgx-vllm-eugr-nightly:2026082102`) in all twelve rounds — checked per round in `state.yaml`, which is what makes any cross-round comparison legitimate at all. Note the console line saying it is distributing `:latest` is not evidence of an epoch change; `container_image_longterm_ref` is the field to read.
+**System.** `sparkrun` cannot clear the page cache (no passwordless sudo), so every round in the campaign carries the same uncontrolled cold-read state. Uniform across rounds, so it biases nothing between them, but it is a floor on how quiet any single measurement can be and it is not measured. Image epoch was pinned and identical (`dgx-vllm-eugr-nightly:2026082102`) in all thirteen rounds, R13c's six invocations included — checked per round in `state.yaml`, which is what makes any cross-round comparison legitimate at all. Note the console line saying it is distributing `:latest` is not evidence of an epoch change; `container_image_longterm_ref` is the field to read.
 
-**Serving stack.** The flag space is far more coupled than the campaign assumed: `--enable-prefix-caching` moves **four** things at once (`mamba_cache_mode`, the chunked-prefill requirement, `mamba_block_size`, and caching itself), and R9 spent an engine start discovering one of those the expensive way. R9b's practice — grep the validators out of the pinned image with a throwaway `docker run --rm --entrypoint bash` before writing the hypothesis — cost two minutes and cleared both arms in advance. Make it the default. *Headroom: `max_num_batched_tokens` is a live and largely unexplored axis; the campaign has measured 8192 and 32768 only, and at c16 even 32768 leaves the gate half-closed (`Running` 11 of 16). A proper curve over 16384/32768/65536/131072 at one concurrency has never been run.* *Blindness: the scheduler log is the primary occupancy instrument and it was LOST in two of the four rounds that planned to use it; the working command is now proven (`docker exec <container> tail -f /tmp/sparkrun_serve.log`, verified live with `grep -c 'Running:'`).*
+**Serving stack.** The flag space is far more coupled than the campaign assumed: `--enable-prefix-caching` moves **four** things at once (`mamba_cache_mode`, the chunked-prefill requirement, `mamba_block_size`, and caching itself), and R9 spent an engine start discovering one of those the expensive way. R9b's practice — grep the validators out of the pinned image with a throwaway `docker run --rm --entrypoint bash` before writing the hypothesis — cost two minutes and cleared both arms in advance. Make it the default. *Headroom, UPDATED by R13c: `max_num_batched_tokens` was the campaign's largest unexplored axis and it has now been curved at c4 over six values, 8192 to 131072 — **the knee is 65536** and nothing above it buys anything. What remains unexplored is the same curve at OTHER concurrencies: at c16 even 32768 leaves the gate half-closed (`Running` 11 of 16) and sixteen d16384 prefills would need 262144, so the knee must move with `c` and nobody has measured where. A sweep is also cheaper than R13 warned — start cost tracks budget SIZE, not novelty, ~110–190 s across 8192–98304.* *Blindness: the scheduler log is the primary occupancy instrument and it was LOST in two of the four rounds that planned to use it; the working command is now proven (`docker exec <container> tail -f /tmp/sparkrun_serve.log`, verified live with `grep -c 'Running:'`).*
 
 **Model.** MTP acceptance is now measured against depth (R5), concurrency (R7), the token budget (R10), prefix caching and chunked prefill (R9b). It moves with **depth** and it moves with **concurrency**; it does **not** move with any scheduler knob — flat at 2.85-3.09 acceptance length and 61.7-69.8% across every scheduling change tested, in four consecutive rounds. That is a genuinely useful negative: **MTP acceptance is ruled out as an explanation for anything the scheduler does on this model**, which is why every c>1 result in this campaign resolves to admission behaviour. *Headroom, and it is the largest un-taken lever in the campaign: acceptance collapses from 93.6% to 47.7% between d16384 and d131072, and with `num_speculative_tokens=3` halving acceptance roughly halves tokens per verify step. The MTP module ships BF16 in every Qwen3.6-35B quant arm, so it is a full-precision draft head being asked to draft over long contexts. Calibrating or fine-tuning it on long-context text is a quality-neutral throughput lever — needs a training-infra decision, and is out of scope for this loop.*
 
-**Workload and measurement.** The benchmark did not measure what the campaign thought, in three separate ways, and each was found by reading rather than by benchmarking: `tg_throughput` is a batch aggregate charged for admission stagger (R10); the `ctx_`/cold phase labels are inverted and the two phases are charged different token counts (R9b); prefix caching never hits (R9b). *Surprise: the headline metric is a **scheduling** measurement wearing a throughput's units — R12 moved it +67.6% at c2 while the sustained hardware ceiling moved -0.5%.* *Blindness, and this is the sharpest one left: the prefill cells. Our `pp2048 @ d32768 c1` reads 295.71 against 4644.54 for another vLLM NVFP4 entry in the same board cell — a 15x gap — while our decode rate sits within 3% of what a like-for-like incumbent's headline requires. A 15x like-for-like gap in one metric family and a 3% gap in another is the signature of a definition mismatch, not of a slow box, and nobody has read `pp_throughput`'s definition or the board's prefill test-type mapping.*
+**Workload and measurement.** The benchmark did not measure what the campaign thought, in three separate ways, and each was found by reading rather than by benchmarking: `tg_throughput` is a batch aggregate charged for admission stagger (R10); the `ctx_`/cold phase labels are inverted and the two phases are charged different token counts (R9b); prefix caching never hits (R9b). **A fourth was added after this pass: what the campaign called "admission stagger" is not admission (R13's `Waiting: 0`, confirmed by R13c's curve), so the mechanism behind three rounds of `c>1` interpretation was wrong as well as the units.** *Surprise: the headline metric is a **scheduling** measurement wearing a throughput's units — R12 moved it +67.6% at c2 while the sustained hardware ceiling moved -0.5%, and R13c reproduced that shape across a whole curve (`tg` +233%, `peak_thr` +14%).* *Blindness, and this is the sharpest one left: the prefill cells. Our `pp2048 @ d32768 c1` reads 295.71 against 4644.54 for another vLLM NVFP4 entry in the same board cell — a 15x gap — while our decode rate sits within 3% of what a like-for-like incumbent's headline requires. A 15x like-for-like gap in one metric family and a 3% gap in another is the signature of a definition mismatch, not of a slow box, and nobody has read `pp_throughput`'s definition or the board's prefill test-type mapping.*
 
 **Process and cost.** Covered in the ledger above. One addition: the campaign's own predictions got sharply better once they were built by **decomposing the metric** rather than by scaling the previous round's percentages — R12 was the first round where both headline bands held, and it built them from `tg = c x tg_req / stagger`. R10 and R12 both wrote the same post-mortem: *the mechanism section was right and the numeric band was wrong, in the same document*, because the band was set by scaling while the generating model sat one paragraph above. That is a repeatable failure and it has a repeatable fix.
 
@@ -4041,7 +4200,11 @@ regularities; and one campaign `[COST]` total.
    separately **refuted by R13** at `mnbt 98304`, where Phase 1 staggers LESS at
    both arms. Both halves gone. **Do not spend a cell here and do not pose a
    third form of it.** The `ctx_` cells remain real board cells worth winning —
-   one of them, `ctx_tg @ d16384 c4`, is the campaign's widest margin at 6.16x.
+   one of them, `ctx_tg @ d16384 c4`, is the campaign's widest margin at 6.15x.
+   R13c added the last nail: the ctx-vs-Phase-2 sign is a smooth **function of
+   the token budget** that crosses zero twice (+4.8% / −19.9% / −12.6% / −4.8% /
+   −0.8% / +2.6% across the six budgets). Every round that read its local sign as
+   a rule was reading one point on a curve.
 3. **What accounts for the two thirds of the depth term the bandwidth model does
    not predict, and what makes the curve steepen?** -16.8% measured against -44.8%
    naive. MTP acceptance decay is the candidate and has never been measured
@@ -4050,21 +4213,42 @@ regularities; and one campaign `[COST]` total.
    like-for-like gap says probably not. Zero box time to check.
 5. **Does the c16 aggregate keep climbing past 16?** Still climbing at +24% (c8
    -> c16) and the gate is only half-open even at mnbt 32768. c32 is a
-   one-invocation question but should not be run until the budget question is
-   settled, or it measures the same gate again.
+   one-invocation question. R13c settled the budget question **at c4 only** — the
+   knee is 65536 there, and sixteen concurrent d16384 prefills would need 262144
+   — so a c32 or c16 round should now sweep the budget rather than fix it, and
+   should expect the knee to move with `c`.
 6. **Is the box's 80%-of-ceiling clock a fleet-wide arena condition or a local
    one?** Closed as a *measurement* question — the clock is flat policy — but the
    headroom question behind it was never asked of anyone who would know.
+7. **NEW, and it is the campaign's sharpest open mechanism. What is the span
+   ratio's ~1.50 floor made of?** For four rounds the answer was "admission
+   stagger"; R13 refuted that with `Waiting: 0` in every sample and R13c
+   confirmed it from the curve — the ratio keeps falling from 1.654 to 1.505
+   between two budgets that both hold full residency, and then stops dead. The
+   leading candidate is **MTP acceptance dispersion across the batch** (samples
+   span 2.77-4.00, a 1.44x spread against a measured 1.54), and it is a
+   candidate, not a finding. Settling it needs per-request acceptance rather than
+   the batch mean the engine log prints — **that is R13b**, and nobody has
+   established the measurement is even available.
+8. **NEW. Are single measurements in this campaign systematically ~2% high, and
+   if so why?** Six of six protected rows reproduced low, mean −1.94%, p ≈ 3% on
+   a coin. Decode-side session effect and first-measurement bias are both live
+   and R13c could not separate them. The `pp2048` control cannot decide it —
+   `pp` is prefill. A cheap test exists: re-run one arm at a different time of
+   day and see whether the sign follows the clock or the ordinal.
 
 ### What to run next, in priority order
 
-1. **R11 — the fold decision.** Re-measure `tg128 @ d16384 c1, runs=7, -o
-   max_num_batched_tokens=32768` and compare against the pooled 112.62 anchor. If
-   c1 is unchanged within noise, fold the flag into `recipe.yaml` and restate the
-   c4 win as the campaign's headline; if it moves, the flag stays a per-round
-   mutation and every `c>1` row keeps naming its configuration. **A verified 2.8x
-   on our most contested cell is waiting behind this, and four headline figures
-   currently sit outside the recipe.** ~120 s of grid time.
+1. **R11 — the fold decision, and R13c has told it which value to test.**
+   Re-measure `tg128 @ d16384 c1, runs=7, -o max_num_batched_tokens=65536` — **not
+   32768 and not 98304** — and compare against the pooled 112.62 anchor. 65536 is
+   the knee: it reaches the c4 ceiling and is the cheapest budget that does, so it
+   is the only value worth folding. If c1 is unchanged within noise, fold the flag
+   into `recipe.yaml` and restate the c4 win as the campaign's headline; if it
+   moves, the flag stays a per-round mutation and every `c>1` row keeps naming its
+   configuration. **A verified 3.3x on our most contested cell is waiting behind
+   this, and TEN of eighteen win rows currently sit outside the recipe.** ~120 s
+   of grid time, ~185 s of engine start.
 2. **The prefill metric check — zero box time.** Read llama-benchy's
    `pp_throughput` definition and the board's prefill test-type mapping. The last
    two times someone read the instrument instead of inferring from it, the
@@ -4081,42 +4265,86 @@ regularities; and one campaign `[COST]` total.
    mamba_block_size=16`. Check the validators from the image first. If `tg`
    returns toward 143 the effect is the block size and prefix caching is a red
    herring.
-4. **R13 — c5 at `max_num_batched_tokens 81920`.** The only cell with a live
-   route to a win: c5's gap is 93% admission stagger, and 81920 admits the whole
-   5-request batch in one step, the configuration that gave c2 its 1.13 stagger.
-   Needs `-o max_model_len=81920` as a second mutation; state the discriminator
-   (does `tg_req` lift when the prefill stops being split?) before running.
-5. **R8c — re-measure `ctx_tg @ d32768 c1` and its cold arm at runs=7.** The
+4. **R13d — repeat `ctx_tg @ d16384 c4` at `mnbt 131072`.** The cheapest
+   scoreable round left: one arm, runs=7, ~190 s of grid. R13c measured **175.40
+   = 6.34x** there, wider than the campaign's title-holding 6.15x, and
+   **deliberately did not promote it** because it is a single 7-run median at a
+   config measured once and its two neighbours above the knee read 168.37 and
+   164.95. Either the repeat confirms a new widest margin or it retires a
+   flattering draw before it is claimed. Both outcomes are worth the arm.
+5. **R8c — re-measure `ctx_tg @ d32768 c1` and its Phase-2 arm at runs=7.** The
    -27% inversion is the only surviving deep inversion and it is a 3-run figure
    from the instrument that has since failed at two other depths. Cheap.
 6. **R8b's acceptance-vs-depth measurement**, riding along with any deep round —
    d16384 and d65536 under one engine start with the engine log captured. It is
    the missing half of open question 3 and it costs nothing extra now that the
-   capture command is proven.
+   capture command is proven (`docker exec <container> tail -f
+   /tmp/sparkrun_serve.log`; `docker logs -f` does NOT work on this image and
+   cost R12 its occupancy instrument).
+7. **R13b — per-request MTP acceptance at `c>1`.** The only live candidate for
+   open question 7, the ~1.50 span floor. Establish first whether per-request
+   acceptance is available at all from the engine log; if it is only the batch
+   mean, say so and close the question as unmeasurable rather than running a
+   round that cannot answer it.
+
+**R13 as originally queued — "c5 at `max_num_batched_tokens 81920`" — is DONE
+and it did not take the cell.** It ran at 98304, reached 0.73x, and its premise
+(c5's gap is 93% admission stagger) has since been withdrawn. Do not re-pose it.
 
 Not worth running: anything at d131072 (~8x R3's box time, the cell is lost and
-was never tunable within the campaign's rules); c32 before the budget question is
-settled; and any further round premised on the `ctx_` rows being the cached pass.
+was never tunable within the campaign's rules); any further budget increase at c4
+(the curve knees at 65536 and 131072 buys −1.4%); any round premised on the
+`ctx_` rows being the cached pass; and any round premised on admission stagger
+being the `c>1` mechanism. **And nothing is ever submitted to the arena — there
+is no login.**
 
 ### HANDOFF
 
-A new session should start here, and then read **THE `ctx_` PHASE-LABEL
-CORRECTION** at the very end of this file before touching any `ctx_` figure —
-it post-dates this synthesis and retires five more claims. The state is: `recipe.yaml`
-**untouched** and identical to the one the campaign opened with; twelve rounds
-archived under `experiments/`; `RESULTS.md` carrying eight won cells, twelve lost and
-the unscoreable remainder, with every row naming its configuration; four headline
-figures depending on mutations that are deliberately not in the recipe; and one
-image epoch throughout, so every number in the file is comparable to every other.
-The single most consequential thing outstanding is **R11**, because it decides
-whether the token-budget lever — the largest effect the campaign found, worth
-1.13x -> 3.15x on our best contested cell — becomes the config or stays a
-footnote. Run it first, before any new cell. Then spend the zero-box-time items
-(the prefill metric check) while the next benchmark runs, because this campaign's
-record is unambiguous that reading the instrument beats measuring around it. And
-carry the one rule that would have saved the most rounds: **put the compared
-quantities under one engine start, declare the thresholds before the run, and
-treat any flattering figure that was never repeated as too high.**
+**Start here and stop here — this revised synthesis is the whole handoff, and it
+now post-dates every round block including the `ctx_` correction and R13c. You do
+not need to read them.**
+
+**The state.** `recipe.yaml` is **untouched** and identical to the one the
+campaign opened with. Thirteen rounds plus three no-box-time passes are archived
+under `experiments/`. `RESULTS.md` carries **8 won cells over 18 rows, 12 lost,
+and the unscoreable remainder**, every row naming its configuration and every
+retired figure marked as retired. **Ten of the eighteen win rows depend on
+mutations that are deliberately not in the recipe.** One image epoch throughout
+(`dgx-vllm-eugr-nightly:2026082102`), so every number in the file is comparable
+to every other. Nothing has ever been submitted to the arena and nothing should
+be — there is no login.
+
+**Pick up at R11, and run it at `max_num_batched_tokens 65536`.** It is the
+single most consequential thing outstanding, because it decides whether the
+token-budget lever — the largest effect the campaign found, worth 1.13x → 3.71x
+on our best contested cell — becomes the config or stays a footnote. R13c removed
+its only real uncertainty by curving the budget: **65536 is the knee**, 32768 is
+short of it and 98304 buys nothing beyond it, so R11 has one value to test rather
+than three. Run it before any new cell. Then **R13d**, which is one arm and either
+confirms a new widest margin or retires a flattering draw before anyone claims it.
+Then spend the zero-box-time item — the prefill metric check, open question 4 —
+while the next benchmark runs, because this campaign's record on that is
+unambiguous: **three of its four largest results cost no box time and came from
+reading the instrument.** The fourth is still sitting unread in
+`pp_throughput`'s definition.
+
+**Carry these four rules, in this order.** (1) Put the compared quantities under
+one engine start; declare the resolution budget and reading thresholds before the
+run. (2) Read the instrument's source before spending the box. (3) Treat any
+flattering figure that was never repeated as too high — this campaign retired
+four such figures and **all four were high**, and R13c put the residual bias at
+~2% even on figures that stand. (4) Schedule a protection round: re-measure your
+published figures from a separate engine start against a pre-declared band, and
+pool same-config repeats instead of picking the better draw.
+
+**And carry the campaign's honesty, because it is the point.** This campaign
+retired two of its own widest wins (R1's 4.60x, R3's 6.56x), withdrew its central
+`c>1` mechanism after four rounds of building on it, discovered its two
+measurement phases had been labelled backwards since round one, found that the
+prefix caching it credited for its concurrency gains never once engaged, and
+declined to promote a wider margin it had already measured. None of that is
+tidied away above and none of it should be. **The standings survived all of it at
+8 won and 12 lost, which is the reason to trust them.**
 
 ---
 
@@ -5311,3 +5539,18 @@ which is still the campaign's widest), the budget response was curved for the
 first time and knees at 65536 — so R13's 98304 buys nothing and R11's fold value
 is 65536 — and six-for-six low reproductions put a measured ~2% error bar on
 every figure this campaign has taken exactly once.**
+
+---
+
+## WHERE THE HANDOFF IS
+
+**This is the end of the round log, not the end of the campaign's conclusions.**
+The authoritative handoff is the **`CAMPAIGN SYNTHESIS — the whole campaign, R1
+through R13c`** section above, revised 2026-08-22 to cover everything below it:
+R5c, R13, the `ctx_` phase-label correction and R13c. It is the only synthesis in
+this file and it must stay the only one — revise it, never append a second.
+
+Short version for anyone who reads nothing else: **8 board cells won, 12 lost,
+nothing submitted to the arena and nothing ever will be. Widest margin 6.15x
+(`ctx_tg @ d16384 c4`, on a mutation). The token budget is the campaign's big
+lever and its curve knees at 65536. Pick up at R11, run it at 65536.**
