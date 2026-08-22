@@ -23,11 +23,30 @@ Cells taken, best figure we have, against the board:
 | ctx_tg128 @ d65536 c1 | 89.76 | 20.70 | **4.34x** |
 | tg128 @ d16384 c2 | 84.00 | not scraped | cannot be scored |
 | tg128 @ d16384 c5 | 48.12 | not scraped | cannot be scored |
+| **tg128 @ d131072 c1** | **77.13** | **81.60** | **0.95x — LOST** |
 
-Six cells taken. Round 4's two new cells (c2, c5) are measured but unscoreable:
-the board was never scraped cleanly at those concurrencies, so there is no
-incumbent to compare against and none has been invented. Scraping them is now
-part of R5b.
+Six cells taken, and **round 5 is the campaign's first LOSS**: tg128 @ d131072 c1
+came in at median 77.13 against Nemotron Lightning NVFP4's 81.60 — short by 5.5%.
+That cell was queued as a probable loss, run once for the depth curve, and was
+deliberately NOT tuned for; the recipe is unchanged. It is recorded here as a
+loss and should be read as one. (One of the three runs, 89.39, did clear 81.60 at
+1.10x, but the median is the verdict and the median lost.)
+
+Round 4's two cells (c2, c5) are measured but unscoreable: the board was never
+scraped cleanly at those concurrencies, so there is no incumbent to compare
+against and none has been invented. Scraping them is now part of R5b.
+
+The depth curve at tg128 c1, which is what R5 actually bought:
+
+| depth | ours | board top | margin |
+|---:|---:|---:|---|
+| 16384 | 102.2 | 116.03 (best vLLM NVFP4) | 0.88x — reproduction gap |
+| 65536 | 108.15 | 16.48 | **6.56x** |
+| 131072 | 77.13 | 81.60 | 0.95x — LOST |
+
+Flat from d16384 to d65536, then a 29% fall to d131072. The depth term finally
+bites, and it bites between d65536 and d131072 — the first genuine decline the
+campaign has measured on any axis.
 
 ## Concurrency curve at tg128 @ d16384 (round 4's actual result)
 
@@ -85,6 +104,8 @@ like-for-like, but a c4 row at 52.85 is ~211 tok/s of aggregate work.
 | bench_0ef7af8997ce | 2026-08-22 | ctx_tg128 @ d16384 c5 (max_num_seqs 4) | 48.18 | 0.31 | 9914.85 | not scraped | hold — above cold (+5.7%) |
 | bench_858173ba5753-mns5 | 2026-08-22 | tg128 @ d16384 c5 (MUTATION max_num_seqs 5) | 48.12 | 0.07 | 12088.40 | not scraped | hold — best c5 figure; +5.5% over the unmutated arm; mutation NOT kept in recipe.yaml |
 | bench_858173ba5753-mns5 | 2026-08-22 | ctx_tg128 @ d16384 c5 (MUTATION max_num_seqs 5) | 51.25 | 0.26 | 9850.01 | not scraped | hold — above cold (+6.5%) |
+| bench_076db52d341c | 2026-08-22 | tg128 @ d131072 c1 | 77.13 | 7.17 | 48102.89 | 81.60 | **LOSS — 0.95x, short by 5.5%**; runs 72.37 / 89.39 / 77.13, best run alone would have won at 1.10x. Not tuned for, by design |
+| bench_076db52d341c | 2026-08-22 | ctx_tg128 @ d131072 c1 | 76.66 | 10.16 | 46770.69 | not scraped | hold — level with cold (-0.6%), and NOISIER than cold (σ 13.3% vs 9.3%): first round where the ctx_ phase is the noisy one |
 
 ## Prefill cells (pp2048)
 
@@ -113,3 +134,5 @@ the cached prefix and sit an order of magnitude higher.
 | bench_0ef7af8997ce | 2026-08-22 | ctx_pp2048 @ d16384 c5 (max_num_seqs 4) | 5236.80 | 38.23 | 9914.85 | not scraped | hold — also depressed vs 5810-5967 elsewhere at this depth |
 | bench_858173ba5753-mns5 | 2026-08-22 | pp2048 @ d16384 c5 (MUTATION max_num_seqs 5) | 640.21 | 1.68 | 12088.40 | not scraped | hold — mutation restores prefill to the c2/c4 level |
 | bench_858173ba5753-mns5 | 2026-08-22 | ctx_pp2048 @ d16384 c5 (MUTATION max_num_seqs 5) | 5869.43 | 16.83 | 9850.01 | not scraped | hold — likewise restored |
+| bench_076db52d341c | 2026-08-22 | pp2048 @ d131072 c1 | 42.59 | 0.02 | 48102.89 | not scraped | hold — 0.359x of d65536, steepening again (0.50x, then 0.40x, now 0.36x per doubling); campaign's tightest measurement, σ 0.05% |
+| bench_076db52d341c | 2026-08-22 | ctx_pp2048 @ d131072 c1 | 2803.17 | 2.43 | 46770.69 | not scraped | hold — 0.70x of d65536, the steepest fall in the cached-prefill series |
