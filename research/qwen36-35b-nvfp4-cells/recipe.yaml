@@ -29,8 +29,22 @@ description: Qwen3.6-35B-A3B-NVFP4 single-node (de-rayed from @eugr recipe)
 name: Qwen3.6-35B-A3B-NVFP4-solo
 defaults:
   port: 8000
-  max_num_batched_tokens: 8192
+  # FOLDED BY R11 (2026-08-22): was 8192 for rounds R1-R13d.
+  # 65536 is the knee of the token-budget curve measured at c4 by R13c — 8192 ->
+  # 65536 is +233% on `tg128 @ d16384 c4` and 65536 -> 131072 is -1.4%, i.e.
+  # nothing. R11 measured the c1 anchor at this value to check the change is
+  # inert where the campaign's baselines live: `tg128 @ d16384 c1` reads 112.92
+  # against the 112.62 anchor (+0.27%) and the Phase-1 partner is inside its own
+  # noise, so no c1 baseline moves and no depth-curve point is invalidated.
+  # THIS IS A CONFIG EPOCH BOUNDARY: every RESULTS.md row labelled "mnbt 8192
+  # (pre-fold recipe)" was measured BEFORE this change and is not reproducible
+  # from this file. See RESULTS.md and the Round 11 outcome in journal.md.
+  max_num_batched_tokens: 65536
   max_model_len: 32768
   gpu_memory_utilization: 0.8
+  # NOT folded. R11 changed ONE flag. The c4 rows at mnbt 65536 were measured at
+  # max_num_seqs 5; at c4 the width is worth <=2.9% (mnbt 32768 measured at
+  # mns 4/5/16 reads 143.08/143.83/147.25) and mns 4 reaches full residency at
+  # c4, but `mnbt 65536 + mns 4` has not itself been measured.
   max_num_seqs: 4
   host: 0.0.0.0
