@@ -1091,6 +1091,40 @@ effect; what is left at c1 needs a smaller cause. Candidate, not a finding: at
 three, and a single 18432-token forward pass looks marginally less efficient per
 token than three chunked ones — `pp2048` agrees in sign and size (−0.8%).
 
+### R9c — the prefix-caching mechanism round: four arms, four engine starts, `mnbt 32768` + `mns 4`, runs=7 each
+
+**CONFIGURATION BEHIND EVERY ROW BELOW, stated because the recipe changed under
+this round:** `max_num_batched_tokens 32768` (**pinned by the arm recipes, NOT
+the shipped 65536** — these arms deliberately reproduce R9/R9b's condition
+across the R11 fold), `max_num_seqs 4`, `max_model_len 32768`, image
+`dgx-vllm-eugr-nightly:2026082102`. Arms P and G run
+`--enable-prefix-caching`; arm N runs `--no-enable-prefix-caching`; arm G adds
+`--block-size 32768`. **All eight rows are NOT SCOREABLE** — two arms turn off a
+flag the recipe ships and all four sit at a budget it does not. Recipes are
+archived with each run as `recipe-r9c-*.yaml`.
+
+**All four arms are under one session, within one hour, on one idle box** — the
+round did not compare a post-fold number to a pre-fold row, it re-measured both
+endpoints. `session_count: 1` and `crash_count: 0` in all four.
+
+| benchId | date | cell / probe | tg med t/s | tg σ | ttfr ms | board top | verdict |
+|---|---|---|---:|---:|---:|---:|---|
+| **bench_30d6586cc70a-p-pc-on** | 2026-08-22 | tg128 @ d16384 c4 (**ARM P — prefix caching ON, `mamba_block_size` 2144**) | **146.32** | 4.17 | 11853.9 | **NOT SCOREABLE** | **THE CONTROL, AND IT REPRODUCES: +2.27% on R9 A1's 143.08** from a separate engine start four hours later. span ratio **1.607** (R9: 1.618, −0.7%), `tg_req` 58.78, `peak_thr` **287**, ttfr within-batch spread **1516 ms**. Scheduler `(4,0)` in **13 of 14** loaded samples — full residency. `Prefix cache hit rate: 0.0%` in 22 of 22 samples. ⚠ **The first same-cell repeat in the campaign to reproduce HIGH**, against a run of 8 low — see open question 8 |
+| **bench_107f95223a60-n-pc-off** | 2026-08-22 | tg128 @ d16384 c4 (**ARM N — prefix caching OFF, `mamba_cache_mode none`, `mamba_block_size` 32768**) | **60.60** | 0.97 | 11762.1 | **NOT SCOREABLE** | **THE OTHER CONTROL, AND IT ALSO REPRODUCES: −2.46% on R9b arm A's 62.13.** span ratio **3.346** (R9b: 3.315), `tg_req` 50.68, `peak_thr` **289 — 0.7% from arm P's 287**, ttfr spread **6269 ms**. **So the prefix-caching effect is 146.32 vs 60.60 = 2.414x on 14 runs**, and the decomposition closes exactly: `tg` ratio 2.415 = `tg_req` ratio 1.160 x span ratio 2.082 — **83% batch span, 17% per-request decode**. ⚠ **NOT at full residency: `(3,1)` in 7 of 13 loaded samples** with 3.34M tokens of KV free, so this row is doing double duty as a queueing figure and the stagger proxy does not strictly hold on it |
+| **bench_76bccce3d8b3-g-block32768** | 2026-08-22 | tg128 @ d16384 c4 (**ARM G — prefix caching ON + `--block-size 32768`, so `mamba_block_size` 32768**) | 54.05 | 0.77 | 9462.5 | **NOT SCOREABLE** | the first of two G runs. ⚠ **Its engine-log capture FAILED (three lines)** — see the repeat below and the journal's capture section. Gate evidence for this run rests only on its agreement with the repeat |
+| **bench_76bccce3d8b3-g-block32768-repeat** | 2026-08-22 | tg128 @ d16384 c4 (**ARM G, repeat**) | **53.07** | 0.49 | 9514.3 | **NOT SCOREABLE** | **THE ROUND'S PRIMARY MEASUREMENT, AND IT LANDS OUTSIDE EVERY BAND THE HYPOTHESIS ALLOWED** — 53.07 against 60–80 under `H_gran` and 130–150 under `H_align`. **Pooled 14-run median with the run above: 53.46.** Reproduces run 1 at −1.81%; span ratio **2.184 vs 2.183 — identical to three decimals**. **`R_span` = 2.184/1.607 = 1.359, inside the pre-declared dead zone (confirm >1.70, refute <1.25), so `H_gran` is NEITHER CONFIRMED NOR REFUTED** and neither is claimed. **AND THE ARM IS CONFOUNDED:** `'block_size': 32768` took (gate passes, the `interface.py:911` 2144 line is absent) but KV capacity collapsed **3,071,735 → 395,264 tokens**, max concurrency 93.74x → **12.06x**, and residency fell to `(4,0)` in only **6 of 16** samples. Its loss decomposes as **70% per-request decode, 30% span** — the *opposite* shape to arm N's. `peak_thr` 286 passed its gate throughout, so **that gate does not detect a memory-layout change** |
+| **bench_30d6586cc70a-p-pc-on** | 2026-08-22 | ctx_tg128 @ d16384 c4 (**ARM P**, Phase 1) | 123.92 | 0.90 | 10312.4 | **NOT SCOREABLE** | hold — Phase 1 partner. span ratio 1.827, `peak_thr` 280, ttfr spread 2005 ms |
+| **bench_107f95223a60-n-pc-off** | 2026-08-22 | ctx_tg128 @ d16384 c4 (**ARM N**, Phase 1) | 70.91 | 1.82 | 10365.9 | **NOT SCOREABLE** | hold — reproduces R9b arm A's 70.90 to **0.01%**, the tightest cross-invocation agreement in the campaign after R11's `ctx_pp` pair. span ratio 2.728, `peak_thr` 286, ttfr spread 5066 ms |
+| **bench_76bccce3d8b3-g-block32768** | 2026-08-22 | ctx_tg128 @ d16384 c4 (**ARM G**, Phase 1) | 58.65 | 0.56 | 8243.8 | **NOT SCOREABLE** | hold — span ratio 2.075, `peak_thr` 280, ttfr spread 6551 ms |
+| **bench_76bccce3d8b3-g-block32768-repeat** | 2026-08-22 | ctx_tg128 @ d16384 c4 (**ARM G, repeat**, Phase 1) | 58.50 | 0.59 | 8281.9 | **NOT SCOREABLE** | hold — reproduces run 1 to **−0.26%**, span ratio 2.070 vs 2.075. The Phase-1 partner is the steadiest quantity in the round |
+
+**What these rows are for, in one line:** they do not move a standing; they price
+`--enable-prefix-caching` at **2.414x of the board metric, 83% of it batch span
+and 0.7% of it hardware**, and they establish by source read that prefix caching,
+`mamba_cache_mode` and `mamba_block_size` **cannot be varied independently in
+this engine** — so open question 1's remaining half is a reading task, not a
+benchmark.
+
 ## Prefill cells (pp2048)
 
 pp2048 rides along in every round by default, so these were measured at no extra
@@ -1224,3 +1258,18 @@ rather than against it.
 |---|---|---|---:|---:|---:|---:|---|
 | **bench_c9518e3e96a3-r11** | 2026-08-22 | pp2048 @ d16384 c1 (**mnbt 65536 = THE FOLDED RECIPE + mns 4**, runs=7) | 629.78 | 5.32 | 3303.92 | 99229 (Atlas) — 637.09 is our own pre-fold figure | **LOST as a cell** at the recorded ~0.006x margin, unchanged and unaffected by the fold. Read here as the **session control, and it PASSES**: 629.78 sits inside the flat **623–643** d16384 series held across nine invocations, so the round's `tg` readings are not sitting on a slow session. −0.8% against R6's 634.99 — the same small negative sign as the `ttfr` rise, and the two together are the (unproven) candidate for why one 18432-token prefill step is marginally worse than three chunked ones |
 | **bench_c9518e3e96a3-r11** | 2026-08-22 | ctx_pp2048 @ d16384 c1 (**mnbt 65536 + mns 4**, runs=7, Phase 1) | **5853.81** | 80.38 | 2851.19 | 884765 (Atlas) | **LOST as a cell**, unchanged. **THE SESSION GATE, WIDENED TO ±10% PER R13d — AND IT PASSES COMFORTABLY.** Predicted 5270–6440; measured 5853.81, which reproduces R6's 5849.11 to **0.09%** and R8's 5856.93 to **0.05%** — the tightest cross-invocation reproduction of any quantity in the campaign. **R13d's advice to widen this gate rather than abandon it was correct**, and this is its first clean outing. Phase pair: `ctx_pp / pp` = **9.295** against the zero-free-parameter prediction `(depth+2048)/2048 = 9.00`, residual **+3.3%** — the **38th** archived pair and the first at c1 above mnbt 8192, so the phase-label audit now stands at **37 of 38 pairs across five depths, eight token budgets and five concurrencies** |
+
+### R9c — the prefill rows, four arms at `mnbt 32768` + `mns 4`
+
+Same configuration caveat as the R9c generation rows above: `mnbt 32768`
+(**pinned, not the shipped 65536**), `mns 4`, `max_model_len 32768`, image
+`2026082102`; arms P and G with `--enable-prefix-caching`, arm N without; arm G
+adds `--block-size 32768`. **NOT SCOREABLE**, read as session controls.
+
+| benchId | date | cell / probe | pp med t/s | pp σ | ttfr ms | board top | verdict |
+|---|---|---|---:|---:|---:|---:|---|
+| **bench_30d6586cc70a-p-pc-on** | 2026-08-22 | pp2048 @ d16384 c4 (**R9c ARM P — prefix caching ON**) | 671.62 | 1.49 | 11853.9 | **NOT SCOREABLE** | **SESSION CONTROL PASSES** — within 0.35% of R9 A1's 669.28 and 0.13% of R10's 672.59, i.e. squarely in the raised-budget plateau. This is what licenses reading arm P's `tg` as a real reproduction rather than a fast session |
+| **bench_107f95223a60-n-pc-off** | 2026-08-22 | pp2048 @ d16384 c4 (**R9c ARM N — prefix caching OFF**) | 651.95 | 1.78 | 11762.1 | **NOT SCOREABLE** | **SESSION CONTROL PASSES**, −1.8% on R9b arm A's 663.93 at the identical engine config. **The prefill rate moves 2.9% between arms P and N while `tg` moves 141% — so the flag buys nothing in prefill and the whole of its `tg` effect is downstream of prefill work**, which is the same conclusion R9b reached from a 0.8% gap |
+| **bench_76bccce3d8b3-g-block32768** | 2026-08-22 | pp2048 @ d16384 c4 (**R9c ARM G — `--block-size 32768`**) | 665.69 | 1.37 | 9462.5 | **NOT SCOREABLE** | hold — **within 0.9% of arm P despite an 87% KV-capacity collapse.** Prefill is insensitive to the block size; the arm's damage is entirely in decode and residency |
+| **bench_76bccce3d8b3-g-block32768-repeat** | 2026-08-22 | pp2048 @ d16384 c4 (**R9c ARM G, repeat**) | 662.34 | 1.65 | 9514.3 | **NOT SCOREABLE** | hold — reproduces run 1 to −0.50%. Four arms spanning three `mamba_block_size` values and both settings of the flag land in **651.95–671.62, a 3.0% band** |
+| R9c, all four arms | 2026-08-22 | ctx_pp2048 @ d16384 c4 (Phase 1) | 6157.16 / 5958.00 / 6091.48 / 6059.13 | 14.64 / 26.68 / 15.19 / 6.53 | — | **NOT SCOREABLE** | hold — Phase 1, arms P / N / G1 / G2. **Four new phase pairs for the phase-label correction**: `ctx_pp / pp` reads **9.167 / 9.139 / 9.151 / 9.148** against the zero-free-parameter prediction `(16384+2048)/2048` = **9.00**, residuals **+1.5% to +1.9%** — the tightest cluster of four in the audit, and the first taken at three different `mamba_block_size` values and both settings of prefix caching. **The audit now stands at 41 of 42 pairs.** That the ratio is invariant to the flag is itself evidence the two phases differ by token count and not by caching |
