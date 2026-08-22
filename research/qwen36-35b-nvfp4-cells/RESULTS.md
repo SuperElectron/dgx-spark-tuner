@@ -61,7 +61,7 @@ Targets and incumbents per cell: docs/arena-recipe.md.
 **The campaign ran 13 rounds and is closed. The synthesis — what held, what was
 retracted, the cost ledger and where to pick up — is the `CAMPAIGN SYNTHESIS`
 section of `journal.md`, revised 2026-08-22 to cover R13, the `ctx_` correction,
-R5c and R13c. It is the ONE authoritative handoff; read it rather than the
+R5c, R13c and **R13d**. It is the ONE authoritative handoff; read it rather than the
 individual round blocks.** Read this file for the standings.
 
 Nothing is submitted to the arena — there is no login, and none was ever
@@ -239,7 +239,9 @@ start.** The gain came from per-request decode, not from the span:
 | c5 | 128.93 | **164.27** | 43.72 | 50.50 (**+15.5%**) | 1.70 | 1.54 |
 
 **A win widened and a record set:** `tg128 @ d16384 c4` goes 3.15x → **3.74x**,
-and `ctx_tg @ d16384 c4` goes 4.56x → **6.16x, the campaign's widest margin**.
+and `ctx_tg @ d16384 c4` goes 4.56x → **6.16x, the widest margin the campaign
+held at the time** (the title has since moved to the mnbt 131072 row at 6.21x —
+R13d).
 ⚠️ **BOTH OF THOSE FIGURES WERE SUPERSEDED THE SAME NIGHT.** R13c re-ran the
 identical configuration from a separate engine start and the two 7-run sets are
 pooled to 14-run medians: **3.74x → 3.67x** and **6.16x → 6.15x**. The claimed
@@ -294,8 +296,9 @@ configuration (mnbt 98304 + mns 5) at runs=7 each and there is no basis for
 preferring either draw. The claimed figures become pooled 14-run medians, exactly
 as R2's verify run did for c4 and as R6 and R8 did when they retired 3-run
 medians: `tg128 @ d16384 c4` **174.68 → 171.31 (3.74x → 3.67x)** and
-`ctx_tg @ d16384 c4` **170.59 → 170.36 (6.16x → 6.15x, still the campaign's
-widest margin)**. The mnbt 8192 and mnbt 32768 rows are **not** pooled — those
+`ctx_tg @ d16384 c4` **170.59 → 170.36 (6.16x → 6.15x — the campaign's widest
+margin as of this pass; R13d later moved the title to the mnbt 131072 row at
+6.21x, by 0.83%)**. The mnbt 8192 and mnbt 32768 rows are **not** pooled — those
 were measured at `mns 4` and `mns 16` and R13c ran `mns 5`, and pooling across a
 configuration difference is the one thing this file has said must never happen.
 
