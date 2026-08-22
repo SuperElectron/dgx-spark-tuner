@@ -3,6 +3,15 @@
 Hypotheses before runs, lessons after them, a synthesis every ~5 rounds.
 The last synthesis is the handoff every new session starts from.
 
+> ⚠️ **READ BEFORE ANY ROUND ENTRY BELOW: the `ctx_` PHASE LABELS ARE BACKWARDS
+> IN ROUNDS 1 THROUGH 12.** Every round before R9b calls the `ctx_` rows "the
+> prefix-caching phase" or "the cached phase". They are llama-benchy **Phase 1,
+> the CONTEXT LOAD — the UNCACHED pass**, and the rows those rounds call "cold"
+> are the cache-eligible ones. The two are also charged different prompt-token
+> counts, so **no `ctx_pp`-versus-`pp` comparison in this journal is valid.**
+> The findings are in **THE `ctx_` PHASE-LABEL CORRECTION** at the end of this
+> file. Do not re-derive a reading from a round entry without it.
+
 ## Premise — thin cells, not the crowded one
 
 Board scan 2026-08-21 (live, single-node, verified against our own known
@@ -97,6 +106,12 @@ Means and medians disagree in direction here, which is the whole reason for the
 rule: d8192 mean 102.55 sits BELOW its median 106.24 while d16384 mean 135.19
 sits ABOVE its median 129.32. Ranking the depths by mean spreads them further
 apart than they are and flatters d16384 specifically.
+
+> ⚠ **CORRECTED.** "prefix-caching phases", "cached-prefix decode" and "with the
+> prefill work removed" are all wrong: these are Phase 1, the UNCACHED context
+> load, and it prefills `depth` tokens — 89% of what the phase below it does.
+> The quietness is an unexplained observation; the explanation is withdrawn. See
+> the phase-label correction at the end of this file.
 
 The ctx_ prefix-caching phases are separate board cells and we measured three of
 them, so they are recorded. Their numbers behave unlike the main phase: at d8192
@@ -196,6 +211,10 @@ a property of the prompt draw, not of quantization noise.
 Practical consequence: c4 cells need far fewer runs than c1 cells for the same
 confidence. Three runs at c4 pin the number to ±1.5%; three runs at c1 could
 not even rank three depths in round 1.
+
+> ⚠ **CORRECTED.** Read "Phase 1 (context load)" for "prefix-caching phase" and
+> "Phase 2" for "cold". The `tg` comparison itself stands. See the phase-label
+> correction at the end of this file.
 
 The ctx_ prefix-caching phase at c4 is again slightly ABOVE the cold phase
 (pooled median 56.36 vs 52.85, +6.6%) and again quieter. Its board figure was
@@ -322,6 +341,13 @@ the same underlying quantity, and the board's 116.03 sits above both — which
 means the gap is a property of the configuration or the box, not of that one
 cell, and it should be visible at every depth. R8 gets that measurement for free.
 
+> ⚠ **CORRECTED, TWICE OVER.** The phase labels are inverted (this is Phase 1,
+> the uncached context load, against Phase 2). And this round's closing claim —
+> that the `ctx_` cells are "the cheapest place in this campaign to measure a
+> real effect" — is **WITHDRAWN**: it rests on a quietness whose explanation is
+> void and on a prefill advantage that is entirely a denominator. The `-17%`
+> inversion itself was separately refuted by R8 (`-1.2%` at runs=7).
+
 **The ctx_ prediction held, and it is the round's most solid finding.** The
 prefix-caching phase came in BELOW the cold phase — 89.76 against 108.15, -17% —
 exactly as predicted, and it reproduces the inversion first seen at d32768
@@ -356,7 +382,15 @@ one phase that has to process the whole context. σ 0.55 makes this the round's
 tightest measurement, so the miss is real and not a noise draw. The cached
 counterpart falls too: ctx_pp2048 4004.76 against 5086.51 at d32768, after
 sitting nearly flat across the three shallower depths (6148.56 / 5910.22 /
-5086.51). Both prefill figures are held, not claimed — their board figures have
+5086.51).
+
+> ⚠ **CORRECTED.** "The cached counterpart" is Phase 1, the context load, and it
+> is charged `depth` tokens against the `pp2048` row's fixed 2048 — so the two
+> series are not comparable and the `ctx_pp` series is not "nearly flat" for any
+> physical reason. It is, however, the campaign's only HONEST prefill-rate curve:
+> Phase 1 is charged the tokens it actually processes, so 6148.56 / 5910.22 /
+> 5086.51 / 4004.76 / 2803.17 is the real prefill rate against depth, and the
+> `pp2048` series is the same physics divided by a fixed 2048. Both prefill figures are held, not claimed — their board figures have
 never been scraped, which is what R5b is for.
 
 Instrument note: the runtime epoch is unchanged. R1 and R3 both ran under the
@@ -547,6 +581,9 @@ two bimodal sequences per step suppresses less than averaging five. This is the
 fifth consecutive round consistent with the MTP-acceptance story, and the c2
 point is the first evidence about the SHAPE of the suppression: 1.4% at c2
 against 14% at c1 means most of the variance is gone by the second sequence.
+
+> ⚠ **CORRECTED.** Phase labels inverted throughout this passage; the `tg`
+> comparisons and their signs stand. See the phase-label correction at the end.
 
 **The ctx_ phases disagree with each other across concurrency, which is new.**
 At c2 the prefix-caching phase came in BELOW the cold phase — 79.44 against
@@ -785,7 +822,13 @@ depths and three concurrencies and which RESULTS.md leaned on as "the cheapest
 place in this campaign to measure a real effect", does not survive to d131072.
 The tidy explanation for the quietness — that removing prefill removes the
 variance — cannot be right, because the prefill is removed here too and the
-variance is larger than ever. Open question 4 should now be read as being about
+variance is larger than ever.
+
+> ⚠ **CORRECTED — and R5 was righter than it knew.** The tidy explanation is not
+> merely broken by this data point; its premise is false. The `ctx_` phase is
+> Phase 1, the uncached context load, and it prefills `depth` tokens. **No
+> prefill is removed in either phase, here or anywhere.** R5 reached the right
+> verdict ("cannot be right") from the wrong evidence. Open question 4 should now be read as being about
 MTP acceptance variance, not about prefill: at this depth the acceptance draw
 dominates both phases, and the cached phase has no prefill work to average it
 against.
@@ -1103,6 +1146,11 @@ the only candidates left standing.
 The prediction here was refuted on the tg128 arm: predicted ctx at or above cold
 in both arms, within ±8%, on the basis that the below-cold inversion belonged to
 d32768 and deeper. It held for tg32 (+5.6%) and inverted for tg128 (-5.6%).
+
+> ⚠ **CORRECTED.** "the cached phase" is Phase 1, the uncached context load. The
+> sign-flip-with-generation-length result itself is a `tg` comparison and is
+> untouched — it remains the cleanest unconfounded evidence in this question,
+> even though the question's framing is now withdrawn.
 
 **The ctx quietness broke again, and R5's explanation for the break does not
 survive.** ctx_tg128 σ is 9.3% of its median against cold's 2.6% — the cached
@@ -1485,6 +1533,9 @@ round shows the proxy working at the top of the range.
   which is the first orderly trend anyone has found in this question. And the
   ctx quietness rule holds here for the seventh and eighth time (σ 0.10% and
   0.18%, both below their cold arms).
+  > ⚠ **CORRECTED.** Phase labels inverted. The monotone-with-concurrency trend
+  > was separately killed by R10 (the sign flips on the token budget alone), and
+  > the "quietness rule" is retired with its explanation withdrawn.
 - **ttfr: MISSED LOW at both points.** Predicted 18000-26000 ms at c8 and
   36000-56000 at c16; measured 16554 and 29751. Both below their bands, the same
   direction as the throughput misses.
@@ -1826,6 +1877,10 @@ look yet at the bimodality it has asserted since R2: this is not a spread, it is
 a mode plus one low draw, and it is exactly why medians are the verdict here.
 
 ### Open question 4 — R3's deep inversion did NOT reproduce
+
+> ⚠ **CORRECTED.** Read "Phase 1 vs Phase 2" for "ctx vs cold" throughout. The
+> measurement and its verdict — R3's deep inversion did not reproduce — are
+> untouched.
 
 The first same-invocation, cross-depth reading of the ctx-vs-cold sign the
 campaign has:
@@ -2745,6 +2800,14 @@ ctx margin grows monotonically with concurrency (+6.6 / +6.5 / +9.7 / +12.7% at
 c4/c5/c8/c16) does not survive either — at mnbt 32768 it reads -14.2% at c4 and
 **+2.0%** at c16.
 
+> ⚠ **WITHDRAWN AT THE PREMISE.** The paragraph below is R10's mechanism for the
+> sign flip and it is **false, not merely contradicted**. "The `ctx_` phase does
+> no prefill" is wrong: `ctx_` is Phase 1, the context load, and it prefills
+> `depth` tokens — 89% of what Phase 2 does. R12 attacked this account with the
+> stagger instrument and R13 broke the regularity underneath it at a third
+> budget; the premise means there was never a mechanism here to attack. The
+> OBSERVATION — the sign flips on the token budget alone — survives all of it.
+
 The span story accounts for it without new machinery: the `ctx_` phase does no
 prefill, so it never staggers much and has little to gain; the cold phase is the
 one carrying the stagger, so removing the stagger lets cold overtake ctx. But it
@@ -3071,6 +3134,16 @@ And the `ctx_` phase is slower on the *other* term too: `tg_req` 74.45 vs cold's
 version: why does removing prefill work make the batch stagger worse?** R10 asked
 for its account to be attacked rather than adopted; the attack lands on the
 mechanism, not on the observation.
+
+> ⚠ **THE SHARPENED QUESTION IS DISSOLVED, NOT ANSWERED.** R12 was right that
+> R10's mechanism fails, and right to say so from the instrument. But its
+> replacement question inherits R10's false premise: **no prefill work is
+> removed in either phase.** `ctx_` is Phase 1, the context load, which prefills
+> `depth` tokens against Phase 2's `depth + 2048`. There is nothing to explain.
+> R13 then refuted the stagger asymmetry itself at `mnbt 98304` (Phase 1
+> staggers LESS at both arms). Both halves are gone: the regularity empirically,
+> the question at its premise. **Do not pose a third form of it.** The three
+> stagger figures in the table above stand as measurements.
 
 ### Side-predictions: 11 held, 5 missed, 3 unmeasured
 
@@ -3800,6 +3873,12 @@ Two consequences, and both are corrections rather than discoveries:
   `16384/2048` and not a cache effect. Every ctx-versus-cold reading in this
   journal before R9b is mislabelled; the `tg` comparisons survive the token-count
   problem but not the labelling.
+  **Since measured, not just asserted:** `ctx_pp / pp = (depth+2048)/2048` holds
+  in **29 of 30** archived phase pairs across five depths, residuals −0.7% to +3.6%.
+  The two phases prefill at the same rate to within 4% and **no prefill speedup
+  exists anywhere in this campaign's data.** Two of the 18 are the
+  prefix-caching-OFF arms and they do not move, which is an independent proof
+  that the cache never hits. Full audit at the end of this file.
 
 ### The depth curve, as finally measured
 
@@ -3858,6 +3937,31 @@ Kept together so a cold reader does not resurrect one of them from an early roun
    d65536 and R5 -0.6% at d131072.
 10. "The -12% reproduction gap" — R0/R1, mostly undersampling. It is **-2.9%** at
     the pooled 14-run figure, and 3 of those 14 runs clear the board entry.
+
+**Added by the phase-label correction pass (2026-08-22). Five more, and they are
+the largest single batch the campaign has retired at once:**
+
+11. "The `ctx_` phase is prefill-free and ~9x faster at prefill" — R1 to R9b.
+    The ratio is `(depth+2048)/2048`, measured to within 4% in 29 of 30 archived
+    phase pairs. **No `ctx_pp`-versus-`pp` comparison anywhere is retained.**
+12. "The `ctx_` phase does no prefill, so it never staggers much" — R10's
+    mechanism for the sign flip. Withdrawn at the premise; Phase 1 prefills
+    `depth` tokens.
+13. "Why does removing prefill work make the batch stagger worse?" — R12's
+    sharpened open question 4, carried by the synthesis and by R13's pre-run
+    prediction. **Dissolved.** Nothing is removed.
+14. "The `ctx_` cells are the cheapest place in this campaign to measure a real
+    effect" — R3, quoted in RESULTS.md for six rounds. Rested on 11 and on the
+    already-retired quietness rule (7).
+15. Open question 4 as posed — "do the `ctx_` prefix-caching phases deserve
+    their own tuning?" They are not prefix-caching phases and the cache never
+    hits. The cells stay worth winning; the framing is dead.
+
+Note what is NOT on this list: **any board margin.** Both sides of every `ctx_`
+comparison are Phase 1 against Phase 1, so the standings are untouched at 8 won
+/ 12 lost. Item 7's premise also failed retrospectively — "removing prefill
+removes the variance" was retired for breaking three times, and it turns out
+nothing was being removed.
 
 ### COST LEDGER
 
@@ -3929,12 +4033,15 @@ regularities; and one campaign `[COST]` total.
    `mamba_block_size` 16 -> 32768 riding along with the flag. Separable in one
    invocation (**R9c**). Either answer reprices every `c>1` figure the campaign
    has.
-2. **Why does removing prefill work make the batch stagger WORSE?** The `ctx_`
-   phase staggers more than the cold phase at every raised-budget point measured
-   (1.17 vs 1.13 at c2, 1.80 vs 1.57 at c4, 2.12 vs 1.70 at c5) and its `tg_req`
-   is lower too. R10's account of the ctx-vs-cold sign flip is contradicted by the
-   instrument. Note this question must be re-posed with the corrected phase labels
-   before another cell is spent on it.
+2. ~~**Why does removing prefill work make the batch stagger WORSE?**~~
+   **CLOSED — the question is dissolved, not answered.** It presupposed that the
+   `ctx_` phase removes prefill work. It does not: `ctx_` is Phase 1, the
+   context load, which prefills `depth` tokens against Phase 2's `depth + 2048`.
+   The regularity underneath it (1.17 vs 1.13, 1.80 vs 1.57, 2.12 vs 1.70) was
+   separately **refuted by R13** at `mnbt 98304`, where Phase 1 staggers LESS at
+   both arms. Both halves gone. **Do not spend a cell here and do not pose a
+   third form of it.** The `ctx_` cells remain real board cells worth winning —
+   one of them, `ctx_tg @ d16384 c4`, is the campaign's widest margin at 6.16x.
 3. **What accounts for the two thirds of the depth term the bandwidth model does
    not predict, and what makes the curve steepen?** -16.8% measured against -44.8%
    naive. MTP acceptance decay is the candidate and has never been measured
@@ -3962,6 +4069,13 @@ regularities; and one campaign `[COST]` total.
    `pp_throughput` definition and the board's prefill test-type mapping. The last
    two times someone read the instrument instead of inferring from it, the
    campaign got its two largest results. Do this while a benchmark runs.
+   **Sharpened by the correction pass, and one blind alley is already closed:**
+   `pp2048` is charged 2048 tokens for `depth + 2048` of real work, but
+   rescaling our figures by that factor does NOT void the prefill losses — the
+   board's entries come through the same CSV and carry the same understatement,
+   so it cancels. What the check must explain instead is a *shape* disagreement:
+   our Phase-1 rate falls with depth (6148.56 → 2803.17) while the board's
+   `ctx_pp` incumbents rise (775123 → 945271). Start there.
 3. **R9c — separate prefix caching from `mamba_block_size`.** One engine start,
    c4 only, runs=3, ~115 s: prefix caching off with an explicit `-o
    mamba_block_size=16`. Check the validators from the image first. If `tg`
@@ -3986,7 +4100,9 @@ settled; and any further round premised on the `ctx_` rows being the cached pass
 
 ### HANDOFF
 
-A new session should start here, not at round 1. The state is: `recipe.yaml`
+A new session should start here, and then read **THE `ctx_` PHASE-LABEL
+CORRECTION** at the very end of this file before touching any `ctx_` figure —
+it post-dates this synthesis and retires five more claims. The state is: `recipe.yaml`
 **untouched** and identical to the one the campaign opened with; twelve rounds
 archived under `experiments/`; `RESULTS.md` carrying eight won cells, twelve lost and
 the unscoreable remainder, with every row naming its configuration; four headline
@@ -4458,6 +4574,14 @@ regularity that holds at one token budget and not at the next, which is the same
 failure mode the ctx-vs-cold question has now suffered four times. It should be
 re-posed as a budget-dependent observation or dropped.
 
+> ⚠ **DROPPED, and the correction pass says why it could never have been
+> re-posed.** R13 was right to refuse a fifth sharpening. The question's premise
+> — that the `ctx_` phase removes prefill work — is false: `ctx_` is Phase 1,
+> the context load, prefilling `depth` tokens. R13's own pre-flight established
+> the other half of the arithmetic (a Phase-2 prefill is `depth + pp` = 18432)
+> without either round noticing that together they kill the question. The
+> stagger figures in the table above stand; the question does not.
+
 ### Predictions: 14 held, 6 missed
 
 - **c5 `tg` 195-250, centre 220: MISSED LOW** at 164.27. **c4 `tg` 190-250:
@@ -4515,3 +4639,165 @@ occupancy instrument after three lost attempts — and used it to refute its own
 mechanism, showing that with `Waiting: 0` in every sample the span ratio still
 sits at 1.54, so most of what this campaign has been calling "admission stagger"
 since R10 is something else.**
+
+---
+
+## THE `ctx_` PHASE-LABEL CORRECTION — full audit, 2026-08-22, no box time
+
+A dedicated correction pass over material already on disk. No benchmark was run,
+no board figure re-scraped, no recipe touched. It exists because R9b, chasing a
+validity gate that had just failed, found two instrument errors that reach every
+`ctx_` row this campaign wrote across thirteen rounds — and R9b recorded them
+without having time to audit what they invalidated. This is that audit.
+
+### The two errors, and when they were found
+
+**Found 2026-08-22, in R9b, by reading `llama_benchy/runner.py:127-176` and
+`223-225` (pinned 0.4.0) after `ctx_pp2048 < 1200` failed as a void condition.**
+
+**(a) llama-benchy labels its two phases backwards relative to how they read.**
+When the probe has `prefix_caching` on and `depth > 0`, Phase 1 is the CONTEXT
+LOAD and is recorded with `is_context_phase=True` — that is the `ctx_` row, and
+it is the **uncached** pass, the one that *establishes* the cache. Phase 2 is
+the inference pass, `is_context_phase=False`, and it is the **cache-eligible**
+one. That is the row this campaign has called "cold" since Round 1. The two are
+exactly inverted, in every round entry above.
+
+The archived exports carry the same fact independently of the source read: every
+record in `experiments/` has `"is_context_prefill_phase": true` on its `ctx_`
+rows, and `"context_size": 16384, "prompt_size": 2048` on **both** phases.
+
+**(b) The two phases are charged different token counts.** Phase 1 is charged
+`expected_ctx` = `depth` prompt tokens. Phase 2 is charged `expected_pp` = 2048,
+while actually processing `depth + 2048` (R13's pre-flight, and prefix caching
+never hits so none of the `depth` is free). So the ~9x `ctx_pp` advantage the
+campaign read at every depth for twelve rounds is a denominator.
+
+### What the correction pass added: the token-count error is now measured
+
+R9b asserted the ratio was `16384/2048`. Tested against every archived pair in
+`experiments/` where both phases appear in one record, the prediction with no
+free parameters is `ctx_pp / pp = (depth + 2048) / 2048`:
+
+Run over **every** `(depth, concurrency, response_size)` cell in the 18 archived
+`consolidated.json` files where both phases were measured — 30 pairs, not a
+sample:
+
+| depth | pairs | observed | predicted | residual |
+|---:|---:|---:|---:|---:|
+| 8192 | 1 | 5.18 | 5.00 | +3.6% |
+| 16384 | 24 | 8.93 – 9.32 | 9.00 | −0.7% to +3.5% |
+| 32768 | 1 | 17.20 | 17.00 | +1.2% |
+| 65536 | 2 | 33.58, 33.77 | 33.00 | +1.7%, +2.3% |
+| 131072 | 1 | 65.82 | 65.00 | +1.3% |
+
+**29 of 30 pairs, five depths, every configuration the campaign ever ran, every
+residual between −0.7% and +3.6%.** The two phases prefill at the same rate to
+within 4%. The small, almost always positive residual is Phase 1 being
+marginally faster per token, which is the direction a pass with no decode setup
+should go. **There is no prefill speedup anywhere in this campaign's data and
+there never was.** The single exception is R13's c5 `ctx_pp` at 7.65 (−15%), a
+broken measurement rather than a counter-example: its σ is 817 on a median of
+5175, sixteen times the dispersion of the c4 arm beside it in the same
+invocation. Recorded, not used.
+
+**This is also a second instrument for R9b's other finding.** Two of the 30
+pairs are R9b's **prefix-caching-OFF** arms and they read 9.20 and 9.16, indistinguishable
+from the caching-ON arms. Had the cache ever hit, Phase 2 would have skipped
+16384 of its 18432 tokens and the ratio would have collapsed toward 1. It does
+not move. **The archives were carrying proof that prefix caching never hits, in
+the very column the campaign read as proof that it did.**
+
+### And the premise underneath four rounds of mechanism is false
+
+The campaign's stock phrase for the `ctx_` phase — from R1's "with the prefill
+work removed, the measurement is much quieter" through R10's "the `ctx_` phase
+does no prefill, so it never staggers much" — has the work backwards. Phase 1
+prefills `depth` tokens. Phase 2 prefills `depth + 2048`. **Phase 1 does 89% as
+much prefill as the phase it was being compared against, not none of it.**
+Nothing is removed, so nothing that was attributed to a removal can stand.
+
+### WITHDRAWN — six claims
+
+Withdrawn, not adjusted. A comparison the denominator invalidates cannot be
+rescaled into looking right, and a mechanism with a false premise is not patched
+into a smaller version of itself.
+
+1. **"The `ctx_` phase is prefill-free and ~9x faster at prefill"** — R1 to R9b.
+   Withdrawn entirely; no `ctx_pp`-versus-`pp` comparison in this journal or in
+   RESULTS.md is retained.
+2. **"Removing the prefill removes the run-to-run variance"** — R1-R4. The
+   regularity was already retired after breaking three times (R5, R6, R8); the
+   premise is now gone too. The quietness of some `ctx_` cells survives as an
+   unexplained observation.
+3. **"The `ctx_` phase does no prefill, so it never staggers much"** — R10's
+   mechanism for the ctx-vs-cold sign flip. Withdrawn at the premise. R12 had
+   already contradicted it with the instrument; it was false before that.
+4. **"Why does removing prefill work make the batch stagger WORSE?"** — R12's
+   sharpened open question 4, carried into the synthesis and into R13's
+   pre-run prediction. **Dissolved, not answered.** It presupposes a removal
+   that never happens.
+5. **"The `ctx_` cells are the cheapest place in this campaign to measure a real
+   effect"** — R3, quoted in RESULTS.md for six rounds. Built on 1 and 2.
+6. **Open question 4 as posed.** They are not prefix-caching phases, and there
+   is no cached phase to tune because the cache never hits. The `ctx_` cells are
+   still real, separately-ranked board cells worth winning; the framing is dead.
+
+That makes **fifteen** claims this campaign has published and later withdrawn.
+The list in the synthesis has been extended accordingly.
+
+### NOT WITHDRAWN — and this is the part that matters for the standings
+
+**No board margin moves. No win is lost, no loss becomes a win, and the
+standings stay at 8 cells won / 12 lost.** The reason is not charity, it is the
+comparison structure: the board publishes `ctx_tg @ dN` and `ctx_pp @ dN` as
+their own test types (`docs/arena-recipe.md`), and its entries arrive through
+the same llama-benchy CSV ours do — the upload path R10 established. Every
+`ctx_` comparison is Phase 1 against Phase 1. A shared convention that is
+strange is still shared. What was wrong was never the margin; it was the
+sentence describing what the margin measured.
+
+The `tg` comparisons between the phases also survive intact — both phases decode
+128 tokens per request, so the token-count error is confined to `pp_throughput`.
+Their values and signs are unchanged. What changes is which one gets called
+cached, and the answer is neither.
+
+**R9b's broken validity gate is now explained rather than merely confessed.** It
+demanded `ctx_pp2048 < 1200` with caching off and measured ~6100. Under the
+corrected reading the gate could not have passed at any setting: Phase 1 is
+charged 16384 tokens whether a cache exists or not, so its `pp` figure has an 8x
+floor built into the denominator. **The arm was right, the gate was
+arithmetically impossible, and overriding it on the engine's own counters was
+the correct call.** Recording it as a broken gate rather than dropping it is
+what made this diagnosable a round later.
+
+### The trap this correction sets, and it is disarmed here
+
+The obvious move on learning that `pp2048` is charged 2048 for `depth + 2048`
+tokens of work is to rescale our prefill figures and void the losses: at d32768
+that turns 295.71 into ~5027 against the best like-for-like vLLM entry's
+4644.54, i.e. a win. **That is wrong.** The board's prefill figures come through
+the same CSV and carry the identical understatement, so the artefact cancels and
+the ratio is untouched. **The six prefill c1 cells remain losses at exactly the
+recorded margins.** Any future session that reaches for this rescaling should
+stop here.
+
+What the correction does sharpen is the open mismatch question. Our Phase-1
+series **falls** with depth (6148.56 → 2803.17 over 16x) while the board's
+`ctx_pp` incumbents **rise** (775123 → 945271 over 4x). Ours is a real rate over
+a real token count and attention makes it fall; theirs cannot be the same
+quantity behaving the same way. That is a shape disagreement on top of the ~150x
+magnitude one — evidence *for* a definition mismatch, not against it. The
+zero-box-time prefill metric check stays the second-priority item.
+
+### What this pass closes and what it leaves
+
+Closed: the audit itself, R9b's two corrections propagated into every affected
+row and claim, and open question 4 dissolved rather than left sharpened. Left
+open and unchanged: **R11** (still the highest-value round), R9c, the prefill
+metric check, R8c, R13b, R13c. Nothing here changes the handoff.
+
+**The one line worth carrying:** this campaign's three largest results — the
+units resolution, the phase labels, and the never-hitting cache — all came from
+reading the instrument rather than measuring around it, and all three cost
+nothing. The fourth is still sitting unread in `pp_throughput`'s definition.
