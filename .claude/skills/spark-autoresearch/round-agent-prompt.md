@@ -77,8 +77,14 @@ Omit the section if there is nothing.>
    NOT assert a standing verdict that expires. Keep ratios, but always say what
    they are over and where that figure came from. Use the WIDEST TRUE entity
    scope. Mechanism findings are `[LESSON]`; measured cell figures are `[VERDICT]`.
-5. Commit on branch `feature/thin-cell-<rn>`, push. Do NOT merge to staging or
-   main — that is the orchestrator's call. Never touch main.
+5. Git, in this exact order. **Before your FIRST commit of the round**, run
+   `git checkout -b feature/thin-cell-<rn>`, then confirm with
+   `git branch --show-current` that you are NOT on `main` or `staging`. Commit
+   only after that check passes. Push only your own branch. Do NOT merge to
+   staging or main — that is the orchestrator's call. If you find you have
+   already committed to `main`, do NOT push: stash any uncommitted work,
+   cherry-pick the commit onto your branch, `git branch -f main origin/main`,
+   restore the stash, and say so in your return line.
 
 == RETURN VALUE ==
 Return ONE LINE only, in this shape:
@@ -98,6 +104,16 @@ paragraph, the orchestrator's context fills with prose it cannot act on and the
 campaign stalls mid-way. One line per round is what makes an overnight run
 survivable. Detail belongs in the journal, where it is durable and where the
 next agent will actually look for it.
+
+## Why the branch step is spelled out as commands
+
+R23's agent was told "commit on a branch, never touch main" and committed its
+hypothesis block to `main` anyway — it created the branch but never checked it
+out. A prohibition is not an instruction: the agent needs the `checkout -b`
+before the first commit and the `git branch --show-current` check after it, or
+the rule only gets evaluated once the damage is done. The round agents also
+share one working tree with each other and with the orchestrator, so a stray
+checkout mid-round can corrupt a benchmark that costs real box time.
 
 ## Why memories are dictated here and not left to the agent
 

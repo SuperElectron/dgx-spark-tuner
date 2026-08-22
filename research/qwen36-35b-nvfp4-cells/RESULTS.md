@@ -5,7 +5,9 @@ the configuration it was measured under, the board incumbent, our margin and the
 verdict.** Model fixed: `nvidia/Qwen3.6-35B-A3B-NVFP4` (de-rayed recipe). Nothing
 was ever submitted to the arena — there is no login — so these rows are the
 standings. Board incumbents come from the 2026-08-21 scrape in
-`docs/arena-recipe.md`. Raw runs, σ and ttfr for every row live in
+`docs/arena-recipe.md`; **every prefill row was re-scored on 2026-08-22 from the
+per-entry re-scrape in `ANALYSIS-board-rescrape.md`**, which is authoritative for
+those rows. Raw runs, σ and ttfr for every row live in
 `experiments/<benchId>/consolidated.json`.
 
 **Every figure is a MEDIAN of the runs**, never a mean (MTP acceptance is
@@ -29,12 +31,13 @@ bimodal). `SE` where quoted is the median standard error, `1.253 σ/√n`.
 - **Phase.** A `ctx_` row is llama-benchy **Phase 1, the context load** — the
   *uncached* pass, charged `depth` prompt tokens. A row without `ctx_` is
   **Phase 2**, charged 2048 while processing `depth + 2048`. The campaign had
-  these backwards for thirteen rounds. **No board margin moves**, because the
-  board publishes the same two test types through the same instrument. Never
-  compare a `ctx_pp` figure to a `pp` figure; the ratio is `(depth+2048)/2048`.
+  these backwards for thirteen rounds. **Board margins DO move** — see the
+  prefill caution under LOST. Never compare a `ctx_pp` figure to a `pp` figure;
+  the ratio is `(depth+2048)/2048`.
 
 **Standings: 8 board cells WON, 12 LOST**, plus a tail the board publishes no
-figure for.
+figure for. **The 2026-08-22 prefill re-scoring changed six margins and moved no
+cell from lost to won or won to lost, so the counts are unchanged.**
 
 **For the narrative — every round's hypothesis and outcome, the campaign
 synthesis, the `ctx_` phase-label correction, R5c's metric closure, the
@@ -72,12 +75,14 @@ carries both budgets.
 | bench_fa5630a4ac79-mnbt16384 | 2026-08-22 | ctx_tg @ d16384 c4 | **MUTATION mnbt 16384 + mns 5** | 68.79 | 7 | 27.68 | **2.49x** | R13c — below the knee |
 | bench_3d8149654d1b | 2026-08-22 | tg128 @ d65536 c1 | mnbt 8192 — pre-fold recipe, mns 4 | 94.10 | 7 | 16.48 | **5.71x** | **The widest campaign-config win.** Worst of 7 (81.79) still 4.96x |
 | bench_3d8149654d1b | 2026-08-22 | ctx_tg @ d65536 c1 | mnbt 8192 — pre-fold recipe, mns 4 | 92.98 | 7 | 20.70 | **4.49x** | Worst of 7 (77.33) still 3.74x |
-| bench_3d8149654d1b | 2026-08-22 | ctx_pp @ d65536 c1 | mnbt 8192 — pre-fold recipe, mns 4 | 4013.59 | 7 | 1393.35 | **2.88x** | Sole-entry cell (1 board entry); the incumbent is three orders below the same test type at d32768, so the holder is probably a slow outlier |
+| bench_3d8149654d1b | 2026-08-22 | ctx_pp @ d65536 c1 | mnbt 8192 — pre-fold recipe, mns 4 | 4013.59 | 7 | 1393.35 | **2.88x** | Sole-entry cell (1 board entry). **The only prefill row that needed no correction**: the incumbent (DeepSeek-V4-Flash-0731-REAP, vLLM FP8) is honest — `ttfr == e2eTtft == 42155.78 ms` — and is not a slow outlier but a much larger model |
 
 ## LOST — 12 cells, 16 rows
 
 `Like-for-like` is the best board entry at the same model/runtime/quant where
-the scrape carries one; the verdict is scored against `Board top`.
+the scrape carries one; the verdict is scored against `Board top` — **except on
+the six prefill rows, where the board top is an Atlas `ttfr` artefact and the
+verdict is scored against `Like-for-like` instead** (see the caution below).
 
 | benchId | date | Cell | Configuration | Ours | Runs | Board top | Like-for-like | Verdict |
 |---|---|---|---|---:|---:|---:|---:|---|
@@ -91,19 +96,28 @@ the scrape carries one; the verdict is scored against `Board top`.
 | bench_dd3afc9e1c94 | 2026-08-22 | ctx_tg @ d16384 c1 | mnbt 8192 — pre-fold recipe, mns 4 (tg32 arm) | 122.97 | 7 | 193.09 (LFM2.5-350M BF16) | 153.86 (our own model on **Atlas**) | **0.64x — LOST**; best vLLM+NVFP4 not in the scrape |
 | bench_25a0e7f36ab0, bench_2b0f7bc8fb7b-mnbt8192, bench_8707c27ce1a4-r22-armG | 2026-08-22 | ctx_tg @ d32768 c1 | mnbt 8192 — pre-fold recipe, mns 4 (tg32 arm) | **115.86** | 24 pooled (R1 3 + R8c E 7 + R22 G 14) | 117.37 (Qwen3.6-35B-A3B-NVFP4 on **Atlas**) | 116.65 (Nemotron-3.5-Lightning-30B-A3B-NVFP4, vLLM) | **0.987x — LOST** by **0.34 SE**. ⚠ The R8c→R22 change of +11.02% **failed the ±10% protection band by 1.0 point**; the sets were pooled rather than replaced because the failing arm ran second and matches R22's position bias in sign and size. Recorded as a departure from procedure, not buried. ⚠ Do not go back |
 | bench_964a188f3d16-mnbt65536, bench_bb4b8ef8a193-r22-armH | 2026-08-22 | ctx_tg @ d32768 c1 | **mnbt 65536 — folded recipe**, mns 4 | **113.37** | 21 pooled (R8c F 7 + R22 H 14) | 117.37 (Atlas) | 116.65 | **0.966x — LOST.** R22's pre-declared claim rule (pooled must clear 120.53) missed by 6.1%. One 14-run arm read 122.80 = 1.046x and was **not promoted** |
-| bench_25a0e7f36ab0 | 2026-08-21 | pp2048 @ d8192 c1 | mnbt 8192 — pre-fold recipe, mns 4 | 1187.51 | 3 | 215894.21 (Atlas) | not in scrape | **0.006x — LOST** |
-| bench_3d8149654d1b | 2026-08-22 | pp2048 @ d16384 c1 | mnbt 8192 — pre-fold recipe, mns 4 | 628.66 | 7 (R1's 3-run figure was 637.09) | 99229.33 (Atlas) | not in scrape | **0.006x — LOST** |
-| bench_25a0e7f36ab0 | 2026-08-21 | pp2048 @ d32768 c1 | mnbt 8192 — pre-fold recipe, mns 4 | 295.71 | 3 | 63079.61 (Atlas) | 4644.54 (Laguna-XS-2.1-NVFP4) | **0.005x of top, 0.064x of best vLLM — LOST.** ⚠ A 15x gap against a like-for-like vLLM entry, while our decode figures sit within 3% of what a like-for-like incumbent requires: the signature of a metric mismatch. Recorded as the board reads it; the mismatch is an open question |
-| bench_25a0e7f36ab0 | 2026-08-21 | ctx_pp @ d8192 c1 | mnbt 8192 — pre-fold recipe, mns 4 | 6148.56 | 3 | 775122.96 (Atlas) | not in scrape | **LOST by ~126x** |
-| bench_3d8149654d1b | 2026-08-22 | ctx_pp @ d16384 c1 | mnbt 8192 — pre-fold recipe, mns 4 | 5856.93 | 7 (R1's 3-run figure was 5910.22) | 884764.53 (Atlas) | not in scrape | **LOST by ~151x** |
-| bench_25a0e7f36ab0 | 2026-08-21 | ctx_pp @ d32768 c1 | mnbt 8192 — pre-fold recipe, mns 4 | 5086.51 | 3 | 945271.31 (Atlas) | not in scrape | **LOST by ~186x** |
+| bench_25a0e7f36ab0 | 2026-08-21 | pp2048 @ d8192 c1 | mnbt 8192 — pre-fold recipe, mns 4 | 1187.51 (warm-equivalent **5225.8**) | 3 | 215894.21 (Atlas — ⚠ `ttfr` artefact, not a prefill rate) | 6944.70 (Laguna-XS-2.1-NVFP4, vLLM NVFP4, WARM) | **0.752x — LOST.** ⚠ Not scored: prefill is scored on `ctx_pp` only |
+| bench_3d8149654d1b | 2026-08-22 | pp2048 @ d16384 c1 | mnbt 8192 — pre-fold recipe, mns 4 | 628.66 (warm-equivalent **4452.2**) | 7 (R1's 3-run figure was 637.09) | 99229.33 (Atlas — ⚠ artefact) | 5878.08 (Laguna, WARM) | **0.757x — LOST.** ⚠ Not scored, same reason |
+| bench_25a0e7f36ab0 | 2026-08-21 | pp2048 @ d32768 c1 | mnbt 8192 — pre-fold recipe, mns 4 | 295.71 (warm-equivalent **4238.4**) | 3 | 63079.61 (Atlas — ⚠ artefact) | 4644.54 (Laguna, WARM) | **0.913x — LOST by 8.7%**, not by 15.6x. ⚠ Not scored, same reason. The warm-equivalent is the MARGINAL `2048/(T2−T1)`, a difference of medians. ⚠ `ANALYSIS-prefill-metric.md`'s projected 5027 = "1.082x WIN" never held — do not quote it |
+| bench_25a0e7f36ab0 | 2026-08-21 | ctx_pp @ d8192 c1 | mnbt 8192 — pre-fold recipe, mns 4 | 6148.56 | 3 | 775122.96 (Atlas — ⚠ artefact; true rate from its own `e2eTtft` is 2975.6) | 7288.95 same-model / 10708.31 best vLLM NVFP4 (Nemotron-3-Nano) | **0.844x / 0.574x — LOST.** Rank 32 of 116 vLLM entries |
+| bench_3d8149654d1b | 2026-08-22 | ctx_pp @ d16384 c1 | mnbt 8192 — pre-fold recipe, mns 4 | 5856.93 | 7 (R1's 3-run figure was 5910.22) | 884764.53 (Atlas — ⚠ artefact; true rate 1540.5) | 6929.26 same-model / 10631.13 best vLLM NVFP4 | **0.845x / 0.551x — LOST.** Rank 35 of 118 |
+| bench_25a0e7f36ab0 | 2026-08-21 | ctx_pp @ d32768 c1 | mnbt 8192 — pre-fold recipe, mns 4 | 5086.51 | 3 | 945271.31 (Atlas — ⚠ artefact; true rate 1361.7) | 5939.56 same-model / 9475.96 best vLLM NVFP4 | **0.856x / 0.537x — LOST.** Rank 40 of 113 |
 
-⚠ **The phase-label correction does NOT rescue the prefill losses.** Rescaling
-our `pp2048` figures by `(depth+2048)/2048` would turn d32768 into a win against
-the best like-for-like vLLM entry. That is wrong: the board's prefill figures
-come through the same llama-benchy CSV and carry the identical understatement,
-so the artefact cancels. Every prefill top except `ctx_pp @ d65536` is held by
-Atlas, which is out of scope — these were cells we entered and lost, not targets.
+⚠ **The artefact does NOT cancel, and prefill is scored on `ctx_pp` ONLY.**
+llama-benchy passes 2048 as the `pp_throughput` numerator (`runner.py:225`) while
+the engine prefills `depth + 2048`, so a **cold** entry's `pp2048` understates by
+`(depth+2048)/2048`; a **warm** entry really did prefill 2048 and its figure is
+correct. The 2026-08-22 per-entry re-scrape classified the board by
+`estPpt(pp2048)/estPpt(ctx_pp)`: it is mostly warm (106 of 125 at d32768, 107 of
+131 at d16384), we are cold at every depth (0.0% prefix-cache hits in 220+ engine
+samples), and ranking by cell top selects a warm opponent by construction — so
+the artefact never cancels on a scored row. **`ctx_pp`'s numerator is what the
+engine actually did for every entry, warm or cold**, so the `ctx_pp` rows carry
+the verdicts and the `pp2048` rows are kept as recorded losses on our marginal
+warm-equivalent, not quotable as board comparisons. Every prefill `Board top`
+except `ctx_pp @ d65536` is an Atlas `ttfr` artefact (fires on a content-free
+`choices` chunk, 260x–694x early; Atlas's true prefill is 1362–2976 tok/s,
+**below ours**) and is shown only to honor the column contract.
 
 ## NOT SCORED — no board figure, or never a campaign target
 
@@ -156,6 +170,14 @@ this table, which is correct — nothing here is quotable.
 | bench_2b0f7bc8fb7b-mnbt8192, bench_964a188f3d16-mnbt65536, bench_8707c27ce1a4-r22-armG, bench_bb4b8ef8a193-r22-armH | 2026-08-22 | "the arm that runs SECOND reads higher, 4 of 4, mean **+6.5%**" | every arm-to-arm comparison in this file | R23 (A-B-B-A, 4 same-config position contrasts: −4.40, −0.91, +0.71, +2.84%, mean **−0.44%**, p = 1.0) | **REFUTED as a directional effect.** What remains is a **symmetric** arm-to-arm spread of ~±5% on identical configurations, which does not re-sign any past delta |
 | bench_dd3afc9e1c94 | 2026-08-22 | R6's "runs=3 is adequate at d16384 — the quiet regime", σ/med 2.6% | tg128 @ d16384 c1 | R23 (seven engine starts now read 2.6 / 5.5 / 8.01 / 8.26 / 10.95 / 12.22 / 10.90%) | none — this cell is not quiet; do not budget runs as if it were |
 | | | `tg` aggregate = per-request × c (168.0, 228.0, 647.6, 4.53x at c4) | every `c>1` row | R10 from llama-benchy's source, corroborated by R5c over 34 records | `tg_throughput` is already a batch aggregate; `peak_throughput` is the ceiling it must sit under. Never multiply |
+| bench_25a0e7f36ab0 | 2026-08-21 | 0.006x against 215894.21 (Atlas) | pp2048 @ d8192 c1 | `ANALYSIS-board-rescrape.md` (2026-08-22) | 0.752x against Laguna-XS-2.1-NVFP4 6944.70, on warm-equivalent 5225.8 |
+| bench_3d8149654d1b | 2026-08-22 | 0.006x against 99229.33 (Atlas) | pp2048 @ d16384 c1 | same | 0.757x against Laguna 5878.08, on warm-equivalent 4452.2 |
+| bench_25a0e7f36ab0 | 2026-08-21 | 0.005x of top / 0.064x of best vLLM, "a 15x gap … an open question" | pp2048 @ d32768 c1 | same | 0.913x against Laguna 4644.54, on warm-equivalent 4238.4. ⚠ `ANALYSIS-prefill-metric.md`'s projected 5027 = "1.082x WIN" is retired with it and was never true |
+| bench_25a0e7f36ab0 | 2026-08-21 | LOST by ~126x (775122.96, "not in scrape") | ctx_pp @ d8192 c1 | same | 0.844x same-model / 0.574x best vLLM NVFP4 — the like-for-like entries the 2026-08-21 scrape missed |
+| bench_3d8149654d1b | 2026-08-22 | LOST by ~151x (884764.53, "not in scrape") | ctx_pp @ d16384 c1 | same | 0.845x / 0.551x |
+| bench_25a0e7f36ab0 | 2026-08-21 | LOST by ~186x (945271.31, "not in scrape") | ctx_pp @ d32768 c1 | same | 0.856x / 0.537x |
+| | | "the board's prefill figures … carry the identical understatement, so the artefact cancels" | every prefill row | same | **REFUTED per entry.** The board is 82–85% warm at d16384/d32768, we are cold at every depth, and cell-top ranking selects a warm opponent by construction. Prefill is scored on `ctx_pp` only |
+| | | every prefill "board top" read as a prefill rate (215894.21, 99229.33, 63079.61, 775122.96, 884764.53, 945271.31) | every prefill row | same | **Atlas `ttfr` artefact, measured not suspected**: `ttfr` fires on a content-free `choices` chunk, inflating by 260x–694x. Atlas's true prefill from its own `e2eTtft` is 1362–2976 tok/s, below ours. Kept in the `Board top` column for the contract only |
 | | | "the `ctx_` phase is prefill-free, so it is ~9x faster at prefill" and the five claims built on it | every `ctx_pp`-vs-`pp` comparison | the `ctx_` phase-label correction | **Withdrawn, not adjusted.** The ratio is `(depth+2048)/2048` to within 4% in 45 of 46 archived phase pairs. Prefix caching **never hit once** in 220+ engine samples |
 
 ## Two cautions that reach every row above
