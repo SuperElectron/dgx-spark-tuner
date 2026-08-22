@@ -21,8 +21,30 @@ Cells taken, best figure we have, against the board:
 | tg128 @ d16384 c4 | 52.85 | 46.68 | **1.13x**, verified |
 | tg128 @ d65536 c1 | 108.15 | 16.48 | **6.56x** |
 | ctx_tg128 @ d65536 c1 | 89.76 | 20.70 | **4.34x** |
+| tg128 @ d16384 c2 | 84.00 | not scraped | cannot be scored |
+| tg128 @ d16384 c5 | 48.12 | not scraped | cannot be scored |
 
-Six cells taken. The two deep cells are the campaign's widest margins, and
+Six cells taken. Round 4's two new cells (c2, c5) are measured but unscoreable:
+the board was never scraped cleanly at those concurrencies, so there is no
+incumbent to compare against and none has been invented. Scraping them is now
+part of R5b.
+
+## Concurrency curve at tg128 @ d16384 (round 4's actual result)
+
+Per-request is the metric the board publishes; aggregate is per-request x c.
+
+| c | max_num_seqs | per-request | aggregate | vs c1 | efficiency |
+|---:|---:|---:|---:|---:|---:|
+| 1 | 4 | 102.2 | 102.2 | 1.00x | 100% |
+| 2 | 4 | 84.00 | 168.0 | 1.64x | 82% |
+| 4 | 4 | 52.85 | 211.4 | 2.07x | 52% |
+| 5 | 4 | 45.60 | 228.0 | 2.23x | 45% |
+| 5 | **5** (mutation) | **48.12** | **240.6** | 2.35x | 47% |
+
+The knee is between c2 and c4. Raising `--max-num-seqs` from 4 to 5 to match a
+c5 probe is worth +5.5% per-request and +5.5% aggregate — a real effect (σ 0.07
+and 0.26, run ranges disjoint), measured once per arm. NOT folded into
+recipe.yaml: the campaign recipe stays unmutated. The two deep cells are the campaign's widest margins, and
 `ctx_tg @ d65536 c1` is the FIRST prefix-caching cell we can actually claim —
 it is the only `ctx_` cell whose board figure was ever scraped.
 
@@ -57,6 +79,12 @@ like-for-like, but a c4 row at 52.85 is ~211 tok/s of aggregate work.
 | bench_f58c56da6658-verify | 2026-08-21 | ctx_tg128 @ d16384 c4 | 55.92 | 0.62 | 8641.49 | not scraped | hold — pooled median 56.36 |
 | bench_dab043abba20 | 2026-08-21 | tg128 @ d65536 c1 | 108.15 | 10.41 | 17281.66 | 16.48 | win — 6.56x incumbent; worst of 3 runs 89.23 still 5.41x |
 | bench_dab043abba20 | 2026-08-21 | ctx_tg128 @ d65536 c1 | 89.76 | 1.80 | 16377.23 | 20.70 | win — 4.34x incumbent; first ctx_ cell with a known board figure |
+| bench_0ef7af8997ce | 2026-08-22 | tg128 @ d16384 c2 | 84.00 | 1.18 | 5657.56 | not scraped | hold — no incumbent; aggregate 168.0, 82% scaling efficiency vs c1 |
+| bench_0ef7af8997ce | 2026-08-22 | ctx_tg128 @ d16384 c2 | 79.44 | 1.06 | 4825.98 | not scraped | hold — BELOW cold (-5.4%), first below-cold ctx_ at this depth |
+| bench_0ef7af8997ce | 2026-08-22 | tg128 @ d16384 c5 (max_num_seqs 4, unmutated) | 45.60 | 0.26 | 11866.00 | not scraped | hold — scheduler-limited: fifth request queues; aggregate 228.0 |
+| bench_0ef7af8997ce | 2026-08-22 | ctx_tg128 @ d16384 c5 (max_num_seqs 4) | 48.18 | 0.31 | 9914.85 | not scraped | hold — above cold (+5.7%) |
+| bench_858173ba5753-mns5 | 2026-08-22 | tg128 @ d16384 c5 (MUTATION max_num_seqs 5) | 48.12 | 0.07 | 12088.40 | not scraped | hold — best c5 figure; +5.5% over the unmutated arm; mutation NOT kept in recipe.yaml |
+| bench_858173ba5753-mns5 | 2026-08-22 | ctx_tg128 @ d16384 c5 (MUTATION max_num_seqs 5) | 51.25 | 0.26 | 9850.01 | not scraped | hold — above cold (+6.5%) |
 
 ## Prefill cells (pp2048)
 
@@ -79,3 +107,9 @@ the cached prefix and sit an order of magnitude higher.
 | bench_f58c56da6658-verify | 2026-08-21 | ctx_pp2048 @ d16384 c4 | 5924.46 | 30.56 | 8641.49 | not scraped | hold — pooled median 5924.76 |
 | bench_dab043abba20 | 2026-08-21 | pp2048 @ d65536 c1 | 118.59 | 0.55 | 17281.66 | not scraped | hold — board figure unknown |
 | bench_dab043abba20 | 2026-08-21 | ctx_pp2048 @ d65536 c1 | 4004.76 | 12.92 | 16377.23 | not scraped | hold — board figure unknown |
+| bench_0ef7af8997ce | 2026-08-22 | pp2048 @ d16384 c2 | 634.04 | 0.48 | 5657.56 | not scraped | hold — flat against c1's 637.09 and c4's 643.31 |
+| bench_0ef7af8997ce | 2026-08-22 | ctx_pp2048 @ d16384 c2 | 5810.28 | 47.04 | 4825.98 | not scraped | hold — board figure unknown |
+| bench_0ef7af8997ce | 2026-08-22 | pp2048 @ d16384 c5 (max_num_seqs 4) | 581.44 | 2.22 | 11866.00 | not scraped | hold — the ONLY depressed prefill row at this depth (-9.6%): the queued fifth prefill is what falls |
+| bench_0ef7af8997ce | 2026-08-22 | ctx_pp2048 @ d16384 c5 (max_num_seqs 4) | 5236.80 | 38.23 | 9914.85 | not scraped | hold — also depressed vs 5810-5967 elsewhere at this depth |
+| bench_858173ba5753-mns5 | 2026-08-22 | pp2048 @ d16384 c5 (MUTATION max_num_seqs 5) | 640.21 | 1.68 | 12088.40 | not scraped | hold — mutation restores prefill to the c2/c4 level |
+| bench_858173ba5753-mns5 | 2026-08-22 | ctx_pp2048 @ d16384 c5 (MUTATION max_num_seqs 5) | 5869.43 | 16.83 | 9850.01 | not scraped | hold — likewise restored |
