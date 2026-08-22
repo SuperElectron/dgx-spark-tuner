@@ -5,10 +5,11 @@
 - **WON 8 board cells, LOST 12**, and a long tail the board publishes no figure
   for and which therefore cannot be scored either way. Those counts have not
   moved since the synthesis pass and nothing overnight moved them.
-- **Widest margin: `ctx_tg @ d16384 c4` at 6.15x** (170.36 vs 27.68), on a
-  **mutation** — `max_num_batched_tokens 98304 + max_num_seqs 5`, pooled over 14
-  runs from two engine starts. The best *campaign-config* win is
-  `tg128 @ d65536 c1` at **5.71x**.
+- **Widest margin: `ctx_tg @ d16384 c4` at 6.21x** (171.77 vs 27.68), on a
+  **mutation** — `max_num_batched_tokens 131072 + max_num_seqs 5`, pooled over 14
+  runs from two engine starts (R13c + **R13d**). It took the title from the
+  mnbt 98304 row's 6.15x **by 0.83%** — a bookkeeping change, not a discovery.
+  The best *campaign-config* win is `tg128 @ d65536 c1` at **5.71x**.
 - **The one contested cell we hold** is `tg128 @ d16384 c4`: **1.13x** on the
   untouched recipe, **3.67x** on the raised token budget.
 - **The token budget is the campaign's largest lever and its curve KNEES AT
@@ -16,6 +17,11 @@
   nothing. R13's 98304 buys nothing over 65536. **R11's fold value is 65536.**
 - **c5 was never taken.** It is the only loss with a live route to a win and it
   ends the campaign at 0.73x. It is recorded as a loss.
+- **R13d ran last and closed the queue's last scoreable cell.** It repeated
+  `ctx_tg @ d16384 c4` at mnbt 131072 and **moved the widest-margin title to
+  6.21x on 14 pooled runs**, retiring R13c's unpromoted 6.34x as a high draw
+  (repeat came in −2.99%). **No standing changed sign; the counts are still
+  8 won / 12 lost.** Everything below still applies.
 
 **What changed overnight, in four items — all four are corrections, and two of
 them retired figures this file had published:**
@@ -97,12 +103,12 @@ campaign's unresolved tension, and R11 is the round that settles it.
 | tg128 @ d16384 c4 | **MUTATION mnbt 32768**, runs=7 | **147.25** | 46.68 | **3.15x** | R10; reproduces R9's A1 143.08 to 2.9% from a separate start |
 | tg128 @ d16384 c4 | **MUTATION mnbt 98304 + mns 5**, **14 runs pooled** | **171.31** | 46.68 | **3.67x** | **R13 + R13c**, two engine starts (174.68 and 169.69, gap −2.86%). Was claimed at 3.74x on R13's 7 runs alone; **R13c reproduced it and the pooled median is now the claimed figure** |
 | tg128 @ d16384 c4 | **MUTATION mnbt 65536 + mns 5**, runs=7 | **173.34** | 46.68 | **3.71x** | **R13c — THE KNEE.** peak_thr 308, span 1.505, σ 4.39%. Statistically identical to mnbt 98304 and 131072; this is the cheapest budget that reaches the ceiling |
-| tg128 @ d16384 c4 | **MUTATION mnbt 131072 + mns 5**, runs=7 | 170.89 | 46.68 | **3.66x** | R13c — above the knee, buys nothing over 65536 |
+| tg128 @ d16384 c4 | **MUTATION mnbt 131072 + mns 5**, **14 runs pooled** | 170.84 | 46.68 | **3.66x** | R13c + R13d, two engine starts (170.89 and 168.97, gap −1.12%) — above the knee, buys nothing over 65536. Not the claimed c4 figure: **the claimed one is the 65536 knee at 3.71x** |
 | tg128 @ d16384 c4 | **MUTATION mnbt 16384 + mns 5**, runs=7 | 85.90 | 46.68 | **1.84x** | R13c — below the knee, scheduler never holds full occupancy |
 | ctx_tg @ d16384 c4 | campaign config, 6 runs pooled | 56.36 | 27.68 | **2.04x** | |
 | ctx_tg @ d16384 c4 | **MUTATION mnbt 32768**, runs=7 | **126.35** | 27.68 | **4.56x** | R10 |
-| ctx_tg @ d16384 c4 | **MUTATION mnbt 98304 + mns 5**, **14 runs pooled** | **170.36** | 27.68 | **6.15x** | **R13 + R13c — the campaign's WIDEST margin**, past tg128 @ d65536 c1's 5.71x. Two engine starts (170.59 and 168.37, gap −1.30%); was claimed at 6.16x on R13's 7 runs alone |
-| ctx_tg @ d16384 c4 | **MUTATION mnbt 131072 + mns 5**, runs=7 | 175.40 | 27.68 | (6.34x) | **R13c — measured, NOT PROMOTED.** Highest of three statistically identical budgets above the knee (175.40 / 168.37 / 164.95, σ/med ~4%). A single 7-run median at a config measured once is exactly what retired R1's and R3's figures, both too high. Needs a repeat — queued as R13d |
+| ctx_tg @ d16384 c4 | **MUTATION mnbt 131072 + mns 5**, **14 runs pooled** | **171.77** | 27.68 | **6.21x** | **R13c + R13d — the campaign's WIDEST margin**, past tg128 @ d65536 c1's 5.71x. Two engine starts (175.40 and 170.16, gap −2.99%). **R13d's repeat settled the cell R13c would not promote**: the pooled figure clears the previous title (170.36) by **0.83%**, so the title moves by a margin too small to mean anything physically — what changed is that it now rests on 14 runs at a re-measured config. **R13c's 175.40 = 6.34x is RETIRED as the high draw it looked like.** No third measurement of this cell — the question is closed |
+| ctx_tg @ d16384 c4 | **MUTATION mnbt 98304 + mns 5**, **14 runs pooled** | 170.36 | 27.68 | **6.15x** | **SUPERSEDED as the widest margin by the mnbt 131072 row above (6.21x), by 0.83%.** Still a win at 6.15x and still the best value below 131072. R13 + R13c, two engine starts (170.59 and 168.37, gap −1.30%); was claimed at 6.16x on R13's 7 runs alone |
 | ctx_tg @ d16384 c4 | **MUTATION mnbt 65536 + mns 5**, runs=7 | 164.95 | 27.68 | **5.96x** | R13c — the knee. peak_thr 289, span 1.505 |
 | ctx_tg @ d16384 c4 | **MUTATION mnbt 16384 + mns 5**, runs=7 | 68.79 | 27.68 | **2.49x** | R13c — below the knee |
 | tg128 @ d65536 c1 | campaign config, runs=7 | 94.10 | 16.48 | **5.71x** | revised DOWN by R8 from R3's 3-run 108.15 |
@@ -322,14 +328,33 @@ either, then stops dead. **That is R13's `Waiting: 0` finding seen from the othe
 side, and the second independent confirmation that the ratio this file called
 "admission stagger" for four rounds is not admission.** Its floor is ~1.50.
 
-⚠️ **A wider margin was measured and deliberately NOT promoted.** `ctx_tg @
-d16384 c4` at mnbt 131072 reads **175.40 = 6.34x**, above the 6.15x that holds
-the widest-margin title. It is a single 7-run median at a configuration measured
-once, and its two neighbours above the knee (168.37, 164.95) make the three one
-point within noise — 175.40 is the highest draw of three. Promoting the best
-first measurement of a cell is exactly what retired R1's 129.32 and R3's 108.15,
-**both too high**. The row is recorded; the title is not moved. A repeat costs
-one arm and is queued as R13d.
+✅ **ROUND 13d SETTLED THE MARGIN R13c REFUSED TO PROMOTE — the title moves, by
+0.83%.** R13c measured `ctx_tg @ d16384 c4` at mnbt 131072 as **175.40 = 6.34x**
+and would not claim it: a single 7-run median at a config measured once, with two
+above-knee neighbours (168.37, 164.95) making the three one point. R13d repeated
+the identical configuration, runs=7, one engine start.
+
+| | R13c | **R13d** | **pooled 14** | vs the 170.36 title |
+|---|---:|---:|---:|---|
+| `ctx_tg @ d16384 c4`, mnbt 131072 | 175.40 | **170.16** | **171.77** | **+0.83% — TITLE MOVES, 6.21x** |
+| `tg128 @ d16384 c4`, mnbt 131072 | 170.89 | 168.97 | 170.84 | — |
+
+**Read this as a bookkeeping change, not a discovery.** The campaign's widest
+margin is now **6.21x** and rests on 14 runs at a re-measured configuration
+instead of one draw — but 6.21x against 6.15x is 0.83%, well inside the ~2%
+correction this file carries on once-measured figures. **R13c was right not to
+promote 6.34x: it was an overstatement of 2.1%, and it is retired.** The rule
+declared before R13d ran was that the pooled median decides and no third
+measurement would be taken either way. **The cell is closed.**
+
+📉 **AND THE −1.94% SYSTEMATIC NOW HAS EIGHT SAME-SIGN REPRODUCTIONS.** R13d's
+two came in at **−2.99%** (ctx) and **−1.12%** (Phase 2); with R13c's six that is
+**8 of 8 low, mean −1.88%**, p ≈ 0.8% on a fair coin. One thing narrowed: R13c's
+six were all figures that had motivated their own promotion, which is the shape
+first-measurement bias takes — **R13d's Phase-2 partner was not a promoted figure
+and came in low anyway**, which is mild evidence for the session-effect half.
+Mild, not conclusive: one unpromoted point against seven promoted ones. **The ~2%
+downward correction on every once-measured figure in this file stands.**
 
 And **at c2 the hardware ceiling did not move at all**: `peak_throughput` reads
 181 against 182 at `mnbt 8192` (−0.5%) while `tg` rose **+67.6%**. The token
@@ -884,7 +909,7 @@ row, and they answer different questions:** `tg` is what the board ranks,
 | bench_ac37f5b64487 | 2026-08-22 | ctx_tg128 @ d16384 c5 (MUTATION mnbt 32768 + mns 5, runs=7) | 104.75 | 1.16 | 12731.35 | not scraped | hold — BELOW cold (−18.7%), a **SIGN FLIP** against the +6.5% the same cell shows at mnbt 8192, reproducing what R10 saw at c4 (+4.4% → −14.2%). `peak_throughput` 290. **Stagger 2.12 — HIGHER than cold's 1.70**, which contradicts R10's stated mechanism for the flip. ⚠ That mechanism ("Phase 1 does no prefill so it never staggers") is now **withdrawn at the premise**, not merely contradicted |
 
 | bench_433eeaf9827e | 2026-08-22 | tg128 @ d16384 c4 (**MUTATION mnbt 98304 + mns 5**, runs=7) | **174.68** | 7.70 | 12101.77 | 46.68 | **WIN — 3.74x on these 7 runs; SUPERSEDED by the pooled 14-run 171.31 = 3.67x** (R13c re-ran this exact config and read 169.69). Up from 3.15x at mnbt 32768. `peak_throughput` **310**, span ratio 1.53, `tg_req` 66.76 (+15.5%), residency 3.88 of 4. σ 4.41%. ttfr WORSE again (+2.3% on R10) |
-| bench_433eeaf9827e | 2026-08-22 | ctx_tg128 @ d16384 c4 (**MUTATION mnbt 98304 + mns 5**, runs=7) | **170.59** | 6.34 | 10517.21 | 27.68 | **WIN — 6.16x on these 7 runs; SUPERSEDED by the pooled 14-run 170.36 = 6.15x** (R13c re-ran this exact config and read 168.37). **Still the campaign's WIDEST margin at the pooled figure.** Phase 1, the context load. `peak_throughput` 294, span ratio 1.45, `tg_req` 61.93, residency 3.95 of 4. σ 3.72%. BELOW Phase 2 (−2.3%), and it staggers LESS than Phase 2 — refuting R12's asymmetry |
+| bench_433eeaf9827e | 2026-08-22 | ctx_tg128 @ d16384 c4 (**MUTATION mnbt 98304 + mns 5**, runs=7) | **170.59** | 6.34 | 10517.21 | 27.68 | **WIN — 6.16x on these 7 runs; SUPERSEDED by the pooled 14-run 170.36 = 6.15x** (R13c re-ran this exact config and read 168.37). ⚠ **SUPERSEDED as the widest margin by R13d** — the mnbt 131072 pooled 14-run 171.77 = 6.21x. This row stays a win at 6.15x. Phase 1, the context load. `peak_throughput` 294, span ratio 1.45, `tg_req` 61.93, residency 3.95 of 4. σ 3.72%. BELOW Phase 2 (−2.3%), and it staggers LESS than Phase 2 — refuting R12's asymmetry |
 | bench_433eeaf9827e | 2026-08-22 | tg128 @ d16384 c5 (**MUTATION mnbt 98304 + mns 5**, runs=7) | **164.27** | 5.40 | 15126.01 | 225.46 best vLLM NVFP4 (428.95 overall) | **LOSS — 0.73x, short by 27%**, up from 0.57x. The round's target cell, not taken. Against the cell top 428.95 it is **0.38x**. `peak_throughput` 303, span ratio 1.54, `tg_req` 50.50 (+15.5%), residency 4.81 of 5. σ 3.29% |
 | bench_433eeaf9827e | 2026-08-22 | ctx_tg128 @ d16384 c5 (**MUTATION mnbt 98304 + mns 5**, runs=7) | 160.67 | 3.48 | 15552.29 | not scraped | hold — Phase 1. `peak_throughput` 314, span ratio 1.52, `tg_req` 48.73, residency 5.06 of 5. σ 2.16%. BELOW Phase 2 (−2.2%) |
 | bench_9379c15468ec-a-chunk | 2026-08-22 | tg128 @ d16384 c4 (**R9b ARM A — prefix caching OFF, mnbt 32768, mns 4, chunked prefill ON**, runs=3) | 62.13 | 0.70 | 11559.86 | **NOT SCOREABLE** | diagnostic — three flags from the campaign config, not a standings row. `peak_throughput` **297**, IDENTICAL to R9's A1 with caching ON, while `tg` falls **−56.6%** (143.08 → 62.13): the hardware ceiling did not move, the batch span did. Stagger **3.32** vs A1's 1.62. `tg_req` 51.49 (−11.0%) |
@@ -914,9 +939,11 @@ reproduction gap is stated in the row.
 | bench_0bd1f20dca74-mnbt65536 | 2026-08-22 | tg128 @ d16384 c4 (**MUTATION mnbt 65536 + mns 5**, runs=7) | **173.34** | 7.60 | 12167.21 | 46.68 | **WIN — 3.71x, AND THIS IS THE KNEE OF THE CURVE.** New budget value. `peak_thr` **308**, span **1.505**, `tg_req` **65.24 — the highest of the six**, σ 4.39%. `(4,0)` 10/10. Statistically identical to mnbt 98304 and 131072 (top three span 2.1% against σ/med ~4%), so **this is the cheapest budget that reaches the ceiling and it is R11's fold value** |
 | bench_0bd1f20dca74-mnbt65536 | 2026-08-22 | ctx_tg128 @ d16384 c4 (MUTATION mnbt 65536 + mns 5, runs=7) | 164.95 | 3.21 | 10562.91 | 27.68 | **WIN — 5.96x.** `peak_thr` 289, span 1.505 — identical to Phase 2's, the crossover point of the asymmetry |
 | bench_d6cec044441c-mnbt98304 | 2026-08-22 | tg128 @ d16384 c4 (**MUTATION mnbt 98304 + mns 5**, runs=7) | 169.69 | 6.81 | 12374.74 | 46.68 | **WIN — 3.64x on these 7 runs alone. PROTECTION POINT: reproduces R13's 174.68 to −2.86%**, so the row STANDS; because this is the SAME configuration, the two 7-run sets are **pooled to a 14-run median of 171.31 = 3.67x**, which is now the claimed figure. `peak_thr` 302, span 1.509, `tg_req` 64.02. `(4,0)` 11/11. ⚠ This arm's `pp2048` control missed its band — see the prefill rows |
-| bench_d6cec044441c-mnbt98304 | 2026-08-22 | ctx_tg128 @ d16384 c4 (MUTATION mnbt 98304 + mns 5, runs=7) | 168.37 | 5.83 | 10573.68 | 27.68 | **WIN — 6.08x alone. PROTECTION POINT: reproduces R13's 170.59 to −1.30%**; pooled 14-run median **170.36 = 6.15x, still the campaign's WIDEST margin**. `peak_thr` 284, span 1.454 |
+| bench_d6cec044441c-mnbt98304 | 2026-08-22 | ctx_tg128 @ d16384 c4 (MUTATION mnbt 98304 + mns 5, runs=7) | 168.37 | 5.83 | 10573.68 | 27.68 | **WIN — 6.08x alone. PROTECTION POINT: reproduces R13's 170.59 to −1.30%**; pooled 14-run median **170.36 = 6.15x**. ⚠ **No longer the widest margin — R13d took the title with mnbt 131072's pooled 171.77 = 6.21x.** `peak_thr` 284, span 1.454 |
 | bench_0509b2a740f6-mnbt131072 | 2026-08-22 | tg128 @ d16384 c4 (**MUTATION mnbt 131072 + mns 5**, runs=7) | 170.89 | 6.65 | 12207.83 | 46.68 | **WIN — 3.66x.** New budget value, above the knee: **−1.4% against mnbt 65536, i.e. doubling the budget twice past the knee buys nothing.** `peak_thr` 304, span 1.501, `tg_req` **64.14 — 1.0019x of the mnbt 98304 figure**, which is the round's discriminator and reads H_admission_decode. Engine start cost **310 s**, the only budget above the size trend |
-| bench_0509b2a740f6-mnbt131072 | 2026-08-22 | ctx_tg128 @ d16384 c4 (MUTATION mnbt 131072 + mns 5, runs=7) | **175.40** | 6.93 | 10631.59 | 27.68 | **6.34x MEASURED — DELIBERATELY NOT PROMOTED as the campaign's widest margin.** Single 7-run median at a config measured once, σ/med 3.95%, and its two neighbours above the knee read 168.37 and 164.95: the three are one point within noise and this is the highest draw. Promoting a best-first-measurement is exactly what retired R1's 129.32 and R3's 108.15, both too high. Needs a repeat — **R13d**. `peak_thr` 296, span 1.465. **ABOVE Phase 2 (+2.6%)**, the second sign flip of the budget sweep |
+| bench_0509b2a740f6-mnbt131072 | 2026-08-22 | ctx_tg128 @ d16384 c4 (MUTATION mnbt 131072 + mns 5, runs=7) | 175.40 | 6.93 | 10631.59 | 27.68 | **6.34x MEASURED, NEVER PROMOTED, and now RETIRED as the high draw it looked like.** R13d repeated this exact config and read 170.16 (−2.99%); the claimed figure for the cell is the **pooled 14-run 171.77 = 6.21x**. R13c's refusal to promote a single 7-run median at a once-measured config was correct — 6.34x would have been an overstatement of 2.1%. `peak_thr` 296, span 1.465. ABOVE Phase 2 (+2.6%) |
+| **bench_0509b2a740f6-r13d** | 2026-08-22 | tg128 @ d16384 c4 (**MUTATION mnbt 131072 + mns 5**, runs=7) | 168.97 | 9.90 | 12847.72 | 46.68 | **WIN — 3.62x on these 7 runs; pooled 14-run 170.84 = 3.66x.** **R13d.** Rode along free with the ctx arm. Reproduces R13c's 170.89 to **−1.12%** — the eighth consecutive same-sign low reproduction, and the FIRST one of a figure nobody had promoted. `peak_thr` 307, span 1.517, `tg_req` 64.11, residency 3.99 of 4. **σ 5.86%, and the runs span 151.04–183.90** — the mode-plus-one-low-draw shape again |
+| **bench_0509b2a740f6-r13d** | 2026-08-22 | ctx_tg128 @ d16384 c4 (**MUTATION mnbt 131072 + mns 5**, runs=7) | **170.16** | 3.59 | 11284.21 | 27.68 | **WIN — 6.15x on these 7 runs; pooled 14-run 171.77 = 6.21x, THE CAMPAIGN'S WIDEST MARGIN.** **R13d — the promotion test, and it moved the title by 0.83%**, which the round predicted in advance (band 168–174, centre 171.0; measured 171.77). `peak_thr` 296, span 1.440, `tg_req` 61.27. **`(4,0)` in 13/13 loaded samples with the span still at 1.44** — third confirmation that the span ratio is not admission. σ **2.11%**, against Phase 2's 5.86% in the SAME invocation — the σ ordering flipped against R13c's equal 3.95/3.89% at this identical config, so there is no ctx-vs-Phase-2 dispersion rule. ABOVE Phase 2 by +0.70%, same sign as R13c's +2.6% |
 
 **The ctx-vs-Phase-2 sign is a budget response, not a rule.** Across the six
 budgets it reads **+4.8% / −19.9% / −12.6% / −4.8% / −0.8% / +2.6%** — a smooth
@@ -1052,4 +1079,6 @@ rather than against it.
 | bench_0bd1f20dca74-mnbt65536 | 2026-08-22 | pp2048 @ d16384 c4 (**R13c, MUTATION mnbt 65536 + mns 5**) | 671.68 | 2.13 | 12167.21 | not scraped | hold — **SESSION CONTROL PASSES** |
 | bench_d6cec044441c-mnbt98304 | 2026-08-22 | pp2048 @ d16384 c4 (**R13c, MUTATION mnbt 98304 + mns 5**) | **645.90** | **38.43** | 12374.74 | not scraped | ⚠ **SESSION CONTROL MISSES its pre-declared 655-690 band by 1.4%, and the declared consequence was NOT applied — see the argument in the journal.** The miss is one low draw (runs 556.89 / 627.74 / 636.74 / 645.90 / 661.85 / 676.11 / 678.13, the mode-plus-one-low-draw shape R8 and R12 documented); the same arm's `ctx_pp` reads 6189.65 against R13's 6222.20, **0.5%**, and `ctx_pp` is the same physics charged 16384 tokens instead of 2048; the arms either side of it passed; telemetry passed. **The gate was built from seven historical point estimates without pricing their dispersion and was too tight — recorded as a broken gate, the campaign's second after R9b's `ctx_pp2048 < 1200`.** Future rounds should gate on `ctx_pp` |
 | bench_0509b2a740f6-mnbt131072 | 2026-08-22 | pp2048 @ d16384 c4 (**R13c, MUTATION mnbt 131072 + mns 5**) | 670.32 | 25.06 | 12207.83 | not scraped | hold — **SESSION CONTROL PASSES** |
+| **bench_0509b2a740f6-r13d** | 2026-08-22 | pp2048 @ d16384 c4 (**R13d, MUTATION mnbt 131072 + mns 5**) | 636.99 | **3.59** | 12847.72 | not scraped | hold — inside the 610–690 band R13d recorded it against (it was **not** gated, per R13c's finding that this gate was too tight). Reproduces R13c's 670.32 to −5.0%, and its σ collapses from 25.06 to 3.59 |
+| **bench_0509b2a740f6-r13d** | 2026-08-22 | ctx_pp2048 @ d16384 c4 (**R13d**, Phase 1) | 5781.15 | 136.29 | — | not scraped | ⚠ **THE REPLACEMENT GATE MISSED ON ITS FIRST OUTING.** R13c declared `ctx_pp` the session gate after `pp2048` broke its own; R13d predicted 5900–6400 from R13c's single 6163.69 and measured **5781.15 — low by 2.0%**. Not a broken instrument: this is a −6.2% move whose σ fell from 416.60 to 136.29, so the two arms disagree about dispersion as much as level. **Widen the `ctx_pp` gate to ±10% — the band the protection points use — or stop calling it a gate.** Phase pair: `ctx_pp / pp` = **9.08** against the prediction 9.00, residual +0.9%; the phase-label audit now stands at **36 of 37 pairs** |
 | R13c, all six arms | 2026-08-22 | ctx_pp2048 @ d16384 c4 (Phase 1) | 5875.22 / 6007.70 / 6117.63 / 6200.01 / 6189.65 / 6163.69 | 25.63 / 19.47 / 15.42 / 17.79 / 172.99 / 416.60 | — | not scraped | hold — Phase 1, at mnbt 8192 / 16384 / 32768 / 65536 / 98304 / 131072. **Six new phase pairs for the phase-label correction**: `ctx_pp / pp` reads 9.21 / 9.11 / 9.12 / 9.23 / 9.58 / 9.20 against the zero-free-parameter prediction `(16384+2048)/2048` = **9.00**, residuals **+1.2% to +6.4%**, the 9.58 being the arm with the depressed `pp` draw. The correction pass's 29-of-30 result now stands at **35 of 36 pairs**, and these six add a token-budget dimension it did not have |
