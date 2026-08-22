@@ -75,20 +75,13 @@ research/<name>/
 
 ## Observation sweep (mandatory at every synthesis, ~5 rounds)
 
-Verdicts capture what mutations did; observations capture everything else. At
-each synthesis write an "Observations" journal subsection answering: what did
-the runs show about the BOX (clocks, temps, power, memory pressure, page
-cache), the MODEL (acceptance rates, quality quirks, load behavior), or the
-STACK (runtime bugs, version quirks) that is not a mutation verdict? Store
-each as an [ENV]/[LESSON] memory (entity box:<alias> or model:<hf-id>), and
-any candidate future intervention — system setting, fine-tune, prune, quant
-recalibration, kernel fix — as an [IDEA] memory. Empty sweeps are suspicious:
-telemetry always says something.
-
-Telemetry feed: run `scripts/sample-telemetry.sh <seconds> <outfile>` alongside
-at least one benchmark per series (more when investigating), and archive the
-log with that run. Round 11 of qwen35-08b found the SM clock cap exactly this
-way — that class of finding is the sweep's target.
+Run an observation pass per the `observe` skill (.claude/skills/observe/SKILL.md)
+over the series' runs, telemetry, and logs — surprises, headroom at every
+layer, missing instruments — recording [ENV]/[LESSON]/[IDEA] memories and an
+"Observations" journal subsection. Telemetry feed:
+`scripts/sample-telemetry.sh <seconds> <outfile>` alongside at least one
+benchmark per series; archive the log with that run. Empty sweeps are
+suspicious.
 
 ## Cost ledger
 
