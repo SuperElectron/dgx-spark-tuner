@@ -3663,6 +3663,13 @@ its two measurement phases labelled backwards since Round 1.**
 R13 / the `ctx_` phase-label correction / R5c / R13c; again after **R13d**;
 again after **R11**, which ran last and is the only round that ever changed
 `recipe.yaml`; and a fourth time — **CURRENT AS OF 2026-08-22, post-R11 fold** —
+and a fifth time — **CURRENT AS OF 2026-08-22, post-R9c** — to fold R9c's three
+corrections into the places they reach: **open question 1** (its premise was
+wrong by two orders of magnitude and its remaining half is not benchmarkable),
+**open question 8** (the ~2% downward systematic is weakened to a noise floor),
+and **"what to run next" item 3** (R9c is done and must not be re-queued). R9c
+moved no standing and changed no config; everything else below stands as
+written. The fourth revision's text follows —
 to carry the config-epoch consequences of that change into the handoff itself:
 the cross-condition rule below the epoch warning, the `c1`-vs-`c>1` asymmetry of
 the budget lever, and the removal of the pre-fold "not folded" language this
@@ -4283,11 +4290,30 @@ regularities; and one campaign `[COST]` total.
 ### Open questions that are genuinely still open
 
 1. **Why is `--enable-prefix-caching` worth 57% of the headline metric when it
-   never hits?** Zero cache hits, identical prompt-token work, identical
-   `peak_throughput`, and the entire difference in the batch span. The suspect is
-   `mamba_block_size` 16 -> 32768 riding along with the flag. Separable in one
-   invocation (**R9c**). Either answer reprices every `c>1` figure the campaign
-   has.
+   never hits?** ⚠ **NARROWED BY R9c, AND ITS PREMISE CORRECTED — read this
+   version, the one above it was wrong in two ways.** (a) The flag is worth
+   **2.414x**, not 57%, on R9c's 14 re-measured runs (146.32 vs 60.60), and the
+   decomposition closes exactly: **83% batch span, 17% per-request decode, 0.7%
+   hardware** (`peak_throughput` 287 vs 289). The span is made of **ttfr
+   dispersion measured directly at 1516 ms vs 6269 ms**. (b) The suspect was
+   stated as `mamba_block_size` 16 -> 32768, a 2048x change. **It is 2144 ->
+   32768, a 15.3x change** — `platforms/interface.py:911-918` overwrites the 16
+   with the aligned attention block size, and all seven archived engine logs
+   carry the same `Setting attention block size to 2144` line. **R9c ran the
+   granularity arm from the only legal side** (`--block-size 32768` with caching
+   ON) and it **explains at most 42% of the span gap** while bringing a 2.03x
+   per-request decode penalty the caching-OFF arm does not have — so
+   granularity is **not** the whole answer.
+   **AND THE REMAINING HALF IS NOT SEPARABLE BY ANY FLAG IN THIS ENGINE.**
+   Prefix caching ON forces `mamba_cache_mode: align`; OFF forces `none`;
+   `mamba_block_size` may be set only with caching ON
+   (`config/vllm.py:2607-2618`) and is then overwritten by `block_size` under
+   `align`. **Do not queue another benchmark here.** Reword the question as
+   *what does `align` mode do to prefill chunk scheduling* and answer it by
+   reading the mamba2 kernel's chunking path. R9c also left one direct
+   observation behind for whoever does: **arm N does not hold full residency —
+   `(3,1)` in 7 of 13 loaded samples at `c4`/`mns 4` with 3.34M tokens of KV
+   free** — so R7's plain-queueing account is live again and unexplained.
 2. ~~**Why does removing prefill work make the batch stagger WORSE?**~~
    **CLOSED — the question is dissolved, not answered.** It presupposed that the
    `ctx_` phase removes prefill work. It does not: `ctx_` is Phase 1, the
@@ -4333,6 +4359,14 @@ regularities; and one campaign `[COST]` total.
    and R13c could not separate them. The `pp2048` control cannot decide it —
    `pp` is prefill. A cheap test exists: re-run one arm at a different time of
    day and see whether the sign follows the clock or the ordinal.
+   ⚠ **WEAKENED BY R9c.** Its arm P reproduced R9's 143.08 at **+2.27%, HIGH** —
+   the first same-cell repeat in the campaign to break the run — while arm N
+   reproduced **−2.46% low** minutes later on the same box, and G2 reproduced G1
+   at −1.81%. **Two arms measured minutes apart moving in opposite directions by
+   the same magnitude is what a ±2.5% reproduction noise floor looks like, not
+   what a systematic looks like.** The run is now 8 low / 1 high / 1 low and the
+   coin argument is materially weaker. Do not treat the −1.9% as a correction to
+   apply.
 
 ### What to run next, in priority order
 
@@ -4366,11 +4400,17 @@ regularities; and one campaign `[COST]` total.
    so it cancels. What the check must explain instead is a *shape* disagreement:
    our Phase-1 rate falls with depth (6148.56 → 2803.17) while the board's
    `ctx_pp` incumbents rise (775123 → 945271). Start there.
-3. **R9c — separate prefix caching from `mamba_block_size`.** One engine start,
-   c4 only, runs=3, ~115 s: prefix caching off with an explicit `-o
-   mamba_block_size=16`. Check the validators from the image first. If `tg`
-   returns toward 143 the effect is the block size and prefix caching is a red
-   herring.
+3. ~~**R9c — separate prefix caching from `mamba_block_size`.**~~ ✅ **DONE, and
+   it did NOT settle the question — see the revised open question 1.** The arm
+   as queued (caching off + `mamba_block_size=16`) is **refused by a validator**
+   and could never have run; the premise behind it (2048x) was **wrong by two
+   orders of magnitude**; and the legal substitute (`--block-size 32768` with
+   caching ON) came in at `R_span` **1.359, inside its own pre-declared dead
+   zone**, while collapsing KV capacity by 87%. What the round did buy: both
+   endpoints re-measured at runs=7 in one session (**146.32 vs 60.60 = 2.414x**),
+   the 83%/17% span-versus-decode split, and a **proof that the four things the
+   flag moves cannot be separated in this engine**. See the `Round 9c outcome`
+   section. **Do not re-queue this as a benchmark.**
 4. ~~**R13d — repeat `ctx_tg @ d16384 c4` at `mnbt 131072`.**~~ ✅ **DONE.**
    The repeat read **170.16** (−2.99% on R13c's 175.40). **The pooled 14-run
    median is 171.77 = 6.21x, which takes the widest-margin title from the mnbt
@@ -6450,6 +6490,437 @@ the round, and it is why the synthesis called it the highest-value item left.
 One invocation, one engine start. **73.9 s grid + ~210 s engine start**, ~7 min
 wall, ~70k tokens, zero crashes. The cheapest consequential round of the
 campaign after R6, and it changed the only tuned artifact in it.
+
+## Round 9c hypothesis — why is `--enable-prefix-caching` worth 57% of `tg` at c4 when it never hits? THREE arms, c4 only, runs=7
+
+Earned by R9b and named by the synthesis as **open question 1**, the campaign's
+sharpest open mechanism. The fact under test, from R9's arm A1 and R9b's arm A,
+both at `mnbt 32768` / `mns 4` / `tg128 @ d16384 c4`: prefix caching ON reads
+`tg` **143.08**, prefix caching OFF reads **62.13** — a 2.30x swing — while
+`peak_throughput` is **297 in both, identical to the token**, `pp2048` moves
+0.8%, total prompt tokens processed moves 1.7%, and the cache hit rate is
+**0.0% in both**. No prefill work is saved and no hardware ceiling moves.
+
+**Two things were settled by reading before an engine start was spent, and both
+change the round.** This is R9's open question 11 rule applied — grep the
+validators out of the pinned image
+(`ghcr.io/spark-arena/dgx-vllm-eugr-nightly:2026082102`) with a throwaway
+`docker run --rm --entrypoint bash` — and it is the third consecutive time the
+practice has paid.
+
+### FINDING 1 (no box time) — R9c AS QUEUED IS NOT RUNNABLE. A validator refuses it.
+
+The queue's instruction was "run prefix caching OFF with an explicit
+`-o mamba_block_size=16`". `vllm/config/vllm.py:2607-2618` in the pinned image:
+
+    @model_validator(mode="after")
+    def validate_mamba_block_size(self) -> "VllmConfig":
+        mamba_block_size_is_set = (
+            self.cache_config.mamba_block_size is not None
+            and self.cache_config.mamba_block_size != self.model_config.max_model_len
+        )
+        if mamba_block_size_is_set and not self.cache_config.enable_prefix_caching:
+            raise ValueError(
+                "--mamba-block-size can only be set with --enable-prefix-caching"
+            )
+
+`mamba_block_size 16` with `max_model_len 32768` and prefix caching off is
+**exactly** the refused combination, and `config/cache.py:145-148` says the same
+thing in the docstring: *"Can be set only when prefix caching is enabled."* The
+arm the queue specified would have died at config validation. That is R9's
+lesson repeating in a new place, and this time it cost nothing.
+
+**So `mamba_block_size` cannot be moved from the prefix-caching-OFF side at all.
+The only legal lever is from the ON side** — see the round design below.
+
+### FINDING 2 (no box time) — THE 2048x PREMISE IS WRONG BY TWO ORDERS OF MAGNITUDE. `mamba_block_size` was never 16.
+
+R9b read `model_executor/models/config.py:600-638` and concluded that prefix
+caching ON gives `mamba_block_size = block_size = 16`, so the flag moves Gated
+DeltaNet state granularity by 2048x. **It does not, because a later pass
+overwrites it.** `platforms/interface.py:867-918` runs after that and, for
+`mamba_cache_mode == "align"` (which is what prefix caching ON forces), ends with
+
+    if cache_config.block_size < attn_block_size:
+        cache_config.block_size = attn_block_size          # interface.py:911 logs this
+    ...
+    if cache_config.mamba_cache_mode == "align":
+        cache_config.mamba_block_size = cache_config.block_size
+
+and `attn_block_size` is the smallest aligned size making the attention page at
+least as large as the mamba page. **All three archived arms log the same value:**
+
+    interface.py:911] Setting attention block size to 2144 tokens to ensure
+    that attention page size is >= mamba page size.
+
+— `bench_d9fdc68576f2-a1` (caching ON), `bench_9379c15468ec-a-chunk` and
+`bench_10496035f7fd-b-nochunk` (both OFF). So the true contrast is
+**`mamba_block_size` 2144 (ON) vs 32768 (OFF) — 15.3x, not 2048x.** The 16 in
+the queue and in the synthesis's open question 1 is a value that never reaches
+the engine. Both documents are corrected in the outcome.
+
+### FINDING 3 (no box time) — THE EFFECT IS 86% BATCH SPAN, AND THE ARITHMETIC CLOSES EXACTLY.
+
+Re-read of the two archived JSONs through the campaign's own identity
+`tg = c x tg_req / span`, at `c4 d16384` Phase 2:
+
+| | caching ON (a1) | caching OFF (a-chunk) | ratio |
+|---|---|---|---|
+| `tg_throughput` | 143.08 | 62.13 | **2.303** |
+| `tg_req_throughput` | 57.89 | 51.49 | 1.124 |
+| span ratio | 1.618 | 3.315 | **2.049** |
+| `peak_throughput` | 297 | 297 | 1.000 |
+| ttfr within-batch spread | **1614 ms** | **6146 ms** | **3.81** |
+
+`1.124 x 2.049 = 2.303` to three decimals — the decomposition is exact, not
+approximate. **86% of the effect in log-share is the span denominator and 14% is
+real per-request decode.** And the span is made of ttfr dispersion: at ~58
+tok/s/req a 128-token generation lasts ~2.2 s, so a **6.1 s** spread in
+first-response times swamps the decode window entirely, while the ON arm's
+**1.6 s** spread is smaller than it. In the OFF arm one request in every four
+returns its first token at ~6.2 s while the other three return at ~12.3 s; in
+the ON arm the same batch spans 10.6–12.2 s.
+
+**So the question is no longer "why is the throughput different".** The
+sustained hardware rate is identical to the token. The question is **why the
+four prefills finish at far more dispersed times when prefix caching is off** —
+and the leading suspect is now precise: under `align`, chunked prefill must
+break at `mamba_block_size` (2144) boundaries so states land on block edges,
+which forces the four prefills to interleave in fixed-size pieces and finish
+together. Under `none` the granularity is 32768 — **larger than the whole
+18432-token prefill** — so the constraint is vacuous and prefills can run
+greedily to completion one at a time.
+
+### The round, redesigned to be runnable
+
+`mamba_block_size` is settable only with prefix caching ON, and under `align` it
+is assigned `cache_config.block_size`. **So `--block-size` is the one legal
+lever that moves mamba granularity**, and it reaches 32768 from the ON side.
+Three arms, all `tg128 @ d16384 c4`, `mnbt 32768`, `mns 4`, `runs=7`, Phase-1
+partner riding along free:
+
+| arm | recipe | prefix caching | `mamba_cache_mode` | `mamba_block_size` |
+|---|---|---|---|---|
+| **P** (control) | `recipe-r9c-p-pc-on.yaml` | ON | `align` | 2144 |
+| **G** (the test) | `recipe-r9c-g-block32768.yaml` | ON | `align` | **32768** |
+| **N** (control) | `recipe-r9c-n-pc-off.yaml` | OFF | `none` | 32768 |
+
+**THE CONFOUND, STATED UP FRONT.** `--block-size` moves the *attention* page
+size along with mamba granularity — under `align` the two are the same number by
+construction and no flag separates them. Arm G therefore tests "granularity"
+as a bundle, not mamba specifically. It cannot be done better in this engine and
+the outcome must not claim otherwise.
+
+**THE CONFIG EPOCH, HANDLED.** R11 folded `mnbt 65536` into `recipe.yaml`, so
+the recipe no longer reproduces R9/R9b's condition. Every arm here pins
+`-o max_num_batched_tokens=32768` explicitly, and **both endpoints (P and N) are
+re-measured in this session** rather than quoted from the archive. Prefix
+caching is an engine flag, so three arms is three engine starts — that weakness
+is irreducible and is stated, but it is bounded by measuring all three
+back-to-back in one hour on one idle box instead of comparing across the four
+hours that separate R9 from R9b.
+
+### Predictions, and the primary instrument declared before the run
+
+Primary instrument is the **span ratio**, because that is where 86% of the
+effect lives. `R_span = span(G) / span(P)`.
+
+- **H_gran confirmed** if `R_span > 1.7` — granularity is the mechanism, prefix
+  caching is a red herring, and arm G lands with arm N.
+- **H_gran refuted** if `R_span < 1.25` — granularity is inert, the effect
+  belongs to `mamba_cache_mode: align` itself, and the flag is genuinely
+  inseparable from the mode.
+- Between 1.25 and 1.7 both contribute; report the split by the decomposition
+  above and claim neither.
+
+**H_gran is the declared primary hypothesis**, on the reasoning in finding 3.
+
+| quantity | measured before | prediction | reasoning |
+|---|---|---|---|
+| P `tg` c4 | 143.08 (runs=3) | **132–148**, centre 140.4 | re-measure; downward-reproduction systematic is 8 of 8, mean −1.88% |
+| N `tg` c4 | 62.13 (runs=3) | **58–66**, centre 61.0 | same systematic on a σ/med 1.1% cell |
+| **G `tg` c4** | never | **60–80** under H_gran; 130–150 under H_align | the whole round |
+| P span ratio | 1.618 | 1.55–1.70 | |
+| N span ratio | 3.315 | 3.10–3.50 | |
+| **G span ratio** | never | **2.9–3.5** under H_gran | `R_span` 1.8–2.2 |
+| G ttfr spread | never | **>4500 ms** under H_gran | vs P's ~1600 ms |
+| `peak_throughput`, all arms | 297 / 297 | **285–305 in all three** | the ceiling has never moved on this flag; if G's moves, the block-size change cost real compute and the arm is a different experiment |
+| P, G scheduler residency | — | `(4,0)` majority | mns 4 holds full residency at c4 from mnbt 32768 up |
+| σ/med, all arms | 1.1–2.8% at runs=3 | **1.5–5%** at runs=7 | R11 refuted "runs=3 is adequate"; σ is set by MTP verify count, not by concurrency |
+
+### Validity gates, declared now so a failure is recorded and not dropped
+
+1. **THE ARM-G GATE, and it is the one that matters.** Arm G's engine log must
+   show the block size at **32768**, i.e. it must NOT carry
+   `interface.py:911 Setting attention block size to 2144`. If it still reads
+   2144 the flag did not take and **every arm-G number is void** — recorded as a
+   broken gate with the log line, per the R9b precedent.
+2. Arm P's median must land in 132–148. If it does not, the three arms remain
+   comparable to each other (one session) but the tie to R9's archive is broken
+   and no claim may be made across it.
+3. `Prefix cache hit rate: 0.0%` in P and G. It has been 0.0% in all 114 samples
+   ever taken with the flag on; if it is ever non-zero, the whole framing changes.
+4. `crash_count: 0` and `session_count: 1` in all three arms.
+5. `peak_throughput` in 285–305 for all three. Outside that, the arm changed the
+   hardware regime and is not a clean span measurement.
+
+### What this cannot answer
+
+Nothing here transfers to the campaign config as a *standings* row. All three
+arms sit at `mnbt 32768` against a recipe that now ships 65536, and two of them
+turn off a flag the recipe ships. **All rows are NOT SCOREABLE.** The round buys
+a mechanism, not a cell. And it does not close open question 7 (the ~1.50 span
+floor) — it explains a span *difference*, not the floor.
+
+### Cost estimate
+
+Three engine starts (~180–240 s each) plus ~250 s of grid per arm at c4 runs=7
+with the Phase-1 partner. ~25 min wall predicted.
+
+## Round 9c outcome — bench_30d6586cc70a-p-pc-on + bench_76bccce3d8b3-g-block32768 (+ -repeat) + bench_107f95223a60-n-pc-off (2026-08-22)
+
+**FOUR invocations, four engine starts, all `session_count: 1` and
+`crash_count: 0`, all archived, all under one hour on one idle box.** Arm G was
+run twice because its first engine-log capture produced three lines — the repeat
+bought both the gate evidence and a 14-run pooled figure.
+
+**HEADLINE, and it is a declared non-result rather than a finding.** The primary
+instrument was pre-declared as `R_span = span(G)/span(P)`, confirm above 1.70,
+refute below 1.25. **It measured 1.359 — inside the dead zone the hypothesis
+itself named**, so `H_gran` is **NEITHER CONFIRMED NOR REFUTED**, and by the
+round's own rule neither is claimed. Worse for the round and better for the
+record: **the deciding arm turned out to be confounded in a way the hypothesis
+did not predict**, and the confound is large enough that arm G could not have
+settled the question even had it landed cleanly.
+
+### The four arms, `tg128 @ d16384 c4`, `mnbt 32768`, `mns 4`, runs=7 each
+
+| arm | prefix caching | `mamba_block_size` | phase | `tg` med | σ/med | `tg_req` | span ratio | `peak_thr` | ttfr spread |
+|---|---|---|---|---:|---:|---:|---:|---:|---:|
+| **P** | ON | 2144 | Phase 2 | **146.32** | 2.85% | 58.78 | **1.607** | 287 | **1516 ms** |
+| **G1** | ON | **32768** | Phase 2 | 54.05 | 1.42% | 29.49 | 2.183 | 291 | 7460 ms |
+| **G2** | ON | **32768** | Phase 2 | **53.07** | 0.93% | 28.97 | **2.184** | 286 | **7510 ms** |
+| **N** | OFF | 32768 | Phase 2 | **60.60** | 1.61% | 50.68 | **3.346** | 289 | **6269 ms** |
+| P | ON | 2144 | ctx_ (Phase 1) | 123.92 | 0.73% | 56.59 | 1.827 | 280 | 2005 ms |
+| G1 | ON | 32768 | ctx_ | 58.65 | 0.95% | 30.43 | 2.075 | 280 | 6551 ms |
+| G2 | ON | 32768 | ctx_ | 58.50 | 1.01% | 30.28 | 2.070 | 273 | 6597 ms |
+| N | OFF | 32768 | ctx_ | 70.91 | 2.57% | 48.36 | 2.728 | 286 | 5066 ms |
+
+Individual runs, Phase 2: **P** 146.32 / 151.73 / 140.97 / 151.83 / 152.50 /
+145.19 / 144.24. **N** 59.73 / 60.01 / 60.60 / 61.08 / 62.49 / 61.16 / 59.42.
+**G1** 54.63 / 53.14 / 54.05 / 52.57 / 53.18 / 54.70 / 54.29. **G2** 53.93 /
+53.74 / 52.54 / 53.04 / 52.99 / 53.87 / 53.07. **G pooled 14-run median 53.46.**
+
+### BOTH ENDPOINTS REPRODUCED, and that is the round's most reusable result
+
+The whole point of re-measuring P and N in this session was to stop quoting R9
+and R9b across four hours and a config epoch. They reproduce, and closely:
+
+| quantity | archive (runs=3) | R9c (runs=7) | move |
+|---|---:|---:|---:|
+| P `tg` | 143.08 (R9 A1) | 146.32 | **+2.27%** |
+| P span ratio | 1.618 | 1.607 | −0.68% |
+| P ttfr spread | 1614 ms | 1516 ms | −6.1% |
+| N `tg` | 62.13 (R9b arm A) | 60.60 | **−2.46%** |
+| N span ratio | 3.315 | 3.346 | +0.94% |
+| N ttfr spread | 6146 ms | 6269 ms | +2.0% |
+
+**So the prefix-caching effect is real, it is bigger than R9b thought, and it
+now rests on 14 runs instead of 6: `tg` 146.32 vs 60.60 = 2.414x** (was 2.303x).
+
+⚠ **AND THE DOWNWARD-REPRODUCTION SYSTEMATIC BREAKS.** The synthesis records 8
+of 8 protected rows reproducing low, mean −1.88%, and open question 8 asks
+whether single measurements here are systematically ~2% high. **Arm P reproduced
++2.27% HIGH** — the first same-cell repeat in the campaign to do so — while arm
+N reproduced −2.46% low in the same hour on the same box. **Two arms measured
+minutes apart moved in opposite directions by about the same amount, which is
+what a ±2.5% reproduction noise floor looks like and is not what a systematic
+looks like.** Open question 8's "p ≈ 3% on a coin" was computed on a run of
+eight; it is now 8 low, 1 high, 1 low (G2 vs G1, −1.81%) and the coin argument
+is weaker than it was. Recorded, not resolved.
+
+### THE MECHANISM DECOMPOSITION, now on runs=7, and it closes exactly
+
+Using the campaign's `tg = c x tg_req / span` identity on medians:
+
+**P → N (the prefix-caching effect, the thing open question 1 asks about):**
+
+    tg ratio 2.415  =  tg_req ratio 1.160  x  span ratio 2.082  =  2.415  ✓
+    log-share:  span 83%   per-request decode 17%
+
+**P → G (the block-size effect, the thing this round bought):**
+
+    tg ratio 2.757  =  tg_req ratio 2.029  x  span ratio 1.359  =  2.757  ✓
+    log-share:  span 30%   per-request decode 70%
+
+**These are not the same effect wearing different hats. They are opposites.**
+Turning prefix caching off costs 83% span and 17% decode. Raising the block size
+with prefix caching on costs 70% **decode** and 30% span. Arm G went *below* arm
+N on the headline number by taking a completely different road there.
+
+### WHY ARM G IS CONFOUNDED — the engine log says it plainly
+
+**Gate 1 PASSES, with positive evidence, and it is the same line that voids the
+arm as a clean probe.** Arm G2's engine log carries `'block_size': 32768` in the
+`Initializing a V1 LLM engine` config dump and does **not** carry
+`interface.py:911 Setting attention block size to 2144`, which both P and N do.
+The flag took. And then:
+
+| | KV cache | GPU KV cache size | max concurrency @ 32768 |
+|---|---:|---:|---:|
+| P | 65.38 GiB | **3,071,735 tokens** | 93.74x |
+| N | 64.20 GiB | **3,339,995 tokens** | 101.93x |
+| **G** | 66.45 GiB | **395,264 tokens** | **12.06x** |
+
+**Arm G lost 87% of its KV token capacity from the same flag**, because under
+`align` the mamba page is padded to exactly the attention page size and the
+attention page went from 2144 to 32768 tokens — 15.3x of padding waste on the 30
+Gated DeltaNet layers. That is not a granularity experiment, it is a
+memory-layout experiment, and it shows in the scheduler:
+
+- **P**: `(4,0)` in **13 of 14** loaded samples, `(3,0)` once. Full residency.
+- **N**: `(3,1)` in **7 of 13**, `(4,0)` in 6. **Not at full residency.**
+- **G**: `(4,0)` in **6 of 16**, `(3,1)` in 5, `(2,2)` in 4, `(2,0)` in 1.
+  Residency is falling apart.
+
+**The honest reading: arm G could not have answered the question.** It moves
+`mamba_block_size` to the target value, but it drags attention paging, KV
+capacity and residency along with it, and the hypothesis section named only the
+first of those four. The confound was declared in advance ("arm G tests
+granularity as a bundle") — **its size was not.** `peak_throughput` 286 passed
+gate 5 and did not warn, because the sustained ceiling genuinely did not move.
+
+### WHAT THE ROUND DOES ESTABLISH ABOUT OPEN QUESTION 1
+
+1. **The effect is 83% batch span, on runs=7, arithmetically closed.** The
+   sustained hardware rate is the same in both arms (287 vs 289, 0.7% apart).
+   `--enable-prefix-caching` is not buying throughput; it is buying a shorter
+   measurement window.
+2. **The span is made of ttfr dispersion, measured directly: 1516 ms vs 6269 ms,
+   a 4.13x spread.** At ~59 tok/s/req a 128-token generation lasts ~2.2 s, so
+   N's 6.3 s spread swamps the decode window while P's 1.5 s spread sits inside
+   it. One request per batch of four returns its first token ~6 s early in N.
+3. **`mamba_block_size` moves the span in the right direction but explains at
+   most 42% of it** (log scale: `ln(2.184/1.607) / ln(3.346/1.607)`), **and it
+   cannot be the whole story**, because it arrives with a 2.03x per-request
+   decode penalty that prefix-caching-OFF does not have (1.16x).
+4. **⚠ NEW AND UNCLAIMED: arm N is not at full residency.** `(3,1)` in 7 of 13
+   loaded samples with `mns 4`, `c4`, and 3.34M tokens of KV — capacity is not
+   the reason and the campaign does not know what is. R7's plain-queueing
+   account, which survived R9b, now has a direct observation attached to it at
+   c4. **The lead's rule applies: the stagger proxy holds only at full
+   residency, and N is not there**, so N's span figure is doing double duty as a
+   queueing figure. Mechanism UNEXPLAINED, not invented.
+
+**So open question 1 is NARROWED, NOT CLOSED.** What remains: is the residual
+span difference `mamba_cache_mode: align` itself, or the admission behaviour in
+(4) above? Those two are not separable by any flag in this engine — see below.
+
+### AND THE SEPARATION IS PROVABLY IMPOSSIBLE IN THIS ENGINE
+
+Collected from the three source reads, this is the most durable thing the round
+produces and it costs nothing to reuse:
+
+- `enable_prefix_caching` **ON** forces `mamba_cache_mode = "align"`
+  (`models/config.py:601-604`) and `align` forces chunked prefill on
+  (`:620-622`).
+- `enable_prefix_caching` **OFF** forces `mamba_cache_mode = "none"`
+  (`:630-635`).
+- `mamba_block_size` may be set **only** with prefix caching on
+  (`config/vllm.py:2607-2618`), and under `align` it is then **overwritten** by
+  `cache_config.block_size` (`platforms/interface.py:918`).
+
+**Therefore prefix caching and `mamba_cache_mode` cannot be varied
+independently at all, in either direction, and `mamba_block_size` can only be
+reached through `--block-size`, which drags attention paging with it.** Any
+future round that proposes to separate them should be refused at the queue
+rather than at the validator. **Open question 1 should be reworded to ask what
+`align` mode does to prefill scheduling, and answered by reading the mamba2
+kernel's chunking path, not by a benchmark.**
+
+### The gates
+
+1. **Arm-G gate — PASSES**, with positive evidence (`'block_size': 32768`, and
+   the 2144 line absent). ⚠ For **G1 the live capture failed** (three lines: the
+   container was matched but `/tmp/sparkrun_serve.log` did not yet exist when
+   `docker exec tail -f` fired, so tail exited immediately). G1's gate rests
+   only on its numerical agreement with G2 (`tg` 54.05 vs 53.07, span 2.183 vs
+   2.184 — identical to three decimals). **Recorded as a capture failure, and
+   the fix is in the next section.**
+2. **Arm-P band 132–148 — PASSES** at 146.32, near the top.
+3. **`Prefix cache hit rate: 0.0%` in P and G — PASSES**, 22 of 22 samples in
+   each. That is now **158 consecutive samples** with the flag on and no hit
+   ever recorded.
+4. **`crash_count: 0`, `session_count: 1` — PASSES in all four.**
+5. **`peak_throughput` 285–305 — PASSES in all four** (287 / 291 / 286 / 289).
+   ⚠ **And it passed while arm G lost 87% of its KV cache**, so this gate does
+   not detect a memory-layout change. Do not rely on it for that.
+
+### THE ENGINE-LOG CAPTURE HAS A THIRD FAILURE MODE, and it is now fixed
+
+R12 lost the instrument to `docker logs -f`. R13d lost it to matching `vllm`
+instead of `^sparkrun_`. **R9c lost it to firing `docker exec tail -f` as soon
+as the container appeared — the container exists for tens of seconds before
+`/tmp/sparkrun_serve.log` is created, `tail` exits non-zero, and the capture
+returns three lines.** The working recipe now needs BOTH waits:
+
+    for i in $(seq 1 300); do cid=$(docker ps --format '{{.Names}}' | grep '^sparkrun_' | head -1); [ -n "$cid" ] && break; sleep 1; done
+    for i in $(seq 1 300); do docker exec "$cid" test -f /tmp/sparkrun_serve.log && exec docker exec "$cid" tail -f -n +1 /tmp/sparkrun_serve.log; sleep 1; done
+
+With both waits the capture produced **306–309 lines and 22 scheduler samples on
+three consecutive arms**, which is the first time this campaign has captured the
+occupancy instrument on every arm of a round.
+
+### Predictions: 7 held, 5 missed, 0 gates broken
+
+**Held:** P `tg` 132–148 (146.32) · N `tg` 58–66 (60.60) · P span 1.55–1.70
+(1.607) · N span 3.10–3.50 (3.346) · G ttfr spread >4500 ms (7510) ·
+`peak_throughput` 285–305 in all four · P residency `(4,0)` majority (13 of 14).
+
+**Missed:** ⚠ **G `tg` missed BOTH declared bands** — 53.07 against 60–80 under
+`H_gran` and 130–150 under `H_align`, i.e. the round's central quantity fell
+outside every value the hypothesis allowed for. · G span 2.9–3.5 under `H_gran`
+(2.184). · G residency `(4,0)` majority (6 of 16). · σ/med 1.5–5% in all arms —
+**G2 read 0.93% and G1 1.42%, both below band**, and low σ is the signature of
+the KV-capacity collapse pinning the arm. · The implicit prediction that arm G
+would be a clean probe.
+
+**The pattern is R10's and R12's post-mortem for the third time: the mechanism
+section was right and the numeric band was wrong, in the same document.** The
+band for G was set by interpolating between P and N, while the paragraph above
+it said arm G changes attention paging as well — which is exactly the term that
+put it outside both bands. **Decompose the metric; do not interpolate between
+the arms you already have.**
+
+### Telemetry — sessions twelve through fifteen, all agreeing
+
+2,379 samples across the four arms. **2398 MHz median SM clock in every one**,
+73–77 C, 96.53–97.15 W peak. Fifteen sessions and the box has never once shown a
+thermal or power excursion. The 80%-of-ceiling clock remains flat policy.
+
+### Phase pairs — the audit reaches 41 of 42
+
+`ctx_pp / pp` against the zero-free-parameter prediction `(16384+2048)/2048` =
+9.00: **P 9.167 · N 9.139 · G1 9.151 · G2 9.148** — residuals +1.5% to +1.9%,
+the tightest cluster of four the audit has, and the first at three different
+`mamba_block_size` values. The phase-label correction now stands at **41 of 42
+pairs**.
+
+### What is NOT claimed
+
+No standings row moves. All twelve rows are **NOT SCOREABLE** — every arm sits
+at `mnbt 32768` against a recipe that ships 65536, and two arms turn off a flag
+the recipe ships. **Nothing here transfers to the campaign config**, and the
+round did not close open question 1, open question 7, or the `mns 4` gap the
+synthesis names as the cheapest round left.
+
+### COST
+
+Four invocations, four engine starts, zero crashes. **883.8 s of grid**
+(220.6 + 217.9 + 223.1 + 222.2) plus four starts of ~180–200 s, **~36 min wall**
+against ~25 min predicted — the overrun is entirely the arm-G repeat. ~95k
+tokens. **Three of the round's five results cost no box time at all**, which is
+the third consecutive round where reading the image beat benchmarking it.
 
 ## WHERE THE HANDOFF IS
 
