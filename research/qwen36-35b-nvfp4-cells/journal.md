@@ -138,3 +138,65 @@ Averaging over four sequences per step means a single lucky or unlucky
 speculative streak moves the aggregate much less than it does at c1, where σ ran
 to 22% of the median. If σ stays as wide at c4 as it was at c1, the noise is not
 MTP acceptance and the bimodality story needs rewriting.
+
+## Round 2 outcome — bench_f58c56da6658 + -verify (2026-08-21)
+
+| Cell | run | tg median | σ | runs |
+|---|---|---:|---:|---|
+| tg128 @ d16384 c4 | first | 53.56 | 0.43 | 53.56 / 52.75 / 53.74 |
+| tg128 @ d16384 c4 | verify | 52.69 | 0.75 | 52.95 / 52.69 / 51.25 |
+| ctx_tg128 @ d16384 c4 | first | 56.40 | 0.16 | 56.40 / 56.32 / 56.68 |
+| ctx_tg128 @ d16384 c4 | verify | 55.92 | 0.62 | 55.92 / 56.66 / 55.13 |
+
+Verdict: WIN, verified. Pooled median over all six main-phase runs is 52.85
+against the incumbent 46.68 — 1.13x, +13.2%. The margin sat well under 2x so
+the identical-config repeat was mandatory; it reproduced to within 1.6% of the
+first run. The case does not rest on the median alone: the WORST of the six
+runs, 51.25, still clears 46.68 by 9.8%, so there is no draw of these three
+runs that loses this cell. This is the campaign's narrowest win and the only
+one where the incumbent came from a real field (8 entries) rather than a lone
+straggler, which is presumably the same fact seen twice.
+
+The measurement's units were wrong in the queue, and that is the round's real
+finding. The plan said "expect 180-260 aggregate" and the benchmark reported
+53.3, which reads at first glance as a catastrophic miss — c4 apparently
+running at HALF our c1 figure of 102.2. It is not a miss; llama-benchy's
+`tg t/s` is PER-REQUEST, not aggregate. Proof is in round 1's own export: at
+c1, `tg_throughput` and `tg_req_throughput` are identical to the last decimal
+in all six cells, which they can only be if the headline number is a
+per-request rate that happens to coincide with the aggregate when there is one
+request. At c4 they diverge, and `peak_throughput` — which IS aggregate —
+reads 291 against the main phase's per-request 53.56. Four sequences at 53.56
+is about 214 sustained aggregate, sitting inside the predicted 180-260 band
+after all. So the hypothesis' physics was right and its units were wrong.
+
+This matters beyond one round: the board's 46.68 is the same per-request
+metric, so the comparison above is like-for-like and stands. But every
+concurrency cell in this campaign must be read per-request, and any estimate
+written as "aggregate" needs dividing by the concurrency before it is compared
+to anything. R4 (c2 and c5) is planned with the same units error latent in it.
+
+Per-request throughput therefore falls from 102.2 at c1 to 52.85 at c4 — a 4x
+concurrency buys about 2.1x aggregate, 52% scaling efficiency. e2e_ttft rises
+from ~3.2s at c1 to ~10.2s, which is what queueing at --max-num-seqs 4 looks
+like. Neither number is a board cell; both are the cost side of the win.
+
+The noise prediction was confirmed, and this is the strongest evidence yet for
+the MTP-acceptance story. σ collapsed from 18.38 at c1 (14% of the median) to
+0.43 and 0.75 at c4 — under 1.5%. Meanwhile the individual per-request rates
+inside those same c4 runs span 13.75 to 74.37, a 5.4x spread. Single sequences
+remain wildly bimodal; averaging four of them per step is what makes the
+aggregate stable. That is exactly the shape predicted before the run: the c1
+noise is per-sequence speculative acceptance, not thermals, not clocks, and not
+anything about the box that would move a four-sequence average around. The
+model card supports the mechanism — the NVFP4 checkpoint leaves the whole MTP
+module in BF16, so the draft head is full-precision and its acceptance rate is
+a property of the prompt draw, not of quantization noise.
+
+Practical consequence: c4 cells need far fewer runs than c1 cells for the same
+confidence. Three runs at c4 pin the number to ±1.5%; three runs at c1 could
+not even rank three depths in round 1.
+
+The ctx_ prefix-caching phase at c4 is again slightly ABOVE the cold phase
+(pooled median 56.36 vs 52.85, +6.6%) and again quieter. Its board figure was
+never scraped, so it is recorded and held, not claimed.
