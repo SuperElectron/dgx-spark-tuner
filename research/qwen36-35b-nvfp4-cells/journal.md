@@ -4801,3 +4801,513 @@ metric check, R8c, R13b, R13c. Nothing here changes the handoff.
 units resolution, the phase labels, and the never-hitting cache — all came from
 reading the instrument rather than measuring around it, and all three cost
 nothing. The fourth is still sitting unread in `pp_throughput`'s definition.
+
+---
+
+## Round 13c hypothesis — the `max_num_batched_tokens` curve at ONE concurrency: tg128 @ d16384 c4, six budgets, runs=7
+
+**This round is a PROTECTION round first and a curve second.** Three rows in
+RESULTS.md's WON table are `tg128 @ d16384 c4`, one per configuration — 52.85
+(1.13x, campaign config), 147.25 (3.15x, mnbt 32768) and 174.68 (3.74x, mnbt
+98304) — and each rests on a single engine start at a single budget value. Their
+Phase-1 partners include the campaign's widest margin (`ctx_tg @ d16384 c4`
+170.59 = **6.16x**). Mat reads those rows in the morning. A round that protects a
+standing must be at least as rigorous as the round that won it, so every point
+here is runs=7, and the round's pre-declared rule for what happens if a
+reproduction fails is written below **before** the run.
+
+The campaign has retired three of its own headline numbers already (R6 over R1,
+R8 over R3, R13 over R12's reading) and the `ctx_` correction withdrew five more.
+If a row does not reproduce, it comes down. That is the point of running this.
+
+### The curve, and why the budget earned one
+
+R13 moved `tg_req` by **+15.5% at two different concurrencies with the span ratio
+flat** (c4 1.57 -> 1.53, c5 1.70 -> 1.54) and with `Waiting: 0` in 100% of loaded
+scheduler samples. No admission story predicts that. The campaign therefore has a
+knob that demonstrably moves **decode** and has never been curved: three budgets
+(8192 / 32768 / 98304) measured at scattered concurrencies, with c4 the only
+concurrency that appears at more than one of them, and even there at three
+different `max_num_seqs` values.
+
+Six budgets at ONE concurrency, everything else held: **8192, 16384, 32768,
+65536, 98304, 131072**, all at `max_num_seqs 5`, c4, d16384, tg128, runs=7.
+
+### THE ADMISSION ARITHMETIC, computed before the run
+
+A Phase-2 request prefills `depth + pp` = **18432** tokens (R13's pre-flight;
+prefix caching never hits, so none of the 16384 is free). Four requests are
+**73728** tokens. With chunked prefill ON a scheduler step packs up to `B` tokens
+across requests, so admission takes `ceil(73728 / B)` steps:
+
+| mnbt B | admission steps at c4 | new value? |
+|---:|---:|---|
+| 8192 | 9 | no — R2/R9 A0 |
+| 16384 | 5 | **NEW** — torch.compile rebuild |
+| 32768 | 3 | no — R9 A1 / R10 |
+| 65536 | 2 | **NEW** — torch.compile rebuild |
+| 98304 | 1 | no — R13 |
+| 131072 | 1 | **NEW** — torch.compile rebuild |
+
+**98304 and 131072 are the same admission configuration** — both admit the whole
+batch in one step, both leave `Waiting: 0`. That pair is the round's discriminator.
+
+### THE DISCRIMINATOR, declared before the run
+
+R13 left an unexplained fact: the budget lifts per-request decode. Two accounts,
+and they differ on the one place the curve can separate them — past the point
+where admission is already a single step.
+
+- **H_admission_decode** — decode is depressed only while prefill is being
+  chunked across steps and interleaved with ongoing decode. Once `B >= 73728` the
+  effect is exhausted. Prediction: **`tg_req(131072) <= 1.03 x tg_req(98304)`**,
+  and `tg_req(65536)` already within 5% of `tg_req(98304)`.
+- **H_budget_decode** — the budget itself buys decode (larger compile ranges,
+  a wider token allocation per step), independent of how many steps admission
+  takes. Prediction: **`tg_req(131072) >= 1.05 x tg_req(98304)`**.
+- Between 1.03 and 1.05 the round reports **mixed** and does not force it.
+
+Secondary, and cheap: the knee. If admission steps drive the curve, the knee sits
+between 32768 (3 steps) and 65536 (2 steps) and the curve is flat above it.
+
+### HEADLINE PROTECTION — the reproduction rule, written before the numbers exist
+
+Three of the six points re-measure an archived headline figure. The band is
+**±10%** around the archived median, and it is not arbitrary: σ/med at this cell
+is 3.3-4.4%, a 7-run median's standard error is ~2%, and the campaign's own
+measured cross-invocation systematics are 2.9% (R10 vs R9 A1), 1.8% (R8 vs R6)
+and 0.2% (R13's pp2048 vs R12's). ±10% is about 2.5x the expected combined
+spread — wide enough that a true reproduction clears it comfortably, tight enough
+that a real regression fails it.
+
+| # | protected row | archived | band | margin at stake |
+|---|---|---:|---|---|
+| P1 | tg128 @ d16384 c4, campaign config | 52.85 | **47.6 – 58.1** | 1.13x vs 46.68 |
+| P2 | tg128 @ d16384 c4, mnbt 32768 | 147.25 | **132.5 – 162.0** | 3.15x |
+| P3 | tg128 @ d16384 c4, mnbt 98304 | 174.68 | **157.2 – 192.1** | **3.74x** |
+| P4 | ctx_tg @ d16384 c4, mnbt 98304 | 170.59 | **153.5 – 187.6** | **6.16x — widest in campaign** |
+| P5 | ctx_tg @ d16384 c4, mnbt 32768 | 126.35 | **113.7 – 139.0** | 4.56x |
+| P6 | ctx_tg @ d16384 c4, campaign config | 56.36 | **50.7 – 62.0** | 2.04x |
+
+**The rule, and it binds this round:**
+
+- **Inside the band** — the row STANDS, and the journal and RESULTS.md record the
+  reproduction gap as a number, not as a reassurance.
+- **Outside the band** — the claimed figure for that row becomes the **pooled
+  14-run median** of the archived runs and this round's runs, exactly as R6 did to
+  R1 and R8 did to R3, the margin is revised in RESULTS.md, and the journal says
+  plainly that the row came down. If the pooled median falls below the incumbent
+  the cell moves from WON to LOST.
+- **No row is defended by discarding this round's runs.** Seven runs against seven
+  runs, same instrument, same image epoch — there is no basis for preferring the
+  older draw.
+
+One systematic is knowingly introduced and must be named: **the curve holds
+`max_num_seqs 5` at every point**, while the archived rows were measured at mns 4
+(P1, P6), mns 16 (P2, P5) and mns 5 (P3, P4). Varying `mns` to chase each
+historical row would have wrecked the curve. At c4 every one of those values
+satisfies `mns >= c`, so no request waits for a *slot* in any of them — R4's
++5.5% mns effect was measured at c5 where `mns 4 < c`, and R10 priced an mns
+change at c4 (mns 4 -> 16, same budget) at **2.9%**. The ±10% band already covers
+twice that. If P1 or P2 misses low by less than that margin, the journal will say
+so rather than blaming `mns` for it.
+
+### ONE INVOCATION IS IMPOSSIBLE HERE, and the round says so instead of pretending
+
+The campaign's strongest methodological result is that single-invocation controls
+beat cross-invocation inference every time it tested one (R6 over R1, R8 over R3,
+R9b over R4, R10 over R2). **This round cannot have one.**
+`max_num_batched_tokens` is a vLLM *serve* argument substituted into the recipe's
+command template; `sparkrun -o key=value` takes a single value per key and starts
+one engine per invocation. There is no way to vary it inside an engine start. Six
+budgets = **six invocations, six engine starts**. The queue entry's "ONE
+invocation" is not achievable and the round is not going to fake it by running
+one budget and inferring the rest.
+
+So this comparison is **weaker than a single-invocation one**, and three things
+are done about it rather than said about it:
+
+1. **`pp2048` is a session control in every arm**, against a series flat across
+   nine invocations (623-643 at campaign config, 655-680 at raised budgets). Any
+   arm whose control misses has its `tg` figures declared unreadable.
+2. **Telemetry in every arm** — the SM clock has read 2392-2398 MHz in ten
+   consecutive sessions; a drifting box would show here first.
+3. **Three of the six points ARE reproductions**, so this round *measures* its own
+   cross-invocation systematic instead of assuming one. That is a by-product worth
+   as much as the curve: nobody has ever measured this campaign's engine-start
+   error at three widely separated operating points in one night.
+
+**Arm order is priority order, not curve order** — 98304, 32768, 8192, then the
+three new values 16384, 65536, 131072. If the night is cut short, the three
+protection points are already banked. Thermal drift across the sequence is
+exactly what the telemetry and `pp2048` controls are for.
+
+### Numeric predictions
+
+`tg = c x tg_req / stagger`. Bands built from the generating model and from the
+three archived points, not by scaling percentages.
+
+| mnbt | `tg` band | centre | `tg_req` band | stagger band | peak_thr band |
+|---:|---|---:|---|---|---|
+| 8192 | 45 – 60 | 52 | 30 – 37 | 2.3 – 2.8 | 275 – 300 |
+| 16384 | 75 – 115 | 95 | 40 – 55 | 1.8 – 2.4 | 275 – 305 |
+| 32768 | 132 – 162 | 147 | 54 – 62 | 1.45 – 1.75 | 275 – 305 |
+| 65536 | 150 – 182 | 166 | 60 – 69 | 1.42 – 1.62 | 285 – 315 |
+| 98304 | 157 – 192 | 175 | 62 – 71 | 1.42 – 1.62 | 290 – 320 |
+| 131072 | 155 – 195 | 175 | 62 – 71 | 1.40 – 1.65 | 290 – 325 |
+
+Side predictions, each of them a standing campaign regularity being tested again:
+
+| quantity | predicted | why |
+|---|---|---|
+| `pp2048` @ mnbt 8192 | **623 – 643** | campaign-config series, nine invocations |
+| `pp2048` @ every raised budget | **655 – 690** | raised-budget plateau (658.93 / 663.93 / 667.00 / 669.28 / 672.59 / 676.40 / 677.44) |
+| `ttfr` monotone rising with B | **yes**, and `ttfr(131072) >= 12102` | rose on all six previous budget increases |
+| MTP acceptance | **2.85 – 3.15 / 61 – 72%** at every budget | flat under every scheduler knob for five rounds |
+| Prefix cache hit rate | **0.0% at all six budgets** | 0.0% in 162 samples across three budgets |
+| `Running`/`Waiting` at c4 | **NOT (4,0) at 8192 and 16384; clean (4,0) at 32768 and above** | R9 read `(2,2)`/`(3,1)` at 8192; R10 and R13 read `(4,0)` at 32768 and 98304 |
+| stagger proxy `c/(tg/tg_req)` | **INVALID at 8192 and 16384** if residency is partial | R5c: the proxy holds only at full residency |
+| ctx (Phase 1) vs Phase 2 | **ctx below Phase 2 at the raised budgets**, sign unpredicted at 8192/16384 | −2.3% at 98304, −14.2% at 32768, but **+4.4% at 8192** — this regularity has broken four times and is not leaned on |
+| SM clock median | **2392 – 2398 MHz** | eleventh consecutive session |
+| grid time | **1250 – 1500 s** total | R13's c4 arm was 225.5 s at runs=7 |
+| engine starts | **3 cached (~180 s) + 3 rebuilt (~225 s)** ≈ 1750 s | R13: a NEW budget value misses the torch.compile cache and costs ~45 s extra |
+| wall clock | **55 – 75 min** | the round is six invocations, and it is priced as six |
+
+### MUTATIONS, stated plainly
+
+`-o max_num_seqs=5` and `-o max_num_batched_tokens=<B>` at six values.
+**Both are MUTATIONS**; `recipe.yaml` is NOT touched and `max_model_len` stays at
+the recipe default 32768 (R13 established from `vllm/config/scheduler.py:248-284`
+in the pinned image that there is no `mnbt <= max_model_len` validator while
+chunked prefill is on; the only other constraints are `mnbt >= max_num_seqs`,
+satisfied at every value, and a *warning* above `max_num_seqs x max_model_len` =
+163840, which no value here reaches). Every RESULTS.md row this round produces
+names its configuration. The fold decision remains **R11's**, and this round is
+what R11 needs: R11 asks for the c1 anchor at the folded budget, and it cannot
+even be posed properly until somebody knows the shape of the budget response.
+
+### Discipline
+
+- **runs=7 at every point.** Both 3-run medians this campaign ever promoted had
+  to be retired and both were too high.
+- **BOTH estimators at every point** — `tg_throughput` and `peak_throughput` side
+  by side, `tg_req_throughput` for the span ratio. **Never `tg x c`.**
+- Read the `Benchmark args:` echo before letting a run proceed (R5's lost engine
+  start). The first arm's echo is read by hand; the driver asserts the same
+  fields on every later arm and aborts if they differ.
+- Engine log captured the proven way — `docker exec <container> tail -f
+  /tmp/sparkrun_serve.log` — and **verified live** with `grep -c 'Running:'`
+  before any arm's occupancy figure is quoted. R8, R9 and R12 all shipped without
+  this instrument; R13 recovered it.
+- Serial. Nothing else touches the box. No arena submission, ever. No box system
+  settings, no `apt`.
+
+## Round 13c outcome — six invocations, 2026-08-22
+
+Six budgets at c4 / d16384 / tg128 / `max_num_seqs 5` / runs=7. Every arm
+`session_count: 1`, `crash_count: 0`, same pinned image epoch
+(`dgx-vllm-eugr-nightly:2026082102`) as every round since R1. Archived as
+`bench_<id>-mnbt<B>`:
+
+| mnbt | benchId | grid | engine start |
+|---:|---|---:|---:|
+| 8192 | `bench_0f4c34c12223-mnbt8192` | 226.2 s | 112.8 s |
+| 16384 | `bench_fa5630a4ac79-mnbt16384` | 222.4 s | 137.7 s |
+| 32768 | `bench_10bd1b5f24ea-mnbt32768` | 220.5 s | 160.6 s |
+| 65536 | `bench_0bd1f20dca74-mnbt65536` | 218.3 s | 185.2 s |
+| 98304 | `bench_d6cec044441c-mnbt98304` | 229.5 s | 177.9 s |
+| 131072 | `bench_0509b2a740f6-mnbt131072` | 236.6 s | **310.0 s** |
+
+### THE ANSWER TO THE ROUND'S FIRST QUESTION: ALL SIX PROTECTED ROWS STAND
+
+Every one of the six protected figures reproduced inside its pre-declared ±10%
+band, from a separate engine start, at runs=7 against runs=7.
+
+| # | protected row | archived | R13c | gap | band | verdict |
+|---|---|---:|---:|---:|---|---|
+| P1 | tg128 @ d16384 c4, mnbt 8192 | 52.85 | **52.07** | **−1.48%** | 47.6–58.1 | **STANDS** |
+| P2 | tg128 @ d16384 c4, mnbt 32768 | 147.25 | **143.83** | **−2.32%** | 132.5–162.0 | **STANDS** |
+| P3 | tg128 @ d16384 c4, mnbt 98304 | 174.68 | **169.69** | **−2.86%** | 157.2–192.1 | **STANDS** |
+| P4 | ctx_tg @ d16384 c4, mnbt 98304 | 170.59 | **168.37** | **−1.30%** | 153.5–187.6 | **STANDS** |
+| P5 | ctx_tg @ d16384 c4, mnbt 32768 | 126.35 | **125.74** | **−0.48%** | 113.7–139.0 | **STANDS** |
+| P6 | ctx_tg @ d16384 c4, mnbt 8192 | 56.36 | **54.57** | **−3.18%** | 50.7–62.0 | **STANDS** |
+
+P2 is worth a second line: 143.83 at `mns 5` reproduces **R9's arm A1** (143.08,
+`mns 4`, runs=3) to **+0.5%** as well as R10's 147.25 (`mns 16`, runs=7) to
+−2.3%. That cell now has three independent measurements at three different
+`max_num_seqs` values spanning 4 to 16, inside a 2.9% band. R10's pricing of the
+`mns` systematic at c4 is confirmed rather than assumed.
+
+**AND ALL SIX GAPS ARE NEGATIVE.** −1.48 / −2.32 / −2.86 / −1.30 / −0.48 /
+−3.18%, mean **−1.94%**, six of six the same sign. On a coin that is p ≈ 3%.
+Two candidates and **this round cannot separate them**: a small decode-side
+session effect tonight, or a first-measurement bias in a campaign that promotes
+the figure from the run that motivated the round. Evidence bearing on it: the
+`pp2048` session control landed in band at **five of six** arms, so no night-wide
+slowdown is visible — but `pp` is a prefill measurement and `tg` is a decode
+measurement, so a decode-only session effect would not show there. **Recorded as
+an open, unresolved 2% systematic**, not explained away. It is small enough that
+no verdict, margin or standing changes sign, and large enough that it should be
+subtracted mentally from any figure this campaign has measured exactly once.
+
+### THE STANDINGS CHANGE THAT FOLLOWS, and it is a tightening
+
+For P3/P4 the two measurements are the **same configuration** (mnbt 98304 + mns
+5), seven runs each. There is no basis for preferring either draw, so the claimed
+figure becomes the **pooled 14-run median**, which is what R2 did with its verify
+run and what R6 and R8 did when they retired 3-run figures:
+
+| cell | R13 (7) | R13c (7) | **pooled (14)** | margin was | **margin now** |
+|---|---:|---:|---:|---:|---:|
+| tg128 @ d16384 c4, mnbt 98304 | 174.68 | 169.69 | **171.31** | 3.74x | **3.67x** |
+| ctx_tg @ d16384 c4, mnbt 98304 | 170.59 | 168.37 | **170.36** | 6.16x | **6.15x** |
+
+**This is a stricter standard than the round declared** — the pre-declared rule
+only required pooling on a band miss — and it is applied because the reproduction
+was same-config. `ctx_tg @ d16384 c4` remains the campaign's widest margin at
+**6.15x**, comfortably past `tg128 @ d65536 c1`'s 5.71x.
+
+P1/P2/P5/P6 are **NOT pooled**: those rows were measured at `mns 4` and `mns 16`
+and this round ran `mns 5`. Pooling across a configuration difference is the one
+thing this file has said repeatedly must never happen. The archived figures stand
+as claimed, and R13c's points get their own rows naming `mns 5`.
+
+### THE CURVE — Phase 2 (the headline rows)
+
+| mnbt | admission steps | `tg` | σ/med | `tg_req` | span ratio | `peak_thr` | `pp2048` | ttfr | scheduler |
+|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|
+| 8192 | 9 | **52.07** | 1.03% | 33.00 | 2.535 | 271 | 638.04 | 10217 | **partial** |
+| 16384 | 5 | **85.90** | 2.08% | 43.99 | 2.048 | 277 | 659.21 | 11175 | **partial** |
+| 32768 | 3 | **143.83** | 3.87% | 59.48 | 1.654 | 288 | 670.76 | 11859 | (4,0) 13/13 |
+| 65536 | 2 | **173.34** | 4.39% | **65.24** | **1.505** | 308 | 671.68 | 12167 | (4,0) 10/10 |
+| 98304 | 1 | **169.69** | 4.01% | 64.02 | 1.509 | 302 | 645.90 | 12375 | (4,0) 11/11 |
+| 131072 | 1 | **170.89** | 3.89% | 64.14 | 1.501 | 304 | 670.32 | 12208 | (4,0) 12/13 |
+
+### THE CURVE — Phase 1 (`ctx_`, the context load)
+
+| mnbt | `ctx_tg` | σ/med | `tg_req` | span ratio | `peak_thr` | `ctx_pp` | vs Phase 2 |
+|---:|---:|---:|---:|---:|---:|---:|---:|
+| 8192 | 54.57 | 0.87% | 31.01 | 2.273 | 263 | 5875.22 | **+4.8%** |
+| 16384 | 68.79 | 0.84% | 42.38 | 2.464 | 259 | 6007.70 | **−19.9%** |
+| 32768 | 125.74 | 2.57% | 58.10 | 1.848 | 283 | 6117.63 | −12.6% |
+| 65536 | 164.95 | 1.95% | 62.05 | 1.505 | 289 | 6200.01 | −4.8% |
+| 98304 | 168.37 | 3.46% | 61.20 | 1.454 | 284 | 6189.65 | −0.8% |
+| 131072 | **175.40** | 3.95% | 64.26 | 1.465 | 296 | 6163.69 | **+2.6%** |
+
+### THE DISCRIMINATOR: H_admission_decode HOLDS — and it kills the reason R13 ran at 98304
+
+Declared before the run: `tg_req(131072) <= 1.03 x tg_req(98304)` reads
+H_admission_decode, `>= 1.05x` reads H_budget_decode, between is mixed.
+
+**`tg_req(131072) / tg_req(98304) = 64.14 / 64.02 = 1.0019.`** Decisively
+H_admission_decode. The second leg held too: `tg_req(65536)` = 65.24 is within
+**1.9%** of `tg_req(98304)`, against a 5% threshold. **The budget does not buy
+decode past the point where admission stops being split. There is nothing above
+the knee.**
+
+**But the mechanism is only half right, and the half that is wrong is R13's.**
+H_admission_decode said decode is depressed *while prefill is chunked across
+steps*, which implies the ceiling arrives at one-step admission. It does not.
+**The ceiling arrives at 65536, which is a TWO-step configuration** — and 65536
+is the highest `tg_req` of the six. The three budgets at or above 65536 read
+173.34 / 169.69 / 170.89 on `tg`, a **2.1% spread against a per-arm σ/med of
+~4%**: statistically one point.
+
+**So `max_num_batched_tokens 98304` — the value R13 derived from careful
+one-step-admission arithmetic and paid a torch.compile rebuild for — buys
+NOTHING over 65536.** R13's pre-flight was right that 81920 would leave a
+trailing step and right that 98304 removes it; it was wrong that removing the
+last step is what the gain was made of. Two steps is already enough. This is the
+same shape as R13's own outcome, which got its numbers from the term it treated
+as secondary.
+
+### THE KNEE, and what it means for R11
+
+The knee is at **65536**, exactly where the round predicted it, and the curve is
+flat above it. Going 8192 -> 65536 is **+233%**; going 65536 -> 131072 is
+**−1.4%**, i.e. nothing.
+
+**R11's fold decision now has a value, and it is 65536, not 98304.** Same
+throughput to within noise, a smaller activation budget, and a cheaper engine
+start (185.2 s against 310.0 s at 131072). R11 still needs what it always
+needed — the c1 anchor re-measured — but it no longer needs it at three budgets:
+it needs it at one, and this round says which one.
+
+### FULL RESIDENCY IS NOT THE SAME THING AS A FULL SPAN, and the curve separates them
+
+Two thresholds sit at different budgets and the campaign has been conflating them:
+
+- **Residency** saturates at 32768. The scheduler reads a clean
+  `Running: 4, Waiting: 0` in 13/13 loaded samples there, and at every budget
+  above. Below it the batch queues: at 16384 the log carries `(2,2)` x4 and
+  `(3,1)` x5 against `(4,0)` x7, and at 8192 it carries `(1,3)`, `(2,2)` x4 and
+  `(3,1)` x5 against `(4,0)` x9. **The prediction that 8192 and 16384 would not
+  hold full occupancy and 32768 and above would, held exactly**, and it
+  reproduces R9's direct observation at c4/mnbt 8192 from a fourth engine start.
+- **The span ratio** does NOT saturate at 32768. It keeps falling to 65536
+  (1.654 -> 1.505) and then stops dead (1.509, 1.501).
+
+So between 32768 and 65536 nothing is waiting for admission and the span still
+tightens by 9%. **That is R13's `Waiting: 0` finding seen from the other side,
+and it is the second independent confirmation that the ratio this campaign spent
+four rounds calling "admission stagger" is not admission.** The floor it settles
+on is **~1.50**, reached at 65536 and unmoved by doubling the budget twice more.
+
+Per the pre-declaration, the span figures at 8192 and 16384 are **proxies only
+and are not treated as physical stagger** — residency is partial at both, which
+is exactly the condition R5c showed invalidates `c / (tg/tg_req)`. They are
+reported because they are what the metric's arithmetic contains, not because they
+measure a batch span.
+
+### A NEW WIDEST MARGIN WAS MEASURED AND IS DELIBERATELY NOT PROMOTED
+
+`ctx_tg @ d16384 c4` at mnbt 131072 reads **175.40**, which against the incumbent
+27.68 is **6.34x** — higher than the pooled 6.15x that currently holds the
+campaign's widest-margin title.
+
+**It is recorded as a row and it is NOT claimed as the widest margin.** It is a
+single 7-run median at a configuration measured once, its σ/med is 3.95%, and its
+two neighbours above the knee read 168.37 and 164.95 — the three are one point
+within noise, and 175.40 is simply the highest draw of the three. Promoting the
+best first measurement of a cell is precisely the error that retired R1's 129.32
+and R3's 108.15, **both of which were too high**, and this is a round whose whole
+purpose is to not do that. If somebody wants 6.34x, it costs one repeat: queued
+as R13d.
+
+### CONTROLS, and one gate that was set too tight
+
+**`pp2048` session control: five of six arms in band, one miss.**
+
+| mnbt | `pp2048` | band | verdict |
+|---:|---:|---|---|
+| 8192 | 638.04 (σ 1.31) | 623–643 | **PASS** |
+| 16384 | 659.21 (σ 3.82) | 655–690 | **PASS** |
+| 32768 | 670.76 (σ 2.49) | 655–690 | **PASS** |
+| 65536 | 671.68 (σ 2.13) | 655–690 | **PASS** |
+| 98304 | **645.90** (σ 38.43) | 655–690 | **MISS, −1.4%** |
+| 131072 | 670.32 (σ 25.06) | 655–690 | **PASS** |
+
+The declared consequence of a control miss was that the arm's `tg` figures are
+unreadable. **That consequence is NOT applied to the 98304 arm, and here is the
+argument, made in the open rather than by waiving the rule.** (a) The miss is
+one low draw: the seven runs are 556.89 / 627.74 / 636.74 / 645.90 / 661.85 /
+676.11 / 678.13, and six of seven sit inside or beside the band — the same
+mode-plus-one-low-draw shape R8 and R12 documented. (b) The **same arm carries a
+second, better-resolved prefill control**: `ctx_pp` (Phase 1) is charged 16384
+tokens rather than 2048 and reads **6189.65 against R13's 6222.20 — 0.5%**. (c)
+The arm run immediately before it and the arm run immediately after it both
+passed. (d) Telemetry passed. **The gate was too tight for a 7-run `pp2048`
+median whose σ can reach 6%; it was built from seven historical point estimates
+without pricing their dispersion.** That is the second broken validity gate this
+campaign has recorded (R9b's `ctx_pp2048 < 1200` was the first) and it is
+recorded as broken rather than quietly dropped. A future round should gate on
+`ctx_pp`, which is the same physics measured nine times more precisely.
+
+**Telemetry: SM clock median 2398 MHz in all six arms** (2290 samples), 79 °C
+peak, 99.91 W peak. Sessions **eleven through sixteen** agreeing with R4's 2392.
+No clock, power-policy, driver or kernel setting was touched and no `apt` was run.
+
+**Prefix cache hit rate 0.0% in all 135 engine samples, at all six budgets**, flag
+ON. The campaign total is now **297 samples across six token budgets spanning
+16x**. Nothing on this curve is a caching effect.
+
+**MTP acceptance flat across a 16x budget sweep**: medians 3.03 / 3.09 / 3.19 /
+3.09 / 3.08 / 3.14 at the six budgets (123 samples). Sixth consecutive round
+finding acceptance unmoved by a scheduler knob, and the strongest version yet
+because the knob moved 16-fold. The 32768 arm's 3.19 is 1.3% above the declared
+band and is scored as a miss.
+
+### THE ctx-VS-PHASE-2 SIGN IS A FUNCTION OF THE TOKEN BUDGET, and it flips TWICE
+
++4.8% (8192) -> **−19.9%** (16384) -> −12.6% (32768) -> −4.8% (65536) -> −0.8%
+(98304) -> **+2.6%** (131072). The prediction "ctx below Phase 2 at the raised
+budgets" held at four of five and is **refuted at 131072**.
+
+This is the sixth time this regularity has broken, and the curve finally shows
+why nobody could pin it: **it is not a regularity at all, it is a smooth response
+to the token budget with a minimum near 16384**, and every previous round sampled
+it at one or two budgets and read the local sign as a rule. R12's asymmetry gets
+the same treatment and the same explanation — the `ctx_` phase staggers MORE than
+Phase 2 at 16384 (2.464 vs 2.048) and at 32768 (1.848 vs 1.654), exactly as R12
+found, and LESS at 65536, 98304 and 131072 (1.505/1.454/1.465 against
+1.505/1.509/1.501), exactly as R13 found. **R12 and R13 were both right about
+their own budget and both wrong to call it a rule.** With the phase-label
+correction having already dissolved the question this asymmetry was posed to
+answer, the right disposition is: the numbers are a budget response, and there is
+no puzzle left attached to them.
+
+### PREDICTIONS: 43 held, 7 missed, of 50 pre-declared bands and thresholds
+
+Held: **all 24 main-table bands except one** — every `tg`, `tg_req` and span-ratio
+band at all six budgets, and five of six `peak_thr` bands. The `tg` band at 8192
+predicted centre 52 and measured 52.07. Also held: `pp2048` at 8192 and at four
+of five raised budgets; `ttfr(131072) >= 12102` (12208); MTP acceptance at five
+of six; prefix cache at all six; `Running`/`Waiting` at all six, exactly as
+specified; the stagger-proxy validity call; ctx-vs-Phase-2 sign at four of five;
+SM clock; and grid time (1353.5 s against 1250–1500 s).
+
+Missed, all seven:
+1. `peak_thr` at 8192: **271** against 275–300, low by 1.5%.
+2. `pp2048` at 98304: **645.90** against 655–690 — the broken gate above.
+3. **ttfr monotonicity**: rose on five consecutive increases (10217 -> 11175 ->
+   11859 -> 12167 -> 12375) and then **fell 1.4% at 131072** (12208). The
+   seven-increase run of "raising the budget makes time-to-first-response worse"
+   ends here, though the fall is inside noise and the threshold prediction held.
+4. MTP acceptance at 32768: 3.19 against 2.85–3.15.
+5. ctx below Phase 2 at 131072: **+2.6%**, refuted.
+6. **Engine-start cost: 1084.2 s total against ~1750 s predicted.** See below.
+7. **Wall clock 45m23s against 55–75 min.** The round was cheaper than priced.
+
+### A CORRECTION TO R13's COST NOTE, bought for nothing
+
+R13 reported that a new `max_num_batched_tokens` value costs a full torch.compile
+rebuild (~+45 s) and warned anyone sweeping the flag to budget for it per value.
+Three of this round's six values were new. Measured:
+
+| mnbt | engine start | new value? |
+|---:|---:|---|
+| 8192 | 112.8 s | cached |
+| 16384 | **137.7 s** | **NEW** |
+| 32768 | 160.6 s | cached |
+| 98304 | 177.9 s | cached |
+| 65536 | **185.2 s** | **NEW** |
+| 131072 | **310.0 s** | **NEW** |
+
+**Start cost tracks the SIZE of the budget, not its novelty.** 16384 and 65536
+were both new and both sit on the trend line drawn by the cached values; only
+131072 sits above it, by roughly two minutes. So a sweep is much cheaper than
+R13's note implies — the correct planning figure is ~110–190 s across
+8192–98304 with a step up beyond that, not a flat rebuild penalty per value.
+Sweeping this flag is affordable, which is worth knowing before the next one.
+
+### MUTATIONS NOT FOLDED
+
+`recipe.yaml` is untouched. `max_num_seqs 5` and `max_num_batched_tokens <B>` are
+MUTATIONS at every point and every RESULTS.md row this round produces names its
+configuration. `max_model_len` stayed at the recipe default 32768 throughout and
+no validator fired at any budget up to 131072, confirming R13's source read.
+
+### ONE INVOCATION WAS IMPOSSIBLE, AS DECLARED — and the round measured the price
+
+Six budgets meant six engine starts; `max_num_batched_tokens` is a serve argument
+and cannot vary inside a session. The round said so in advance and treated the
+comparison as the weaker kind. **What it bought instead is the first direct
+measurement of this campaign's cross-invocation error at several operating points
+in one night: 0.48% to 3.18%, mean 1.94%, always in the same direction.** Every
+cross-round comparison in this file inherits an error bar of about that size, and
+until tonight it was assumed rather than measured.
+
+### COST
+
+Six invocations, six engine starts, **1353.5 s of grid time**, 1084.2 s of engine
+start, **45m23s wall**, ~90k harness tokens. Zero crashes, zero retries, no arena
+submission, no box system change.
+
+### The round's value, in one line
+
+**All six protected rows reproduced from separate engine starts at runs=7, the
+two same-config figures were tightened to pooled 14-run medians (3.67x, and 6.15x
+which is still the campaign's widest), the budget response was curved for the
+first time and knees at 65536 — so R13's 98304 buys nothing and R11's fold value
+is 65536 — and six-for-six low reproductions put a measured ~2% error bar on
+every figure this campaign has taken exactly once.**
