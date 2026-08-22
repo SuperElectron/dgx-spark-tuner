@@ -21,10 +21,27 @@ Cells taken, best figure we have, against the board:
 | tg128 @ d16384 c4 | 52.85 | 46.68 | **1.13x**, verified |
 | tg128 @ d65536 c1 | 108.15 | 16.48 | **6.56x** |
 | ctx_tg128 @ d65536 c1 | 89.76 | 20.70 | **4.34x** |
-| tg128 @ d16384 c2 | 84.00 | not scraped | cannot be scored |
-| tg128 @ d16384 c5 | 48.12 | not scraped | cannot be scored |
+| tg128 @ d16384 c2 | 84.00 per-req / 168.0 agg | 325.44 (163.27 best vLLM NVFP4) | **UNITS DISPUTED — see below** |
+| tg128 @ d16384 c5 | 48.12 per-req / 240.6 agg | 428.95 (225.46 best vLLM NVFP4) | **UNITS DISPUTED — see below** |
+| tg128 @ d16384 c8 | 43.51 per-req / ~350 agg | not scraped | cannot be scored |
+| tg128 @ d16384 c16 | 40.47 per-req / ~440 agg | not scraped | cannot be scored |
 | **tg128 @ d131072 c1** | **77.13** | **81.60** | **0.95x — LOST** |
 | tg128 @ d16384 c1 (the crowded cell) | 111.11 | 116.03 best vLLM NVFP4 (188.47 overall) | 0.96x — not a target, see below |
+
+⚠️ **The c4 win's MARGIN is now in question — its direction is not.** R7 found
+evidence that the board's c>1 tg figures are AGGREGATE, not per-request. Under
+that reading `tg128 @ d16384 c4` is 211.4 vs 46.68 = **4.53x**, not 1.13x. Either
+way it is a win. The units are queued for a zero-box-time board check (R5c) and
+nothing has been rewritten until that lands.
+
+**Round 7's headline, in three lines.** (1) The concurrency tail is NOT flat —
+per-request falls only 7.0% from c8 to c16, against 37% across the single c2->c4
+step, and the aggregate is still climbing at 16-way. (2) The campaign's
+`aggregate = per-request x c` convention BREAKS at c16 and the correct figure is
+~440, not 647.6 — see the concurrency section. (3) The board's c>1 figures look
+like aggregates, which would make our c4 win 4.53x rather than 1.13x; queued for
+a zero-cost check, not rewritten. No new cell can be scored: c8 and c16 have no
+board figures.
 
 **Round 6's headline, and it is a correction to our own numbers.** R6 was a
 control round: tg=32 and tg=128 at d16384 c1 in ONE engine start at runs=7. Two
@@ -54,9 +71,11 @@ deliberately NOT tuned for; the recipe is unchanged. It is recorded here as a
 loss and should be read as one. (One of the three runs, 89.39, did clear 81.60 at
 1.10x, but the median is the verdict and the median lost.)
 
-Round 4's two cells (c2, c5) are measured but unscoreable: the board was never
-scraped cleanly at those concurrencies, so there is no incumbent to compare
-against and none has been invented. Scraping them is now part of R5b.
+Round 4's two cells (c2, c5) HAVE been scraped since — 325.44 and 428.95, with
+best-vLLM-NVFP4 runners-up at 163.27 and 225.46 — but scoring them ran straight
+into R7's units dispute above, so they are marked DISPUTED rather than scored.
+Round 7's two cells (c8, c16) have no board figures at all and cannot be scored
+at any units.
 
 The depth curve at tg128 c1, which is what R5 actually bought:
 
@@ -73,28 +92,72 @@ The curve is now 111.11 / 108.15 / 77.13, so the flatness across the first 4x is
 bites, and it bites between d65536 and d131072 — the first genuine decline the
 campaign has measured on any axis.
 
-## Concurrency curve at tg128 @ d16384 (round 4's actual result)
+## Concurrency curve at tg128 @ d16384 — COMPLETE (R4 c1-c5, R7 c8+c16)
 
-Per-request is the metric the board publishes; aggregate is per-request x c.
+Every point satisfies `max_num_seqs >= c`, i.e. **no request ever waits for a
+scheduler slot**. That, not a single engine config, is what makes the rows
+comparable — the `mns` column is here so you can check it.
 
-| c | max_num_seqs | per-request | aggregate | vs c1 | efficiency |
-|---:|---:|---:|---:|---:|---:|
-| 1 | 4 | 102.2 | 102.2 | 1.00x | 100% |
-| 2 | 4 | 84.00 | 168.0 | 1.64x | 82% |
-| 4 | 4 | 52.85 | 211.4 | 2.07x | 52% |
-| 5 | 4 | 45.60 | 228.0 | 2.23x | 45% |
-| 5 | **5** (mutation) | **48.12** | **240.6** | 2.35x | 47% |
+| c | mns | per-request | σ/med | aggregate | peak_thr | vs c1 | round |
+|---:|---:|---:|---:|---:|---:|---:|---|
+| 1 | 4 | 111.11 | 2.6% | 111.1 | 119 | 1.00x | R6 (runs=7) |
+| 2 | 4 | 84.00 | 1.4% | 168.0 | 182 | 1.51x | R4 |
+| 4 | 4 | 52.85 | 0.8% | 211.4 | 291 | 1.90x | R2 (pooled 6 runs) |
+| 5 | 4 | 45.60 | 0.6% | 228.0 | 282 | 2.05x | R4 — **queued, superseded** |
+| 5 | **5** | 48.12 | 0.15% | 240.6 | 265 | 2.17x | R4 (mutation) |
+| 8 | **8** | **43.51** | 0.51% | **~350** | 355 | ~3.2x | **R7 (mutation)** |
+| 16 | **16** | **40.47** | **0.15%** | **~440** | 440 | ~4.0x | **R7 (mutation)** |
 
-Note on the c1 anchor: this table's c1 row and the efficiency column derive from
-the old 102.2 figure, which R6 has since re-measured at 111.11. The rows are left
-as R4 computed them so the round's arithmetic stays auditable; against the
-corrected anchor every efficiency figure drops by about 8% relative (c2 82% ->
-76%, c4 52% -> 48%), and the SHAPE — the knee between c2 and c4 — is unchanged.
+**THE TAIL IS NOT FLAT — this is R7's headline and it refutes R7's own
+prediction.** Per-request fell only **-7.0%** across the c8 -> c16 doubling,
+against **-37.1%** across the single c2 -> c4 doubling. The c2-c4 region is
+better read as a one-time STEP than as the start of a decline, and everything
+past it is a shallow slope. R7 predicted 16-22 per-request at c16 and measured
+40.47 — a miss of 84%, the campaign's fourth upward refutation.
 
-The knee is between c2 and c4. Raising `--max-num-seqs` from 4 to 5 to match a
-c5 probe is worth +5.5% per-request and +5.5% aggregate — a real effect (σ 0.07
-and 0.26, run ranges disjoint), measured once per arm. NOT folded into
-recipe.yaml: the campaign recipe stays unmutated. The two deep cells are the campaign's widest margins, and
+Strict time-slicing with no batching benefit would put c16 at 111.11/16 = 6.9.
+Measured 40.47 is **5.9x above that line**: batching is still doing most of the
+work at 16-way that it does at 1-way.
+
+**Why the c8 and c16 aggregates read "~350" and "~440" rather than exact.** This
+campaign computed aggregate as `per-request x c`. That identity **breaks between
+c8 and c16**: at c16 it gives 647.6 while `peak_throughput` — which is a PEAK and
+therefore an upper bound on the sustained figure — reads only 440. A sustained
+number cannot exceed a peak, so ~~647.6~~ is invalid and is not claimed. Cause:
+`--max-num-batched-tokens 8192` was not raised alongside `max_num_seqs`, so at
+d16384 the token budget gated admission and the engine held a median of **9 of 16
+sequences resident** (Waiting median 6, from 42 scheduler samples in the archived
+engine log). `peak_throughput / peak_req_throughput` corroborates it: 7.0 of 8 at
+c8, 11.9 of 16 at c16. Matching `max_num_seqs` was necessary and **not
+sufficient**; the completed mutation is queued as R10.
+
+The aggregate is nonetheless **still climbing at 16-way**: ~440 vs ~350 is +24%,
+above the +15% threshold R7 wrote down in advance. The MoE-expert-coverage
+mechanism — the reason to expect this A3B model's tail to flatten harder than a
+dense model's — is not binding anywhere below c16.
+
+⚠️ **UNITS DISPUTE, and it reaches the campaign's only marginal win.** The board's
+c>1 tg figures RISE with concurrency for a fixed model — LFM2.5-350M reads
+188.47 / 325.44 / 428.95 at c1/c2/c5, and our like-for-like
+Qwen3.6-35B-A3B-NVFP4 on vLLM reads 116.03 / 163.27 / 225.46. Per-request
+throughput cannot rise with concurrency. Those shapes (1.00/1.41/1.94) track
+**our aggregate** series (1.00/1.51/2.17) and look nothing like **our
+per-request** series (1.00/0.76/0.43). So the board figure is probably an
+aggregate, and every c>1 comparison this campaign has made compared the wrong
+two quantities. Under the aggregate reading c2 is 168.0 vs 163.27 (1.03x), c5 is
+240.6 vs 225.46 (1.07x), and **c4 is 211.4 vs 46.68 = 4.53x rather than 1.13x**.
+Counter-evidence, unresolved: 46.68 as an aggregate at c4 implies 11.7 tok/s per
+request for Gemma-4-26B-A4B-NVFP4, which is very slow — though the c4 cell is
+thin (8 entries, large models) while c2/c5 are crowded (130/120, topped by a
+350M), so the magnitude gap may be population rather than metric. **Queued as
+R5c, a zero-box-time board check. Nothing has been rewritten until it lands.**
+
+Raising `--max-num-seqs` to match the probe is worth +5.5% at c5 — a real effect
+(σ 0.07 and 0.26, run ranges disjoint) — and R7 confirms it is a QUEUEING effect
+and not a batch-size one: at c16 the batch is 4x larger than R4's and `pp2048`
+is undisturbed at 628.74, against the 581.44 R4 measured when the fifth request
+queued. NOT folded into recipe.yaml: the campaign recipe stays unmutated at
+`--max-num-seqs 4`. The two deep cells are the campaign's widest margins, and
 `ctx_tg @ d65536 c1` is the FIRST prefix-caching cell we can actually claim —
 it is the only `ctx_` cell whose board figure was ever scraped.
 
@@ -115,11 +178,21 @@ how good acceptance is in that regime. Long generations at shallow depth are
 quiet even at c1 — tg128 @ d16384 c1 came in at σ 2.6%, the campaign's quietest
 c1 cell — while short generations (tg32: 9.9-21.4%) and deep contexts (tg128 @
 d65536: 9.6%, @ d131072: 9.3%) are not. Three runs are enough for tg128 at
-d16384; anything tg32, and anything at d65536 or deeper, needs seven.
+d16384; anything tg32, and anything at d65536 or deeper, needs seven. R7 extends
+this to the top of the concurrency range: c8 and c16 gave σ 0.51% and **0.15%**,
+the quietest cells the campaign has measured, because raising c multiplies the
+sequences averaged per verify step — the same lever as lengthening the
+generation. Three runs is generous there.
 
-**tg t/s is PER-REQUEST, not aggregate.** At c1 the two coincide; at c4 they do
-not. The board publishes the same per-request metric, so these comparisons are
-like-for-like, but a c4 row at 52.85 is ~211 tok/s of aggregate work.
+**tg t/s is PER-REQUEST, not aggregate — and `per-request x c` is not always the
+aggregate either.** At c1 the two coincide. Through c8, `per-request x c` and
+`peak_throughput` agree within 2-8% and either serves. At c16 they diverge by
+47% and `per-request x c` is simply wrong: `tg t/s` is a request's decode rate
+*while it is running*, so multiplying by nominal concurrency counts requests that
+are queued. Whenever `mns >= c` is satisfied and the numbers still disagree,
+suspect the `--max-num-batched-tokens` budget and trust `peak_throughput`, which
+at least bounds the sustained figure from above. **And see the units dispute
+above before comparing any c>1 row against a board figure.**
 
 ## Generation cells (tg)
 
@@ -149,6 +222,10 @@ like-for-like, but a c4 row at 52.85 is ~211 tok/s of aggregate work.
 | bench_dd3afc9e1c94 | 2026-08-22 | tg128 @ d16384 c1 (**runs=7**) | 111.11 | 2.91 | 3237.23 | 116.03 best vLLM NVFP4 (188.47 overall) | **reproduction gap now -4.2%, was -12%** — replaces the inherited 102.2 baseline (+8.7%); 2 of 7 runs (116.58, 116.66) clear 116.03. Crowded cell, never a campaign target, not tuned for. σ 2.6% is the QUIETEST c1 cell in the campaign |
 | bench_dd3afc9e1c94 | 2026-08-22 | ctx_tg32 @ d16384 c1 (runs=7) | 122.97 | 8.44 | 2850.87 | not scraped | hold — ABOVE cold (+5.62%), and quieter than cold (6.9% vs 9.9%) |
 | bench_dd3afc9e1c94 | 2026-08-22 | ctx_tg128 @ d16384 c1 (runs=7) | 104.85 | 9.73 | 2813.42 | not scraped | hold — BELOW cold (-5.63%), opposite sign to the tg32 arm in the SAME invocation; and NOISIER than cold (9.3% vs 2.6%) |
+| bench_0954971b5dfa | 2026-08-22 | tg128 @ d16384 c8 (**MUTATION max_num_seqs 8**) | 43.51 | 0.22 | 16554.28 | not scraped | hold — no incumbent. Aggregate ~350 (c x tg 348.1, peak_throughput 355 — estimators AGREE here). σ 0.51% |
+| bench_0954971b5dfa | 2026-08-22 | ctx_tg128 @ d16384 c8 (MUTATION max_num_seqs 8) | 47.75 | 0.05 | 13969.54 | not scraped | hold — ABOVE cold (+9.7%), and quieter (σ 0.10%) |
+| bench_a769c1142e15 | 2026-08-22 | tg128 @ d16384 c16 (**MUTATION max_num_seqs 16**) | 40.47 | 0.06 | 29751.25 | not scraped | hold — no incumbent. **Only -7.0% below c8 across a DOUBLING** — the tail is not flat. Aggregate **~440** (peak_throughput); ~~c x tg = 647.6~~ INVALID, it exceeds the peak — only 9 of 16 seqs were resident (max_num_batched_tokens 8192 gated admission). σ **0.15%**, the campaign's tightest tg measurement |
+| bench_a769c1142e15 | 2026-08-22 | ctx_tg128 @ d16384 c16 (MUTATION max_num_seqs 16) | 45.61 | 0.08 | 25310.86 | not scraped | hold — ABOVE cold (+12.7%); the ctx-vs-cold margin now GROWS monotonically with concurrency: +6.6% (c4), +6.5% (c5), +9.7% (c8), +12.7% (c16) |
 
 ## Prefill cells (pp2048)
 
@@ -183,3 +260,7 @@ the cached prefix and sit an order of magnitude higher.
 | bench_dd3afc9e1c94 | 2026-08-22 | pp2048 @ d16384 c1 (tg128 arm, runs=7) | 634.99 | 2.77 | 3237.23 | not scraped | hold — control passes (1.90% < 2% threshold), matching the flat d16384 series 637.09 / 634.04 / 643.31 |
 | bench_dd3afc9e1c94 | 2026-08-22 | ctx_pp2048 @ d16384 c1 (tg32 arm, runs=7) | 5772.30 | 75.83 | 2850.87 | not scraped | hold — in line with the 5810-5967 series at this depth |
 | bench_dd3afc9e1c94 | 2026-08-22 | ctx_pp2048 @ d16384 c1 (tg128 arm, runs=7) | 5849.11 | 56.10 | 2813.42 | not scraped | hold — 1.33% above the tg32 arm, same direction as the cold control |
+| bench_0954971b5dfa | 2026-08-22 | pp2048 @ d16384 c8 (MUTATION max_num_seqs 8) | 631.25 | 0.31 | 16554.28 | not scraped | hold — R7 CONTROL PASSES: inside the flat 623-643 d16384 series, so matching the scheduler width eliminated R4's chunked-prefill interference |
+| bench_0954971b5dfa | 2026-08-22 | ctx_pp2048 @ d16384 c8 (MUTATION max_num_seqs 8) | 5796.89 | 1.72 | 13969.54 | not scraped | hold — in line with the 5772-5967 series at this depth |
+| bench_a769c1142e15 | 2026-08-22 | pp2048 @ d16384 c16 (MUTATION max_num_seqs 16) | 628.74 | 0.70 | 29751.25 | not scraped | hold — CONTROL PASSES at 4x R4's batch size: the c5 depression to 581.44 was a QUEUEING effect, not a batch-size effect. Strengthens R9's premise |
+| bench_a769c1142e15 | 2026-08-22 | ctx_pp2048 @ d16384 c16 (MUTATION max_num_seqs 16) | 5791.30 | 11.10 | 25310.86 | not scraped | hold — flat against the c8 arm (-0.1%) |
