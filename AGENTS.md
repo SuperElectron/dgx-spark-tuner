@@ -10,20 +10,16 @@ Procedures live in the skills; see `## Skills`.
 - Nothing is ever submitted to Spark Arena. There is no login and one is not
   wanted. Never pass `--arena`; never run `sparkrun arena` anything.
 
-## Git
+## Research Experiment setup
 
-- `main` ← `staging` ← `feature/*`. Never commit directly to `main` or `staging`.
-- Branch before your first commit, then verify. As commands, not as intent:
-  `git checkout -b feature/<name> staging`, then `git branch --show-current`.
-  A prohibition is only evaluated once you are already committing, which is too
-  late; this failed exactly that way and cost a history repair.
-- One agent owns the working tree at a time. Every agent shares one checkout, so
-  while a round holds the box no other agent runs git operations.
-- An agent commits and pushes only its own branch. Merging up is the
-  orchestrator's call, and it verifies what the branch landed before merging.
-- Never commit `QUEUE.md` (gitignored).
+To do a research experiement, an agent is used to run that isolated experiment
+- an agent must use context from .claude/skills/experiment
+- the agent is responsible to add/push code, and create a PR.
+- you are required to merge it back into staging.
 
-## A series
+## Folder Layout for research experiements.
+
+All research experiments populate a folder structure as follows:
 
 ```
 research/<series>/
@@ -35,14 +31,7 @@ research/<series>/
     └── bench_<id>-<label>/         one archive per invocation
 ```
 
-- Write only to `recipe.yaml`, `EXPERIMENT.md` and `RESULTS.md`. Everything
-  else in a series is read-only, archives included.
-- `EXPERIMENT.md` states the claim before any run, and gains its conclusion
-  after.
-- Create no other files. Analysis belongs in `EXPERIMENT.md`.
-- `recipe.yaml` changes only when a fold rule declared before the run fires.
-- `RESULTS.md` is Mat's. Nothing derives from it — tooling reads the archives.
-- Name a hypothesis directory for the claim, not the cell.
+- Do not modify these files unless a one of your skills permits it. These are read only unless a specific skill operates on them.
 
 ## The box
 
@@ -63,7 +52,8 @@ Invoke the skill; do not reimplement it from memory.
 - `mem0` — the memory service: markers, entity scopes, what is derived vs
   hand-written, reconcile.
 - `observe` — the observation pass over runs, telemetry and logs.
-- `gh-issues` — issue body structure and closing rules.
+- `experiments` — how one experiment is run: what the harness hands the agent,
+  what it measures and archives, and the git and PR rules it follows.
 
 ## Code rules
 
