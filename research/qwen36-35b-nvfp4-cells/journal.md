@@ -1957,3 +1957,486 @@ engine start is what turned a suspicion into a correction. Controls are what
 made it safe to believe: pp2048 landed inside a series it has now held across
 seven invocations, and the shallow arm reproduced R6 to 1.8%, so the fall
 belongs to the depth and not to the night.
+
+## Round 9 hypothesis — the chunked-prefill interference control: tg128 @ d16384, c4 and c5, three arms
+
+Earned by R4, and it is the last mechanism in this campaign that was **inferred
+rather than measured**. R4 saw `tg128 @ d16384 c5` come in at 45.60 against a c4
+figure of 52.85 — a 13.7% deficit — and explained it by chunked prefill: with
+`--max-num-seqs 4` the fifth request cannot get a scheduler slot, and with
+`--enable-chunked-prefill` on its prefill is chunked into the ongoing decode
+steps rather than waiting outside the engine, so four decoding sequences share
+every step with prefill work. The supporting evidence was the prefill row:
+`pp2048 @ d16384` reads 637.09 / 634.04 / 643.31 at c1 / c2 / c4 and falls to
+581.44 at c5 under mns 4, the only depressed prefill figure at this depth in the
+whole campaign, restored to 640.21 the moment mns is raised to 5.
+
+That is a good story and the campaign has been leaning on it since. It has two
+holes, and this round exists to close them.
+
+### Hole 1 — the 13.7% deficit was never measured inside one invocation
+
+R4's c5 arm and the c4 figure it was compared against come from **different
+benchmark invocations** (R4's `bench_0ef7af8997ce` carried c2 and c5; the 52.85
+is R2's pooled figure from `bench_f58c56da6658`). So the deficit itself is a
+cross-invocation comparison, carrying engine-start variation and thermal drift
+on top of the effect. R8 has just shown what that is worth: it refuted R3's
+five-round flatness reading purely by putting two conditions under one engine
+start, and the figure it retired was 13% wrong — almost exactly the size of the
+effect being explained here.
+
+**This round measures c4 and c5 in ONE invocation** (`-b concurrency=4,5`), so
+the deficit is a within-engine-start quantity for the first time.
+
+### Hole 2 — chunked prefill was never actually turned off
+
+Nobody has run this model with `--enable-chunked-prefill` disabled. The
+mechanism was read off prefill rows; the flag was never moved.
+
+Moving it is not a `-o` probe argument. `-o` overrides recipe *defaults*, i.e.
+the template placeholders, and `--enable-chunked-prefill` is a hardcoded flag in
+the recipe command. Arm B therefore runs from a **candidate recipe copy**,
+`recipe-nochunk.yaml`, identical to `recipe.yaml` except that the flag reads
+`--no-enable-chunked-prefill`. Verified before writing this: vLLM
+0.27.2rc1.dev360+ge85d1b69c in the epoch image builds its boolean engine args
+with `argparse.BooleanOptionalAction`, so `--no-enable-chunked-prefill` is the
+correct spelling and will parse.
+
+### The constraint that forces a third arm
+
+`SchedulerConfig.verify_max_model_len` in this image raises outright when
+chunked prefill is off and `max_num_batched_tokens < max_model_len`:
+
+    max_num_batched_tokens (8192) is smaller than max_model_len (32768).
+    This effectively limits the maximum sequence length to
+    max_num_batched_tokens and makes vLLM reject longer sequences.
+
+The campaign recipe carries `--max-num-batched-tokens 8192` and
+`--max-model-len 32768`, so **arm B cannot run at the campaign's token budget at
+all.** It needs `-o max_num_batched_tokens=32768`. The auto-raise vLLM applies
+when the budget is left unset does not help us — it only fires when
+`max_num_batched_tokens` was never passed, and the recipe always passes it.
+
+That means the naive two-arm design (campaign config vs. chunked prefill off)
+would vary **two** things at once — the flag AND the token budget — and R7 has
+already shown the token budget is a live lever in its own right: at c16 it gated
+admission and held only 9 of 16 sequences resident. A two-arm result would be
+uninterpretable. So the round runs **three arms**, and what it compares is not
+three throughput numbers but three *deficits*:
+
+| arm | recipe | max_num_batched_tokens | chunked prefill | what it buys |
+|---|---|---:|---|---|
+| **A0** | `recipe.yaml` | 8192 (campaign default) | ON | reproduces R4's condition, with c4 and c5 inside ONE engine start |
+| **A1** | `recipe.yaml` | **32768** | ON | the matched control for B — isolates the token budget |
+| **B** | `recipe-nochunk.yaml` | **32768** | **OFF** | the actual test |
+
+Define **D = (c5 − c4) / c4** on per-request tg128 medians, computed *within each
+arm's own invocation*. D0, D1, D2 are the three deficits. This is a contrast of
+contrasts: engine-start variation and thermal drift move c4 and c5 together
+inside an arm and therefore cancel to first order in D, which is exactly the
+weakness that made R4's inference unsafe and exactly what R8 demonstrated the
+value of fixing.
+
+### What each outcome means, decided now
+
+Let **R = (D0 − D2) / D0**, the fraction of the campaign-config deficit that
+disabling chunked prefill recovers.
+
+- **R ≥ 0.60** — R4's mechanism is CONFIRMED. Mixed prefill-into-decode batching
+  is what costs the 13.7%, and the campaign's chunked-prefill story survives its
+  first direct test.
+- **R ≤ 0.25** — R4's mechanism is REFUTED. The journal will say so plainly and
+  the story goes into RESULTS.md as an inference that did not survive
+  measurement. The deficit would then be an ordinary consequence of five
+  requests sharing four slots, and the prefill depression a symptom rather than
+  the cause.
+- **0.25 < R < 0.60** — partial; reported as partial, not rounded to whichever
+  side is tidier.
+
+And the middle arm splits the credit:
+
+- **D0 ≈ D1** — the token budget contributes nothing; whatever B shows belongs
+  to the chunked-prefill flag alone.
+- **D0 ≫ D1** — the 8192 budget was doing the damage, not chunking per se. R4's
+  mechanism would then be *right about the symptom and wrong about the lever*,
+  and R10's token-budget story gets a second data point at a much smaller
+  concurrency than c16.
+
+### Resolution budget, declared before the run
+
+This is the best-powered round the campaign has run, and it is worth saying why.
+σ at these operating points is tiny: R4 measured 0.26 at c5 (0.57% of median)
+and 0.07 at c5/mns5 (0.15%); R2 measured 0.43 and 0.75 at c4 (0.8%); R7 measured
+0.51% at c8 and 0.15% at c16. R6's variance mechanism explains it — raising c
+multiplies the sequences averaged per MTP verify step. At σ ≈ 0.6%, a 3-run
+median has a standard error near 0.4%, so **D carries an uncertainty of roughly
+±1%** and the effect under test is 13.7%. runs=3 is not merely adequate here, it
+is generous, and per R6's pricing nothing in this round is tg32 or deeper than
+d16384, so no arm needs seven.
+
+The round can therefore resolve **R to about ±0.1**, which is far finer than the
+0.25/0.60 thresholds above. If it comes back unable to decide, something has
+gone wrong with the measurement rather than with the question.
+
+### Numeric predictions
+
+**Arm A0** — the reproduction:
+- `tg128 @ d16384 c4`: **51–55**, centre ~52.9 (R2 pooled 52.85).
+- `tg128 @ d16384 c5`: **43–48**, centre ~45.6 (R4's figure).
+- **D0 = −10% to −17%**, centre −13.7%.
+- `pp2048 @ c4`: **623–650** (the flat series). `pp2048 @ c5`: **555–605**,
+  i.e. DEPRESSED — R4 read 581.44. If the c5 prefill row comes back inside the
+  flat series, R4's supporting evidence has failed to reproduce and the round
+  has already learned something before arm B runs.
+- `ctx_tg128 @ c4`: **54–58** (R2 pooled 56.36); `ctx_tg128 @ c5`: **46–50**
+  (R4 48.18). ctx ABOVE cold at both, per R7's monotone-with-concurrency trend.
+
+**Arm A1** — chunked prefill still on, budget raised to 32768:
+- `pp2048 @ c5` is the discriminator. At mnbt 32768 a d16384 prefill (16384 +
+  2048 = 18432 tokens) fits in a single batch, so nothing is *split*; it is
+  still *mixed* into decode steps. If R4's depression is about the 8192 chunk
+  boundary specifically, predict **615–650, recovered**. If it is about mixed
+  batches per se, predict **555–605, still depressed**. I expect the latter,
+  because R7 saw pp2048 undisturbed at 628.74 at c16 where the batch is 4x
+  larger — which made that interference a queueing effect, not a batch-size one.
+- `tg128 @ c5`: **43–49**. `tg128 @ c4`: **51–55** (c4 has no queued request, so
+  the budget should not touch it; if c4 moves, the budget is doing something
+  this round did not anticipate).
+- **D1 = −8% to −17%**, centre −13%.
+
+**Arm B** — the test:
+- If the mechanism is right: `tg128 @ c5` **50–55**, `pp2048 @ c5` **615–650**,
+  **D2 = −1% to −6%**, R ≈ 0.6–0.95.
+- If the mechanism is wrong: `tg128 @ c5` **43–48**, D2 ≈ D0, R ≈ 0.
+- `tg128 @ c4`: **48–55**. c4 never queues a request, so with mns 4 ≥ c 4 there
+  is nothing for chunked prefill to interleave and the flag should be close to
+  a no-op here. **This is arm B's own control**: if c4 moves materially between
+  A1 and B, the flag is changing something other than queued-prefill
+  interleaving — most likely prefill batching efficiency — and D2 cannot be read
+  as cleanly as the thresholds assume.
+
+### Side-predictions, so the round can be refuted on more than one axis
+
+- **The engine log settles the queueing claim directly, which R4 could not.**
+  Capture `Running: N reqs, Waiting: M reqs` through the grid the way R7 did.
+  Predict **Running median 4 / Waiting median 0 at c4** and **Running median 4 /
+  Waiting median 1 at c5** in every arm. If Waiting is 0 at c5 the fifth request
+  is not queueing at all and the entire premise — R4's and this round's —
+  collapses. This is the instrument the mechanism has been missing since R4 and
+  it costs nothing.
+- **MTP acceptance is captured from the same log (R8b rides along).** R5 watched
+  acceptance move with depth, R7 with concurrency; nobody has watched it move
+  between c4 and c5, and a c4→c5 acceptance drop would be a *rival* explanation
+  for the deficit that has nothing to do with prefill. Predict acceptance
+  roughly flat between c4 and c5 within an arm (both are moderate-load points,
+  R7 read 64.5% under heavy c16 load and R5 read 93.6% at c1). A material drop
+  is a finding.
+- **vLLM will warn on arm B.** The image logs "This model does not officially
+  support disabling chunked prefill. Disabling this manually may cause the
+  engine to crash or produce incorrect outputs." Predict the warning appears and
+  the engine runs anyway. If arm B crashes, that is the round's answer for D2 —
+  the mechanism is untestable on this stack — and it will be recorded as a
+  crash, archived with a `-crash` suffix, not retried unchanged.
+- **ttfr**: predict **~10100–10300 ms at c4** (R2 read 10167 / 10151) and
+  **11500–12500 ms at c5** (R4 read 11866 at mns 4). If arm B recovers the
+  deficit, its c5 ttfr should FALL relative to A0's — the fifth request stops
+  paying for interleaved prefill — which is a second, independent axis on which
+  the mechanism can be checked.
+- **σ under 1% of the median on every tg row**, per R6's pricing at c ≥ 4. A
+  σ above 2% anywhere means this round's error budget is wrong and R must be
+  re-priced before it is read against the thresholds.
+- **Telemetry**: predict SM clock **2392–2398 MHz** median, the figure five
+  consecutive sessions have now agreed on. Open question 5 is closed; this is a
+  cheap consistency check, not a question.
+
+### Standings expectation
+
+**No new cell, and nothing claimed.** c4 is the campaign's only marginal win and
+this round re-measures it — under R7's units dispute its margin is either 1.13x
+(per-request) or 4.53x (aggregate) and R5c has not landed, so the row is not
+being rewritten either way. c5 has a scraped board figure (428.95 top, 225.46
+best vLLM NVFP4) and is likewise stuck behind the same dispute. Every row this
+round produces goes into RESULTS.md **labelled with the arm it was measured
+under**, because two of the three arms are MUTATIONS and it must be impossible
+to read an A1 or B number as a campaign-config number.
+
+If A0's c4 figure disagrees materially with R2's pooled 52.85, that is a
+revision the round makes and RESULTS.md carries it — R6 and R8 both revised
+headline figures downward and both were right to.
+
+### Config, and what is a mutation
+
+- **A0**: `recipe.yaml`, UNMUTATED. No `-o` at all. d16384 + pp2048 + tg128 needs
+  18560 and the recipe default `max_model_len 32768` covers it, so no context
+  override is required. mns stays at the recipe's 4 — which is the *point*, since
+  the queued fifth request is the phenomenon.
+- **A1**: `recipe.yaml` + `-o max_num_batched_tokens=32768`. ONE mutation.
+- **B**: `recipe-nochunk.yaml` (`--no-enable-chunked-prefill`) +
+  `-o max_num_batched_tokens=32768`. TWO mutations, which is why A1 exists.
+
+**Neither mutation is folded into `recipe.yaml`.** The campaign config stays
+`--max-num-batched-tokens 8192 --enable-chunked-prefill --max-num-seqs 4`, and
+`recipe-nochunk.yaml` is a candidate copy that later rounds must not inherit by
+accident.
+
+Probe, identical in all three arms:
+`-b pp=2048 -b tg=128 -b depth=16384 -b concurrency=4,5 -b runs=3`. Per R5's
+process lesson the `Benchmark args:` echo is read before each run is allowed to
+proceed and must show `depth: [16384]` and `concurrency: [4, 5]` — sparkrun does
+not error on a missing `-b depth`, it silently defaults it to 0. `state.yaml`
+gets checked for `session_count: 1` in each arm, which is the evidence that c4
+and c5 really did share one engine start.
+
+**Three engine starts, and the round says so.** The three arms cannot sit in one
+invocation because A1 and B need different engine configurations, and B needs a
+different serve command entirely. What the design buys is that the *quantity
+being compared* — D — is measured within a single engine start in each arm, so
+engine-start variation enters only as a second-order term on the difference of
+deficits, not as a first-order term on a difference of throughputs. That is
+strictly stronger than what R4 had and it is the most that can be bought without
+a recipe that takes the flag as a template variable.
+
+Cost prediction: three engine starts (~3 min each) and three grids of 6 runs.
+R4's c2+c5 grid at runs=3 cost 173.3 s and R7's c8 grid cost 218.9 s, so predict
+**180–260 s of grid time per arm, 550–750 s total**, 25–35 minutes of wall clock,
+and roughly 55–70k harness tokens.
+
+## Round 9 outcome — bench_5399a85d7aec-a0 (arm A0) + bench_d9fdc68576f2-a1 (arm A1) + bench_12f458ba7348-crash (arm B), 2026-08-22
+
+Two arms measured, one arm impossible. Both measured arms carry
+`session_count: 1`, so in each of them c4 and c5 shared one engine start and one
+thermal state — which was the whole point of the design.
+
+**Arm A0 — `recipe.yaml` UNMUTATED (mnbt 8192, chunked prefill ON, mns 4):**
+
+| cell | median | (mean) | σ | σ/med | runs |
+|---|---:|---:|---:|---:|---|
+| tg128 @ d16384 c4 | **52.64** | (52.48) | 0.58 | 1.10% | 51.70 / 52.64 / 53.10 |
+| tg128 @ d16384 c5 | **45.05** | (45.19) | 0.28 | 0.62% | 45.05 / 44.93 / 45.58 |
+| ctx_tg128 @ c4 | 54.98 | (54.87) | 0.19 | 0.35% | 54.60 / 55.04 / 54.98 |
+| ctx_tg128 @ c5 | 48.04 | (47.80) | 0.44 | 0.92% | 47.19 / 48.04 / 48.19 |
+| pp2048 @ c4 | 640.70 | (640.61) | 0.32 | — | 640.18 / 640.94 / 640.70 |
+| pp2048 @ c5 | 579.98 | (579.49) | 3.37 | — | 579.98 / 575.14 / 583.36 |
+
+**Arm A1 — `recipe.yaml` + `-o max_num_batched_tokens=32768` (chunked prefill ON):**
+
+| cell | median | (mean) | σ | σ/med | runs |
+|---|---:|---:|---:|---:|---|
+| tg128 @ d16384 c4 | **143.08** | (143.14) | 3.97 | 2.77% | 138.31 / 143.08 / 148.03 |
+| tg128 @ d16384 c5 | **81.73** | (76.64) | 8.16 | **9.98%** | 83.06 / **65.12** / 81.73 |
+| ctx_tg128 @ c4 | 121.42 | (120.38) | 3.28 | 2.70% | 121.42 / 123.78 / 115.95 |
+| ctx_tg128 @ c5 | 79.53 | (80.05) | 1.14 | 1.43% | 81.62 / 78.99 / 79.53 |
+| pp2048 @ c4 | 669.28 | (671.15) | 2.94 | — | 669.28 / 668.87 / 675.30 |
+| pp2048 @ c5 | 596.78 | (597.15) | 0.96 | — | 598.47 / 596.22 / 596.78 |
+
+### Hole 1 is CLOSED, and it closes in R4's favour
+
+**D0 = −14.4%** (45.05 against 52.64), against the −13.7% R4 computed across two
+separate invocations. The deficit is real, it is not an artefact of comparing
+two engine starts, and this is the first time it has been measured as a
+within-invocation quantity. R4 got the number right for a reason it could not
+demonstrate at the time.
+
+R4's supporting evidence reproduces just as tightly. `pp2048 @ c5` reads
+**579.98 against R4's 581.44 — 0.25% apart** — while `pp2048 @ c4` reads 640.70,
+inside the flat 623-643 d16384 series that has now held across nine invocations.
+The cached counterpart repeats too: 5182.08 at c5 against 5888.97 at c4, the
+same one-sided depression R4 saw (5236.80 against 5810-5967). Every A0
+prediction landed inside its band, both ttfr bands included (10205.51 against
+10100-10300 predicted, 11847.76 against 11500-12500).
+
+So the phenomenon R4 described is solid. What was never solid was the
+explanation, and that is where this round stops.
+
+### THE MECHANISM COULD NOT BE TESTED, AND THE ROUND SAYS SO PLAINLY
+
+**Arm B did not run.** `--no-enable-chunked-prefill` is a real flag and it parsed
+correctly — the engine accepted it, emitted the predicted warning ("This model
+does not officially support disabling chunked prefill"), and then **refused to
+start**:
+
+    pydantic_core.ValidationError: 1 validation error for VllmConfig
+      Assertion failed, Chunked prefill is required for mamba cache mode 'align'.
+
+This is architectural, not a tuning accident. `mamba_cache_mode` is `"align"`
+whenever prefix caching is enabled — vLLM's own docstring says so ("align ... is
+the default when prefix caching is enabled") — and `"align"` requires chunked
+prefill. The campaign recipe runs `--enable-prefix-caching`, and **30 of this
+model's 40 layers are Gated DeltaNet**, i.e. mamba-class layers whose recurrent
+state is what that cache mode governs.
+
+The consequence is worth stating carefully, because it is the round's real
+answer. **On this stack, chunked prefill cannot be disabled without also
+disabling prefix caching.** The only runnable "arm B" would change the cache
+strategy for three quarters of the layer stack at the same time as the flag
+under test, and would destroy every `ctx_` row in the process. A mechanism test
+whose control condition alters 75% of the layer stack's caching behaviour cannot
+attribute its result to chunked prefill. So:
+
+- **D2 is unmeasured. R is unmeasured. The 0.25 / 0.60 thresholds this round
+  declared in advance never got to be applied.** Nothing was invented to fill
+  the gap.
+- **R4's inferred chunked-prefill interference mechanism is neither confirmed
+  nor refuted. It remains an inference**, and after this round it is an
+  inference that is now known to be *untestable by the obvious route* — which is
+  a more useful state than "untested", because it stops the campaign from
+  queueing this same round again.
+
+The round was set up to say "confirmed", "refuted", or "partial". It says
+**none of those**, and the honest fourth answer is the one it reports.
+
+The prediction that vLLM "will warn on arm B and the engine runs anyway" was
+**half right and the wrong half mattered**: the warning fired exactly as
+predicted, and then a *second*, unrelated validator killed the engine. Predicting
+the warning was easy; predicting the mamba constraint required reading a part of
+the config the round never looked at. Cost: one engine start, no measurements,
+archived as `bench_12f458ba7348-crash` with the traceback and the candidate
+recipe. Not retried unchanged, per the standing rule.
+
+### THE UNPLANNED FINDING, and it reaches the campaign's only marginal win
+
+Arm A1 existed purely as arm B's matched control. With arm B dead it has no
+control duty left, and what it found instead is more consequential than what the
+round set out to test.
+
+**The campaign's own token budget was gating admission at c4.** From the engine
+logs, sampled through each grid:
+
+| arm | cell | Running median | Waiting median | observed (Running, Waiting) pairs |
+|---|---|---:|---:|---|
+| A0 (mnbt 8192) | c4 | 3.0 | 0.0 | (0,0) **(2,2) (3,1)** (4,0) |
+| A0 (mnbt 8192) | c5 | 3.0 | **1.0** | (0,0) (1,0) (1,4) (2,3) (3,0) (3,2) **(4,1)** |
+| A1 (mnbt 32768) | c4 | **4.0** | 0.0 | (0,0) **(4,0) only** |
+| A1 (mnbt 32768) | c5 | 3.0 | 0.0 | (0,0) (2,0) (3,0) (3,1) (4,0) (4,1) |
+
+Two things fall out of that table.
+
+**First, the c5 queueing claim is now DIRECTLY OBSERVED rather than inferred.**
+At A0 c5 the scheduler sits at `Running: 4, Waiting: 1` — the fifth request
+genuinely waits for a slot, exactly as R4 said and exactly as this round
+predicted (Waiting median 1.0 at c5, 0.0 at c4). R4 reasoned its way to this
+from a prefill row; the scheduler has now been asked directly and agrees. That
+half of R4's story is confirmed even though the mechanism half could not be
+tested.
+
+**Second, and this is the part R4 got wrong: c4 queues too.** R4's account says
+"at c4 every prefill happens in one batch up front and the decode phase is
+clean". A0's c4 log carries `(2,2)` and `(3,1)` — two requests running with two
+waiting — so at the campaign's own configuration **c4 never reached full
+occupancy either**, and raising the token budget alone turns c4 into a clean
+`(4,0)` for the entire grid. R7 found this gate at c16 and queued it as R10 on
+the assumption it was a high-concurrency problem. It is not. **It bites at c4,
+which is the cell holding the campaign's only marginal win.**
+
+### The throughput consequence is NOT claimed, and open question 9 is why
+
+The naive reading of arm A1 is a 2.7x win: 52.64 → 143.08 per-request at c4 by
+changing one number. **That reading is wrong and the round refuses it**, on
+exactly the check R7 wrote into open question 9 — compute both estimators at
+every new operating point.
+
+| arm | cell | tg × c | peak_throughput | verdict |
+|---|---|---:|---:|---|
+| A0 | c4 | 210.6 | 272 | consistent (below the peak) |
+| A0 | c5 | 225.2 | 276 | consistent |
+| A1 | c4 | **572.3** | **297** | **INVALID — exceeds the peak by 93%** |
+| A1 | c5 | **408.7** | **289** | **INVALID — exceeds the peak by 41%** |
+
+A sustained figure cannot exceed a peak. At arm A1 the identity breaks at *both*
+concurrencies, so **arm A1's per-request numbers are not comparable to any other
+row in this campaign and are claimed against nothing.** What the bounding
+estimator actually says is much more modest: `peak_throughput` rises **272 → 297
+at c4 (+9.2%)** and **276 → 289 at c5 (+4.7%)**.
+
+So the honest summary of arm A1 is: raising the token budget **fixed the
+occupancy** (direct evidence, the scheduler log) and moved the aggregate bound by
+**single-digit percent** (direct evidence, `peak_throughput`), while the
+per-request metric moved by an amount that cannot be reconciled with either.
+**The campaign does not yet understand what `tg_throughput` measures at c > 1**,
+and this round is the second consecutive one to trip over it. That is a
+measurement problem, not a physics result, and it is now the most valuable thing
+in the queue.
+
+**D1 = −42.9%** is recorded for completeness and should be trusted no further
+than the numbers it is built from, i.e. not very far.
+
+### MTP acceptance is flat, which kills the rival explanation (R8b rode along)
+
+Captured live from both engine logs, the way R7 did and the way R8 failed to.
+Heavy-load samples (>200 drafted tokens in the window):
+
+| arm | cell | mean acceptance length | avg draft acceptance |
+|---|---|---:|---:|
+| A0 | c4 | 2.99 | 66.2% |
+| A0 | c5 | 3.09 | 69.8% |
+| A1 | c4 | 2.95 | 65.1% |
+| A1 | c5 | 2.85 | 61.7% |
+
+**Acceptance does not move between c4 and c5** — the spread across all four
+cells is 61.7-69.8%, and at arm A0 the *slower* cell (c5) has the *higher*
+acceptance. The round predicted "roughly flat" and it is flat. This matters
+because it removes the one rival mechanism that could have explained the deficit
+without any reference to prefill: MTP acceptance decay is **not** what makes c5
+slower than c4. R5 watched acceptance move with depth and R7 watched it move
+with concurrency at c16; between c4 and c5 it does not move at all, so whatever
+costs 14.4% is a scheduling effect, not an acceptance effect. That is a genuine
+narrowing of the mechanism space, bought for free, and it is the one part of
+R4's story this round could still test.
+
+### Side-predictions
+
+- **Waiting median 0 at c4 / 1 at c5: HELD** at arm A0, and it is the round's
+  cleanest result. (Running median came in at 3.0 rather than 4 in three of four
+  cells because the samples include grid ramp-up and ramp-down; the loaded-state
+  pairs are what the table above reports.)
+- **pp2048 @ c4 623-650: HELD** at 640.70 (A0) and 669.28 (A1 — above the band,
+  and the band was written for the campaign config).
+- **pp2048 @ c5 555-605: HELD** at 579.98 (A0) and 596.78 (A1). Note that the
+  A1 discriminator the hypothesis set up — "if the depression is about the 8192
+  chunk boundary it recovers to 615-650, if it is about mixed batches it stays
+  depressed" — **came out on the mixed-batch side**: at mnbt 32768 a d16384
+  prefill fits in one batch and c5's prefill is *still* depressed, 596.78 against
+  669.28 at c4. That is the round's one piece of positive evidence about R4's
+  mechanism, and it points the way R4 said, but it is a single side-prediction
+  and it is not a substitute for the arm that could not run.
+- **ttfr: HELD at both A0 points** (10205.51 in a 10100-10300 band; 11847.76 in
+  11500-12500).
+- **σ under 1% on every tg row: MISSED.** A0 obliged (0.35-1.10%) but **A1 c5
+  came in at 9.98%** — runs 83.06 / **65.12** / 81.73, the mode-plus-one-low-draw
+  shape R8 documented. The round's ±1% error budget for D therefore holds for D0
+  and does **not** hold for D1, which is a further reason not to lean on D1.
+- **Telemetry: HELD.** 700 samples in A0 and 395 in A1, both at **SM clock 2398
+  MHz median** (2379-2411 and 2333-2411), 75/76 °C peak, 95.25/97.10 W peak. The
+  **sixth and seventh consecutive sessions** agreeing with R4's 2392. Open
+  question 5 stays closed. No clock, power-policy, driver or kernel setting was
+  touched and no `apt` was run.
+
+### Standings
+
+**No new cell, and nothing claimed.** c4 and c5 both sit behind R7's unresolved
+units dispute (open question 7), which R5c has not yet settled, so no row was
+rewritten in either direction.
+
+One flag is added to RESULTS.md rather than a revision: **the campaign's only
+marginal win, `tg128 @ d16384 c4`, was measured under a configuration that does
+not reach full occupancy at c4.** A0's engine log is the evidence. That does not
+change the measured number (52.64 here reproduces R2's pooled 52.85 to 0.4%) and
+it does not change the verdict's direction; it means the cell has headroom the
+campaign has not characterised, and that the "which units" question and the
+"which occupancy" question now both hang over the same row.
+
+### Cost
+
+Three engine starts, two grids of six runs, one engine that refused to start.
+**Grid time 442.5 s** (A0 223.4 s: 114.0 + 109.4; A1 219.1 s: 111.5 + 107.6),
+inside the predicted 550-750 s only because the third arm never reached its
+grid. Roughly 40 minutes of wall clock — the A1 engine start alone took ~6
+minutes, materially longer than A0's because the larger token budget forces
+torch.compile over a `(1, 32768)` range and a longer FlashInfer autotune — and
+about 70k harness tokens.
+
+**The round's value, in one line: it proved R4's deficit is real inside a single
+engine start and its queueing claim is real in the scheduler's own log, showed
+that R4's mechanism cannot be tested on this stack at all, and found by accident
+that the campaign's token budget was starving the very cell its only marginal
+win sits in.** Two of those three were not what the round was for.
