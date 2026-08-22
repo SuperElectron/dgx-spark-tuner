@@ -52,8 +52,11 @@ Invoke the skill; do not reimplement it from memory.
 - `mem0` — the memory service: markers, entity scopes, what is derived vs
   hand-written, reconcile.
 - `observe` — the observation pass over runs, telemetry and logs.
-- `experiments` — how one experiment is run: what the harness hands the agent,
-  what it measures and archives, and the git and PR rules it follows.
+- `experiment` — how an agent runs one experiment: what it is handed, what it
+  measures and archives, and the git and PR rules it follows.
+- `experiment-postrun` — after that PR is open and before it merges: check the
+  archive is complete, derive the `[EXPERIMENT]` memory from it, confirm the
+  index converged.
 
 ## Code rules
 

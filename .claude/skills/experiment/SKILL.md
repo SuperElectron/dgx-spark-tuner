@@ -1,6 +1,6 @@
 ---
-name: experiments
-description: How a single benchmark experiment is run end to end — what the harness hands the agent, what the agent measures and archives, and the git and PR rules it follows. Use when running one experiment, or when setting an agent up to run one.
+name: experiment
+description: How an agent runs one benchmark experiment — what the harness hands it, what it measures and archives, the single RESULTS.md row, and the git and PR rules it follows. Use when running one experiment, or when setting an agent up to run one. The memory and the merge are handled afterwards by experiment-postrun.
 ---
 
 # Running one experiment
@@ -113,12 +113,12 @@ If genuinely blocked — box unreachable, engine will not start after two
 attempts, a validator refuses the configuration — return one line starting
 `ESCALATE:` with what was tried.
 
-## Then the harness
+## What happens next
 
-1. Verifies the PR: archive present with an engine log, one `RESULTS.md` row,
-   nothing else modified.
-2. Merges to `staging`.
-3. Runs `memory-backfill.sh --reconcile <series-dir>` to derive the
-   `[EXPERIMENT]` memory from the archive.
-4. When every run for the hypothesis is in, writes the conclusion into
-   `EXPERIMENT.md` and the `[OBSERVATION]` memory.
+The PR is not merged by this agent. `experiment-postrun` takes over: it checks
+the archive is complete, derives the `[EXPERIMENT]` memory from it, and only
+then does the harness merge and delete the branch.
+
+Once every run for a hypothesis is in, `spark-autoresearch` writes the
+conclusion into `EXPERIMENT.md` and the `[OBSERVATION]` memory, and decides
+whether a fold rule fired.
