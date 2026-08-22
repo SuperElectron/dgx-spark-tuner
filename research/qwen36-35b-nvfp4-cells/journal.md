@@ -1176,3 +1176,411 @@ measured, one board cell re-claimed at a corrected figure, one open question
 largely closed and a second one sharpened — for a third of R3's box time and a
 fifteenth of R5's. **Control rounds are the cheapest rounds this campaign runs
 and this queue has been under-scheduling them.**
+
+## Round 7 hypothesis — the concurrency tail: tg128 @ d16384, c8 and c16
+
+Earned by R2, rewritten twice — once by R4 (which took the knee question away
+from it) and once here. What is left is the tail. R4 measured c1/c2/c4/c5 and
+found the knee between c2 and c4; c8 and c16 are the two points that say what
+happens after the knee, and there are only two questions worth asking of them:
+**where does per-request throughput collapse, and is the aggregate still
+climbing?** Those are different questions with different answers and the round
+records both metrics for both points, because R2's units correction is what
+makes this round legible at all — llama-benchy's `tg t/s` is PER-REQUEST, and
+`peak_throughput` is the aggregate. Every c>1 row in this campaign is a
+per-request row.
+
+### The mutation, and why the curve stays internally comparable without a re-run
+
+The campaign recipe carries `--max-num-seqs 4`. A c8 probe is twice the
+scheduler width and a c16 probe is four times it, so on the unmutated recipe
+half or three quarters of each batch would sit in the queue and the measurement
+would be of the queue, not of the box. R4 already settled what to do: matching
+the scheduler width to the probe concurrency is worth **+5.5%** at c5, and the
+mechanism it exposed is chunked prefill — the queued request's prefill gets
+chunked into ongoing decode steps and `pp2048` falls to 581.44 against a flat
+634-643 everywhere else at this depth. So this round runs **one matched arm per
+point**: `-o max_num_seqs=8` at c8 and `-o max_num_seqs=16` at c16. Two
+invocations, two engine starts, because `max_num_seqs` is an engine setting and
+cannot vary within one.
+
+**This is a MUTATION and it is journaled as one. It is NOT folded into
+recipe.yaml** — the campaign config stays `--max-num-seqs 4`, exactly as R4's
+mns-5 arm stayed out of it.
+
+The obvious worry is that mixing scheduler widths makes the curve incomparable.
+It does not, and the reason is worth writing down because it also settles
+whether c4 and c5 need re-measuring. The invariant that matters is not
+"max_num_seqs is the same at every point" — it is **max_num_seqs >= concurrency
+at every point**, i.e. nothing queues. Check it against the curve:
+
+| c | mns | mns >= c? |
+|---:|---:|---|
+| 1 | 4 | yes |
+| 2 | 4 | yes |
+| 4 | 4 | yes, exactly |
+| 5 | 4 | **NO — this is the arm R4 discarded** |
+| 5 | 5 | yes, exactly |
+| 8 | 8 | yes (this round) |
+| 16 | 16 | yes (this round) |
+
+Every point the curve actually uses already satisfies it. The one point that
+did not — c5 at mns 4 — is precisely the arm R4 measured, diagnosed and set
+aside in favour of the mns-5 arm. **So no earlier point needs re-measuring**,
+and the claim being made across the whole curve is "no request ever waits for a
+scheduler slot", not "one engine config throughout". RESULTS.md will carry the
+`max_num_seqs` in every c>1 row so the reader can check that for themselves
+rather than taking it on trust.
+
+### Mechanism, and the numeric prediction
+
+Two mechanisms pull in opposite directions past the knee.
+
+**Batching amortization (says the aggregate keeps climbing).** Decode at c1 is
+weight-bandwidth-bound: R5's engine read ~1.7 GB of active weights per step to
+produce one token's worth of work. Batching divides that fixed read across more
+sequences, which is the entire reason the aggregate rose 102 -> 168 -> 211 ->
+241 across c1/c2/c4/c5 while per-request fell. Nothing in that argument stops at
+c5.
+
+**MoE expert coverage (says it flattens).** This is a 35B-A3B model — about 3B
+active parameters per token, chosen by the router. At c1 one token's routing
+touches a small slice of the expert set. At c16, sixteen independent sequences
+route independently in the same step, and the union of experts touched
+approaches the whole set. The per-step weight read therefore GROWS with batch
+size in a way it does not for a dense model, and the amortization argument above
+quietly stops being true somewhere in this range. That is the specific reason to
+expect this tail to flatten harder than a dense model's would.
+
+The estimator the campaign trusts is interpolation of its own measured points —
+it produced the only two accurate predictions the campaign has made (R4's c2,
+R6's pair). Fitting `aggregate ~ a + b*ln(c)` through the c2 (168.0) and c5
+(240.6) points gives b = 79.7, a = 112.8, hence:
+
+- **c8: per-request median 30-38, centre ~34. Aggregate 240-304, centre ~278.**
+- **c16: per-request median 16-22, centre ~19. Aggregate 256-352, centre ~334.**
+
+The bands are wide on purpose: the two mechanisms above disagree by more than
+the fit's own error, and the log fit encodes only the first of them.
+
+**The discriminator, which is the number to read in the morning:** compare the
+c16 aggregate against the c8 aggregate.
+
+- If **c16 aggregate is 15% or more above c8's**, the tail is still climbing at
+  16-way and concurrency remains a live lever for aggregate work — the
+  amortization story wins and the MoE-coverage argument is not binding yet.
+- If **c16 aggregate is within ~8% of c8's**, the aggregate has SATURATED by c8,
+  c16 buys nothing but latency, and the MoE-coverage story is the reading.
+- Between those, the round says "still climbing but weakly" and does not
+  pretend to have separated the mechanisms.
+
+Per-request collapse gets its own statement: it has fallen 102 -> 84 -> 53 ->
+48 so far, which is far shallower than 1/c. If per-request at c16 comes in at or
+below the strict-1/c line from c1 (111.11/16 = 6.9), the box has stopped
+amortizing anything and is simply time-slicing; predicting well above that, at
+16-22, is predicting that amortization is still doing real work even at the
+tail.
+
+### Side-predictions, so the round can be refuted on more than one axis
+
+- **pp2048 sits at 620-645 at BOTH points.** This is the R4 control, and here it
+  is a check on the mutation itself: with the scheduler width matched, no
+  prefill should be chunked into decode, so prefill should return to the flat
+  d16384 series (637.09 / 634.04 / 643.31 / 623.13 / 634.99 / 640.21). **If
+  pp2048 falls below 600 at either point, matching the width did NOT eliminate
+  the interference** and R9's premise changes — the interference would then be a
+  batch-size effect rather than a queueing effect.
+- **σ under 2% of the median at both points.** Every c>1 cell in this campaign
+  has been very quiet (σ 0.07-1.18 absolute at c2/c4/c5), and R6 explained why:
+  σ is set by how many MTP verify steps a measurement averages over, and raising
+  c multiplies the sequences averaged per step. c8 and c16 average over more
+  than anything measured so far, so they should be the quietest cells yet. This
+  is also why **runs=3 is the correct budget here** — R6's planning result says
+  runs=7 is for tg32 and for d65536+, neither of which this round touches.
+- **ctx_ sits ABOVE cold at both points, by +3% to +8%.** R4 measured ctx above
+  cold at c4 (+6.6%) and at c5 under both widths (+5.7%, +6.5%); this round
+  extends the same concurrency axis and should follow it. Open question 4 has
+  refuted this campaign's ctx predictions before and may again — a sign flip
+  here would be the fourth axis on which the sign moves.
+- **ttfr grows with c and the growth is the queueing signature.** c4 read
+  10167 ms and c5 read 11866/12088. Predict **c8 18000-26000 ms** and **c16
+  36000-56000 ms** — roughly linear in c, because with the width matched every
+  request's prefill competes for the same prefill bandwidth.
+
+### Standings expectation
+
+Honest and stated in advance: **probably none.** docs/arena-recipe.md was
+expanded by a board scrape that added figures for fifteen cells including c2 and
+c5, but it carries **no c8 or c16 figures at all** — the scrape covered c1, c2,
+c4 and c5 only. Unless that changes, both rows will read "not scraped — cannot
+be scored", exactly as R4's did before the scrape landed. This round is bought
+for the curve, not for the board, and nothing will be invented to make it look
+otherwise.
+
+One free standings correction does land, though, and it belongs to this round
+because it is the same curve: the scrape DID fill in c2 (325.44) and c5 (428.95),
+which RESULTS.md still records as "not scraped". Those two rows get their real
+incumbents and their real verdicts here.
+
+Config. **MUTATION: `-o max_num_seqs=<c>`, matched per point.** No
+`max_model_len` override — d16384 + pp2048 + tg128 fits the recipe default
+32768. Epoch expected unchanged; `state.yaml` will be checked for
+`container_image_longterm_ref` per round.
+
+Probe: `-b pp=2048 -b tg=128 -b depth=16384 -b concurrency=8 -b runs=3 -o
+max_num_seqs=8`, then the same with 16/16. Per R5's process lesson the
+`Benchmark args:` echo is read before either run is allowed to proceed, and must
+show `depth: [16384]` — sparkrun does not error on a missing `-b depth`, it
+silently defaults it to 0.
+
+Cost prediction: two engine starts (~3 min each) and a grid that is 6 runs
+total, but each run at c8/c16 does 8x/16x the generation work of a c1 run at the
+same depth. R4's c2+c5 grid took its time from the c5 arm; predict **300-600 s
+of grid time across the two invocations** and 15-25 minutes of wall clock.
+
+## Round 7 outcome — bench_0954971b5dfa (c8) + bench_a769c1142e15 (c16), 2026-08-22
+
+Two invocations, one matched arm each, runs=3, `-o max_num_seqs=<c>`:
+
+| cell | median | (mean) | σ | σ/median | runs |
+|---|---:|---:|---:|---:|---|
+| tg128 @ d16384 c8 (mns 8) | 43.51 | (43.47) | 0.22 | 0.51% | 43.51 / 43.72 / 43.18 |
+| tg128 @ d16384 c16 (mns 16) | 40.47 | (40.46) | 0.06 | **0.15%** | 40.47 / 40.52 / 40.38 |
+| ctx_tg128 @ d16384 c8 (mns 8) | 47.75 | (47.78) | 0.05 | 0.10% | 47.75 / 47.74 / 47.85 |
+| ctx_tg128 @ d16384 c16 (mns 16) | 45.61 | (45.56) | 0.08 | 0.18% | 45.44 / 45.61 / 45.63 |
+
+**The headline is a refutation, and it is the campaign's fourth upward one: the
+concurrency tail is not flat.** Per-request throughput fell 43.51 -> 40.47
+across a DOUBLING of concurrency — **-7.0%** — after falling 37% across the
+single step from c2 to c4. Both numeric predictions missed, both high, and the
+c16 one missed by 84%: predicted 16-22 per-request, measured 40.47. The
+discriminator written into the hypothesis is answered emphatically in favour of
+"still climbing" (below), and the MoE-expert-coverage mechanism that predicted a
+hard flattening is **not binding anywhere in this range**.
+
+### The aggregate needs care, and this is the round's most important finding
+
+The campaign's convention has been `aggregate = per-request x c`. That convention
+**breaks between c8 and c16**, and the round caught it because it recorded both
+estimators, which is exactly what it was sent to do.
+
+| c | mns | per-request | `c x tg` | `peak_throughput` | ratio |
+|---:|---:|---:|---:|---:|---:|
+| 1 | 4 | 111.11 | 111.1 | 119.0 | 1.07 |
+| 2 | 4 | 84.00 | 168.0 | 182.0 | 1.08 |
+| 4 | 4 | 52.85 | 211.4 | 291.0 | 1.36 |
+| 5 | 5 | 48.12 | 240.6 | 265.0 | 1.10 |
+| 8 | 8 | 43.51 | 348.1 | 355.0 | **1.02** |
+| 16 | 16 | 40.47 | 647.6 | 440.0 | **0.68** |
+
+`peak_throughput` is by construction a PEAK, so it bounds the sustained
+aggregate from above. Through c8 the two estimators agree and `peak` sits at or
+slightly above `c x tg`, exactly as a peak should. At c16 `c x tg` **exceeds the
+peak by 47%**, which is impossible for a sustained figure. So **647.6 is not the
+c16 aggregate and this round does not claim it.**
+
+The engine log says why, and it is a config finding rather than a physics one.
+`--max-num-batched-tokens 8192` was NOT raised alongside `max_num_seqs`. At
+d16384 every request's prefill must be chunked into 8192-token batches, and the
+scheduler admits only what fits that token budget — so the 16 requests never all
+resided at once. Sampled across the whole grid (42 scheduler log lines):
+**Running median 9.0 of 16, Waiting median 6.0, running max 16.** `tg_throughput`
+measures a request's decode rate *while it is running*, so multiplying it by the
+nominal concurrency counts requests that are queued. The corroborating ratio is
+in the data twice over: `peak_throughput / peak_req_throughput` is 355/50.5 =
+**7.0** at c8 (near-full occupancy of 8) and 440/37.0 = **11.9** at c16 (74%
+occupancy of 16).
+
+So the honest c16 aggregate is **400-480 tok/s**, best single figure ~440 by the
+peak estimator, against **348-355** at c8. RESULTS.md carries it that way, with
+the invalid 647.6 shown struck through rather than deleted, so nobody
+re-derives it.
+
+**Matching `max_num_seqs` to the probe was necessary and not sufficient.** R4
+found the sequence-count queue; this round found a second queue behind it, on
+the token budget. That is a clean, cheap follow-up (R10 below) and it is the
+completed version of this round's mutation, not a new idea.
+
+### The discriminator, answered
+
+The hypothesis asked one question of these two points: **is the aggregate still
+climbing at 16-way?** Thresholds were written down in advance — 15% or more above
+c8 means still climbing and concurrency remains a live lever; within ~8% means
+saturated by c8.
+
+**Measured: 440 against 355, +24%.** Above the threshold, so the verdict is
+**still climbing**, and it is still climbing despite the engine only managing 9
+of 16 resident sequences. The batching-amortization story wins and the
+MoE-expert-coverage story — the round's own reason to expect this MoE's tail to
+flatten harder than a dense model's — is not binding by c16. It may still be
+true further out; nothing here tests c32.
+
+The per-request statement is the sharper one. Strict time-slicing (no
+amortization at all) would put c16 at 111.11/16 = 6.9. Measured 40.47 is **5.9x
+above that line**, so batching is still doing most of the work it does at c1.
+The per-request curve is not a decay law — it is a STEP between c2 and c4 and
+then a shallow slope:
+
+| step | per-request change | concurrency change |
+|---|---:|---:|
+| c1 -> c2 | -24.4% | 2x |
+| c2 -> c4 | **-37.1%** | 2x |
+| c4 -> c5 | -8.9% | 1.25x |
+| c5 -> c8 | -9.6% | 1.6x |
+| c8 -> c16 | **-7.0%** | 2x |
+
+Two doublings, -37.1% and -7.0%. R4 called the c2-c4 region a "knee" and read it
+as the start of a decline; it is better read as a **one-time step**, and the
+engine log now offers a mechanism for it.
+
+### MTP acceptance measured against concurrency — first time in this campaign
+
+The c16 engine log was captured through the whole grid and archived
+(`experiments/bench_a769c1142e15/engine-serve.log`, 42 SpecDecoding samples).
+Under heavy load (samples drafting >500 tokens):
+
+| regime | mean acceptance length | avg draft acceptance | per-position |
+|---|---:|---:|---|
+| c1 @ d16384 (R5's reading) | 3.81 | 93.6% | 1.000 / 0.962 / 0.846 |
+| c16, all samples | 3.29 | 76.2% | 0.899 / 0.762 / 0.635 |
+| c16, heavy-load samples | **2.94** | **64.5%** | 0.809 / 0.635 / 0.490 |
+
+R5 watched acceptance collapse with DEPTH. This is the first time the campaign
+has watched it move with CONCURRENCY, and it is a candidate mechanism for the
+c2-c4 step: losing the high-acceptance MTP regime is a one-time cost, paid once
+as the batch fills, and once paid the remaining scaling is ordinary batching.
+
+**But state the confound, because it is serious.** A c16 measurement averages
+acceptance over 16 concurrent prompts and therefore reports close to the
+POPULATION MEAN of a distribution this campaign has known to be bimodal since
+R2. A c1 measurement reports a single DRAW from it. R5's 93.6% came from a
+runs=3 c1 cell with σ 9.6% — plausibly a high draw. So "acceptance falls with
+concurrency" and "c1 figures sit above the population mean" predict the same
+observation, and this round cannot separate them. That is also the tidiest
+available explanation for why c8 and c16 are the **quietest cells the campaign
+has ever measured** (σ 0.51% and 0.15%): they average the acceptance draw over 8
+and 16 sequences, which is precisely R6's variance mechanism applied to
+concurrency. R6 said concurrency was a proxy for verify-steps-averaged; this
+round shows the proxy working at the top of the range.
+
+### Side-predictions
+
+- **pp2048 620-645 at both points: HELD, and the control did real work.**
+  Measured 631.25 (σ 0.31) at c8 and 628.74 (σ 0.70) at c16, inside the band and
+  inside the flat d16384 series (637.09 / 634.04 / 643.31 / 623.13 / 634.99 /
+  640.21). This was written as the check on the mutation itself, and it passes:
+  **matching the scheduler width eliminated R4's chunked-prefill interference**,
+  which depressed pp2048 to 581.44 at c5/mns4. The interference is a QUEUEING
+  effect, not a batch-size effect — at c16 the batch is 4x larger than R4's and
+  prefill is undisturbed. That is a direct, unplanned strengthening of R9's
+  premise.
+- **σ under 2% at both: HELD emphatically.** 0.51% and 0.15%. c16 is the
+  campaign's tightest tg measurement, beating R5's pp2048 as the quietest cell
+  of any kind. runs=3 was the right budget and even that was generous.
+- **ctx above cold by +3-8%: direction HELD, magnitude MISSED high at both
+  points.** +9.7% at c8 (47.75 vs 43.51) and +12.7% at c16 (45.61 vs 40.47). No
+  sign flip: open question 4's sign has now been positive at c4, c5, c8 and c16
+  and negative only at c2 on this axis. The magnitude is also GROWING with
+  concurrency, monotonically — +6.6% (c4), +6.5% (c5), +9.7% (c8), +12.7% (c16) —
+  which is the first orderly trend anyone has found in this question. And the
+  ctx quietness rule holds here for the seventh and eighth time (σ 0.10% and
+  0.18%, both below their cold arms).
+- **ttfr: MISSED LOW at both points.** Predicted 18000-26000 ms at c8 and
+  36000-56000 at c16; measured 16554 and 29751. Both below their bands, the same
+  direction as the throughput misses.
+
+### Standings, and the round's second finding
+
+**Neither cell can be scored.** docs/arena-recipe.md carries no c8 or c16 figures
+— the scrape covered c1, c2, c4 and c5 only — so both rows read "not scraped",
+exactly as the hypothesis said in advance. Nothing was invented.
+
+The free correction the hypothesis promised did land: the scrape filled in c2
+(325.44) and c5 (428.95), which RESULTS.md still recorded as "not scraped".
+**Recording them exposed a problem, and it is bigger than the two rows.**
+
+The board's c>1 tg figure appears to be an AGGREGATE, not a per-request rate,
+which is the opposite of the assumption every c>1 comparison in this campaign
+has rested on. The evidence is the shape of the board's own numbers for a fixed
+model across concurrencies:
+
+| series | c1 | c2 | c5 | shape |
+|---|---:|---:|---:|---|
+| board, LFM2.5-350M BF16 | 188.47 | 325.44 | 428.95 | 1.00 / 1.73 / 2.28 |
+| board, Qwen3.6-35B-A3B-NVFP4 vLLM (like-for-like) | 116.03 | 163.27 | 225.46 | 1.00 / 1.41 / 1.94 |
+| **ours, aggregate** | 111.11 | 168.0 | 240.6 | 1.00 / 1.51 / 2.17 |
+| **ours, per-request** | 111.11 | 84.00 | 48.12 | 1.00 / 0.76 / 0.43 |
+
+The board's figures RISE with concurrency for a fixed model. Per-request
+throughput cannot rise with concurrency on a fixed engine. And the like-for-like
+row — our exact model, runtime and quant — tracks our aggregate series closely
+(1.41 vs 1.51, 1.94 vs 2.17) and is nothing like our per-request series.
+
+**What this touches: the campaign's only marginal win.** `tg128 @ d16384 c4` is
+claimed at 1.13x by comparing our per-request 52.85 against the board's 46.68.
+If the board figure is an aggregate, the right comparison is our 211.4 against
+46.68 — **4.53x**, a much larger win. The DIRECTION of that claim is safe under
+either reading; the MARGIN is not established, and the campaign should stop
+quoting "1.13x, verified" as though the units are settled.
+
+The counter-evidence is honest and unresolved: 46.68 as an aggregate at c4 means
+Gemma-4-26B-A4B-NVFP4 managed 11.7 tok/s per request, which is very slow. The c4
+cell is also thin (8 entries) and populated by large models, while c2/c5 are
+crowded (130/120) and topped by a 350M — so the magnitude gap between the cells
+may be population, not metric.
+
+**This round does NOT resolve it and does not rewrite the c4 verdict.** It is
+recorded as new open question 7 and queued as R5c — a zero-box-time board check,
+which is the same cheap, high-value shape as R5b. Per this round's instructions
+the board was not re-scraped.
+
+### Telemetry
+
+Sampled through the c16 grid (420 samples, archived as
+`experiments/bench_a769c1142e15/telemetry.log`): SM clock **2392 MHz median**,
+2353-2411, against the same 3003 MHz ceiling; temperature peaked at 75 °C, power
+at 94.72 W with a 59.6 W median. That is the **fourth consecutive session** to
+read 2392-2398 (R4 2392, R5 2398, R6 2398), and it is the strongest version of
+the reading because c16 is by far the heaviest load the campaign has put on the
+box: 16-way concurrency did not move the clock, the temperature (75 °C, between
+R6's 69 and R5's 79), or the power ceiling (94.72 W, matching R4's 95 and R6's
+94.7 to within a watt). **The box is not power-limited and not thermally limited
+even at 16-way** — the clock is flat policy at ~80% of ceiling, full stop. Open
+question 5 can be closed rather than merely downgraded. No clock, power-policy,
+driver or kernel setting was touched.
+
+### Config and epoch
+
+**MUTATION: `-o max_num_seqs=8` (c8 arm) and `-o max_num_seqs=16` (c16 arm).**
+Confirmed live in the engine's own non-default-args line (`'max_num_seqs': 16`).
+**NOT folded into recipe.yaml** — the campaign config stays `--max-num-seqs 4`,
+as R4's mns-5 arm did. RESULTS.md carries the `max_num_seqs` in every c>1 row so
+the reader can check the mns >= c invariant without taking it on trust.
+
+No `max_model_len` override; d16384 + pp2048 + tg128 fits the recipe default
+32768, with sparkrun reporting 75.0 GB for KV and a 60.0x context multiplier.
+Epoch unchanged: both `state.yaml` files record
+`container_image_longterm_ref: ghcr.io/spark-arena/dgx-vllm-eugr-nightly:2026082102`,
+identical to R1/R3/R4/R5/R6, so every cross-round comparison above is within one
+epoch. Page cache again could not be cleared (no passwordless sudo), uniform
+across rounds. The `Benchmark args:` echo was read before each run was allowed to
+proceed, per R5's process lesson, and confirmed `depth: [16384]`, `tg: [128]`,
+`concurrency: [8]` then `[16]`, `runs: 3` — no repeat of R5's silent depth
+default.
+
+### Cost
+
+**638.6 s of grid time** (c8 218.9 s, c16 419.7 s) against a predicted 300-600 s
+— just over the top of the band, and the c16 arm alone accounts for the miss.
+Two engine starts, no wasted invocations, roughly 25 minutes of wall clock from
+23:33 to 23:47 box time, about 55k harness tokens. Four cells measured, none
+scoreable; the round's value is the curve, the aggregate-estimator failure, the
+first acceptance-vs-concurrency measurement, and the board-metric problem — none
+of which is a board cell.
+
+Cheapest observation of the round, and worth repeating: **recording two
+estimators of the same quantity cost nothing and caught a silent error.** The
+c16 aggregate would have been reported as 647.6 — a 47% overstatement, and a
+headline of "5.8x the c1 aggregate" — if the round had recorded only the metric
+the queue asked for. The instruction to record BOTH is what made the round
+correct.
