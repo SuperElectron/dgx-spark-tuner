@@ -3657,18 +3657,18 @@ interfering with it — and, chasing a validity gate that failed, discovered tha
 prefix caching has never once hit on this benchmark and that the campaign has had
 its two measurement phases labelled backwards since Round 1.**
 
-## CAMPAIGN SYNTHESIS — the whole campaign, R1 through R13d and R11 (which ran last, and folded the recipe)
+## CAMPAIGN SYNTHESIS — the whole campaign, R1 through R13d, R11 (which folded the recipe) and R13b (which ran last, and closed the mechanism)
 
-**Written after R12 on 2026-08-22 and REVISED five times the same day: after
+**Written after R12 on 2026-08-22 and REVISED six times the same day: after
 R13 / the `ctx_` phase-label correction / R5c / R13c; again after **R13d**;
-again after **R11**, which ran last and is the only round that ever changed
+again after **R11**, the only round that ever changed
 `recipe.yaml`, to carry the config-epoch consequences of that change into the
 handoff itself — the cross-condition rule below the epoch warning, the
 `c1`-vs-`c>1` asymmetry of the budget lever, and the removal of the pre-fold
-"not folded" language this section carried; and a fifth time —
-**CURRENT AS OF 2026-08-22, post-R9c** — to fold R9c into every place it
-reaches. R9c moved no standing and changed no config, and its reach is still
-wide:**
+"not folded" language this section carried; a fifth time, post-**R9c**, to fold
+its prefix-caching decomposition into every place it reaches; and a sixth and
+current time — **CURRENT AS OF 2026-08-22, post-R13b**, whose deltas are listed
+in the boxed note below the thesis paragraph. R9c's fifth-revision deltas were:**
 
 > **What the R9c revision changes, so a reader who knows the earlier text can
 > find the deltas:** **open question 1** (premise wrong by two orders of
@@ -3721,13 +3721,21 @@ rounds above have been read. Where a round's headline was later retracted, the
 retraction is here rather than the headline — and this campaign retracted a lot,
 including two of its own widest wins and its central mechanism.
 
-> **SIXTH REVISION — CURRENT AS OF 2026-08-22, post-R13b.** R13b answered
+> **SIXTH REVISION — CURRENT AS OF 2026-08-22, post-R13b. THIS IS THE ONE THAT
+> CLOSED THE CAMPAIGN'S MECHANISM STORY.** R13b answered
 > **open question 7**, the section's sharpest open mechanism, and the deltas are:
 > the R13 bullet in *the central methodological result* (its trailing candidate
 > is refuted), **open question 7 itself** (closed, with a third mechanism), the
 > landed-items list below (a seventh entry), *what to run next* item 7 (done, do
-> not re-queue), and an **R13b cost-ledger row**. No standing moves; R13b is a
-> mechanism round and scored nothing.
+> not re-queue), an **R13b cost-ledger row**, and — added by this pass —
+> **a new section, `THE MECHANISM CHAIN`**, which is the reason the revision
+> matters: R13b's floor is the same physical term as R9c's 83% batch span, so
+> the budget lever, the residency curve, the prefix-caching flag and every `c>1`
+> number in this campaign now hang off **one** cause instead of three unrelated
+> ones. Also **retired claim 22** (the whole acceptance-dispersion line of
+> reasoning, named so nobody resurrects it), a corrected tail on **retired claim
+> 16**, a corrected tail on the **`Model` observation**, and a rewritten
+> **HANDOFF**. No standing moves; R13b is a mechanism round and scored nothing.
 
 **The seven things that landed after the round-12 checkpoint, since they change
 how the rest of this section reads:**
@@ -4129,9 +4137,16 @@ And the "57% of `tg`" figure is retired as a single-draw understatement: it came
 from two 3-run medians four hours and one engine start apart. **2.414x on 14
 runs measured in one session is the figure.**
 
-**What is NOT explained, stated plainly rather than papered over.** ⚠ The
-mechanism behind the span difference is **still open**, and R9c narrowed it
-without closing it:
+**What is NOT explained, stated plainly rather than papered over.** ⚠ **REVISED
+BY R13b, WHICH SUPPLIED THE MECHANISM THIS PARAGRAPH SAID WAS MISSING.** The
+span difference is **first-token spread** — the flag's 1516 ms against 6269 ms is
+prefill-completion stagger, and putting R9c's own arms through R13b's
+zero-parameter identity reproduces both measured span ratios to ~5%. See
+`THE MECHANISM CHAIN` below; note the identification is **inferred from
+arithmetic**, because nobody has run the per-request probe against a
+caching-OFF engine. **What remains genuinely unexplained is narrower than it was:
+why the flag changes the spread by 4.13x in the first place**, and R9c narrowed
+that without closing it:
 
 - `mamba_block_size` is **not** 16 → 32768. It is **2144 → 32768, 15.3x** —
   `platforms/interface.py:911-918` overwrites the 16 with the aligned attention
@@ -4194,6 +4209,98 @@ Two consequences, and both are corrections rather than discoveries:
   losses void. That is wrong — the board's entries come through the same
   llama-benchy CSV and carry the identical understatement, so the artefact
   cancels. **The prefill cells remain losses at exactly the recorded margins.**
+
+### THE MECHANISM CHAIN — one cause under all of it, closed by R13b (2026-08-22)
+
+**This section is new in the sixth revision and it is the most important thing in
+this synthesis.** For most of its life the campaign held three separate stories:
+a token-budget lever it could not explain, a prefix-caching flag worth 2.414x
+that never once hit the cache, and a span ratio whose floor it kept mis-naming.
+**R13b showed they are one story.** Read the chain, then read the ledger of which
+links are measured and which are still inferred — the campaign's own rule is that
+a mechanism paragraph without that ledger is how three rounds got the mechanism
+right and the number wrong.
+
+    token budget  →  residency  →  prefill-completion stagger  →  batch span  →  every `c>1` number
+
+1. **Token budget → residency.** A scheduler step admits `mnbt` tokens of
+   prefill; a Phase-2 request at d16384 costs 18432. At 8192 and 16384 the
+   scheduler never holds `(4,0)` at c4; from 32768 up it does. **MEASURED**,
+   R13c's six-budget curve, 19/16/13/10/11/13 loaded samples per budget.
+2. **Budget → prefill-completion stagger, past the residency point.** Residency
+   saturates at 32768 but the span ratio keeps falling to 65536 — 1.654 → 1.505
+   — **with `Waiting: 0` at both**. A larger budget cuts each request's prefill
+   into fewer chunks, so the five prefills finish closer together. **PARTLY
+   INFERRED.** The falling span is measured (R13c); the tightening first-token
+   spread that is supposed to cause it has **never been measured across budgets**
+   — R13b measured the spread at exactly one budget (98304). Anyone with an
+   engine up should re-run the R13b probe at 16384 and 65536 and close this link;
+   it is one invocation and it is the cheapest link left in the chain.
+3. **Prefill-completion stagger → batch span.** The first request to finish
+   prefill starts decoding while its four neighbours still prefill; its verify
+   steps are co-scheduled with their chunked prefill and cost **88.5 ms against
+   55–58 ms**, a 1.57x penalty borne by exactly one request — and it is the
+   request `tg_duration = max(last token) − min(first token)` is measured from.
+   **MEASURED**, R13b: `corr(start stagger, ms per verify step) = −0.980` over 35
+   requests, against `corr(verify steps, decode duration) = +0.142`. The
+   zero-parameter check `1 + 1.26/2.30 = 1.548` reproduces the observed **1.499**
+   to 3%.
+4. **Batch span → the headline metric.** `tg_throughput` at `c>1` is total decode
+   tokens over that span (`results.py:352`). **MEASURED / definitional**, R10 from
+   the source, corroborated by R5c against 34 archived records.
+5. **Therefore every `c>1` number.** Anything that tightens the first-token
+   spread is charged straight into this metric, whether or not it makes the
+   hardware do more work. That is why `peak_throughput` sat still while `tg` rose
+   two thirds at c2 (R12) and +233% across R13c's curve.
+
+**AND IT REACHES R9c's 83%, WHICH IS THE LINK THAT MAKES THE CHAIN WORTH
+WRITING.** R9c decomposed `--enable-prefix-caching` as `tg` ratio 2.415 =
+`tg_req` ratio 1.160 x **span ratio 2.082**, i.e. **83% batch span**, and
+measured the span directly as within-batch ttfr dispersion: **1516 ms with the
+flag on, 6269 ms with it off**. Put R9c's own archived numbers through R13b's
+identity `span ≈ 1 + spread / decode_duration`, with `decode_duration = 127 /
+tg_req`:
+
+| R9c arm | ttfr spread | `tg_req` | decode duration | predicted span | measured span | gap |
+|---|---:|---:|---:|---:|---:|---:|
+| **P** (caching ON) | 1516 ms | 58.78 | 2.161 s | **1.702** | **1.607** | +5.9% |
+| **N** (caching OFF) | 6269 ms | 50.68 | 2.506 s | **3.502** | **3.346** | +4.7% |
+
+**Both arms, no fitted parameter, same sign, ~5%.** R13b's identity was derived
+at c5 / `mnbt 98304` / prefix caching ON, from a different client, and it
+reproduces two arms of a different round at c4 / `mnbt 32768` / both settings of
+the flag. **So R9c's 83% batch-span term and R13b's span floor are the same
+physical quantity: how far apart the batch's prefills finish.** The flag is not
+buying cache hits (it never hits), is not buying hardware (0.7%), and is not
+buying decode rate (16%) — it is buying **prefill-completion alignment**, and
+that is the whole of its 2.414x.
+
+⚠ **Two honest qualifications on that link, and neither is small.**
+(a) The R9c → R13b identification is **INFERRED FROM ARITHMETIC, not measured**.
+Nobody has run R13b's per-request probe against a prefix-caching-OFF engine; the
+table above is R13b's identity evaluated on R9c's archived aggregates. The ~5%
+over-prediction on both arms is consistent with the identity being slightly wrong
+in a fixed direction, and two points cannot separate that from noise.
+(b) **Arm N is not at full residency** — `(3,1)` in 7 of 13 loaded samples with
+3.34M tokens of KV free — so some of its 6269 ms spread is genuine queueing
+rather than prefill stagger, and by the campaign's own rule (R5c) the span proxy
+holds only at full residency. **Arm P is clean** (`(4,0)` in 13 of 14), and it is
+the arm that matters for the identification. Do not quote arm N's agreement as
+independent confirmation; quote it as not contradicting.
+
+**What the chain retires, and it is the part a future session will otherwise
+re-derive.** The `c>1` results in this campaign do **not** need three mechanisms.
+They need one, and the two that were tried before it are both dead: **admission
+stagger** (refuted by R13, `Waiting: 0` in 100% of samples) and **MTP acceptance
+dispersion** (refuted by R13b, 1.085 against 1.499). See retired claims 16 and 22.
+
+**What it does NOT close.** The residual per-request decode terms — R9c's 16% and
+R13's +15.5% — are not explained by this chain and are not claimed to be. Nor is
+R9b's finding that turning chunked prefill *off* cuts `tg_req` 44% while
+*improving* stagger; that is plausibly the same effect seen from the far side
+(unchunked prefill blocks decode outright but leaves the starts aligned), **but
+that reading is inferred and was never tested.** And the chain says nothing about
+c1, where there is no batch and the span is 1.000 by assignment.
 
 ### The depth curve, as finally measured
 
@@ -4282,9 +4389,11 @@ mechanism:**
     → 1.54 at c5). R13c confirmed it independently: the span keeps tightening
     between 32768 and 65536 with nothing waiting at either, then hits a floor of
     ~1.50 that no budget touches. The ratio is real and it is charged to the
-    metric; **calling it admission is what is withdrawn.** No replacement
-    mechanism is asserted — MTP acceptance dispersion is a candidate, not a
-    finding.
+    metric; **calling it admission is what is withdrawn.** ⚠ **The tail of this
+    item used to read "no replacement mechanism is asserted — MTP acceptance
+    dispersion is a candidate, not a finding." That candidate is now REFUTED
+    too (item 22), and there IS a replacement: prefill-completion stagger.** See
+    `THE MECHANISM CHAIN` above.
 17. **"`tg128 @ d16384 c4` is 3.74x and `ctx_tg @ d16384 c4` is 6.16x"** — R13,
     superseded by R13c the same night. Same configuration, second engine start,
     pooled 14-run medians: **3.67x** and **6.15x** (⚠ the latter superseded as the
@@ -4325,6 +4434,40 @@ them:**
     along. **No round ever ran under the 2048x condition; it never reached the
     engine.** Note the shape: this is the same error as item 4 — a value inferred
     from one source pass and never checked against the log that prints it.
+
+**Added by R13b. One more, and it retires a whole line of reasoning rather than a
+single number — read it before proposing any acceptance-based explanation of
+anything the scheduler does:**
+
+22. **"The span ratio's floor is MTP acceptance dispersion across the batch"** —
+    R13's closing candidate, carried by open question 7, by this synthesis's R13
+    bullet, by `RESULTS.md`, and by the R13b queue entry that specified the
+    round. **REFUTED by R13b, which measured it per request rather than inferring
+    it.** Acceptance dispersion acting alone gives a span ratio of **1.085**
+    against an observed **1.499** — 17% of the excess, against a pre-declared
+    refute threshold of 1.20.
+    **Two distinct errors are being retired here and both generalise:**
+    (a) **The wrong statistic.** R13's "1.44x spread against a measured 1.54"
+    is max/**min**. The quantity that enters the span is max/**harmonic-mean**,
+    which is strictly smaller — even fed R13's own widest logged range
+    (2.77–4.00) it reaches only **1.19**, not 1.44. A dispersion figure quoted
+    against a span figure must be the statistic the span is actually made of.
+    (b) **The wrong samples.** Those 2.77–4.00 readings are 10-second batch
+    aggregates from different runs and phases — **between-sample** variation.
+    Measured **within** one batch, per-request acceptance max/min is **1.167**
+    median over 35 requests. A ~42-step average concentrates hard, and it was
+    always going to.
+    **What this retires beyond R13:** every sentence in this file that offers
+    acceptance as the reason a `c>1` batch's span is wide, and every proposal to
+    buy the answer with more acceptance telemetry. **Do not re-open open question
+    7 as an acceptance question.** ⚠ **And do not confuse this with R6's variance
+    result, which survives untouched** — R6 is about the run-to-run σ of a
+    *median over many verify steps* and acceptance genuinely drives that. Item 22
+    is about the *within-batch spread across five simultaneous requests*. Same
+    word, different quantity, opposite verdict.
+    Note the shape: this is the same error as items 1, 2, 17 and 19 — a
+    dispersion measured across invocations, generalised, and wrong when measured
+    inside one.
 
 ### Refusals and broken gates — recorded, not dropped
 
@@ -4442,9 +4585,9 @@ re-stored here. What follows is what was new at campaign level.
 
 **Serving stack.** The flag space is far more coupled than the campaign assumed: `--enable-prefix-caching` moves **four** things at once (`mamba_cache_mode`, the chunked-prefill requirement, `mamba_block_size`, and caching itself), and R9 spent an engine start discovering one of those the expensive way. R9b's practice — grep the validators out of the pinned image with a throwaway `docker run --rm --entrypoint bash` before writing the hypothesis — cost two minutes and cleared both arms in advance. Make it the default. *Headroom, UPDATED by R13c: `max_num_batched_tokens` was the campaign's largest unexplored axis and it has now been curved at c4 over six values, 8192 to 131072 — **the knee is 65536** and nothing above it buys anything. What remains unexplored is the same curve at OTHER concurrencies: at c16 even 32768 leaves the gate half-closed (`Running` 11 of 16) and sixteen d16384 prefills would need 262144, so the knee must move with `c` and nobody has measured where. A sweep is also cheaper than R13 warned — start cost tracks budget SIZE, not novelty, ~110–190 s across 8192–98304.* *Blindness: the scheduler log is the primary occupancy instrument and it was LOST in two of the four rounds that planned to use it; the working command is now proven (`docker exec <container> tail -f /tmp/sparkrun_serve.log`, verified live with `grep -c 'Running:'`).*
 
-**Model.** MTP acceptance is now measured against depth (R5), concurrency (R7), the token budget (R10), prefix caching and chunked prefill (R9b). It moves with **depth** and it moves with **concurrency**; it does **not** move with any scheduler knob — flat at 2.85-3.09 acceptance length and 61.7-69.8% across every scheduling change tested, in four consecutive rounds. That is a genuinely useful negative: **MTP acceptance is ruled out as an explanation for anything the scheduler does on this model**, which is why every c>1 result in this campaign resolves to admission behaviour. *Headroom, and it is the largest un-taken lever in the campaign: acceptance collapses from 93.6% to 47.7% between d16384 and d131072, and with `num_speculative_tokens=3` halving acceptance roughly halves tokens per verify step. The MTP module ships BF16 in every Qwen3.6-35B quant arm, so it is a full-precision draft head being asked to draft over long contexts. Calibrating or fine-tuning it on long-context text is a quality-neutral throughput lever — needs a training-infra decision, and is out of scope for this loop.*
+**Model.** MTP acceptance is now measured against depth (R5), concurrency (R7), the token budget (R10), prefix caching and chunked prefill (R9b). It moves with **depth** and it moves with **concurrency**; it does **not** move with any scheduler knob — flat at 2.85-3.09 acceptance length and 61.7-69.8% across every scheduling change tested, in four consecutive rounds. That is a genuinely useful negative: **MTP acceptance is ruled out as an explanation for anything the scheduler does on this model**, and ⚠ **R13b extended it from the batch mean to the per-request spread** — within one batch, acceptance dispersion accounts for 1.085 of a 1.499 span. The tail of this paragraph used to read "which is why every c>1 result in this campaign resolves to admission behaviour"; **that is withdrawn — admission was refuted by R13. Every `c>1` result resolves to prefill-completion stagger**, per `THE MECHANISM CHAIN` above. *Headroom, and it is the largest un-taken lever in the campaign: acceptance collapses from 93.6% to 47.7% between d16384 and d131072, and with `num_speculative_tokens=3` halving acceptance roughly halves tokens per verify step. The MTP module ships BF16 in every Qwen3.6-35B quant arm, so it is a full-precision draft head being asked to draft over long contexts. Calibrating or fine-tuning it on long-context text is a quality-neutral throughput lever — needs a training-infra decision, and is out of scope for this loop.*
 
-**Workload and measurement.** The benchmark did not measure what the campaign thought, in three separate ways, and each was found by reading rather than by benchmarking: `tg_throughput` is a batch aggregate charged for admission stagger (R10); the `ctx_`/cold phase labels are inverted and the two phases are charged different token counts (R9b); prefix caching never hits (R9b). **A fourth was added after this pass: what the campaign called "admission stagger" is not admission (R13's `Waiting: 0`, confirmed by R13c's curve), so the mechanism behind three rounds of `c>1` interpretation was wrong as well as the units.** *Surprise: the headline metric is a **scheduling** measurement wearing a throughput's units — R12 moved it +67.6% at c2 while the sustained hardware ceiling moved -0.5%, and R13c reproduced that shape across a whole curve (`tg` +233%, `peak_thr` +14%).* *Blindness, and this is the sharpest one left: the prefill cells. Our `pp2048 @ d32768 c1` reads 295.71 against 4644.54 for another vLLM NVFP4 entry in the same board cell — a 15x gap — while our decode rate sits within 3% of what a like-for-like incumbent's headline requires. A 15x like-for-like gap in one metric family and a 3% gap in another is the signature of a definition mismatch, not of a slow box, and nobody has read `pp_throughput`'s definition or the board's prefill test-type mapping.*
+**Workload and measurement.** The benchmark did not measure what the campaign thought, in three separate ways, and each was found by reading rather than by benchmarking: `tg_throughput` is a batch aggregate charged for admission stagger (R10); the `ctx_`/cold phase labels are inverted and the two phases are charged different token counts (R9b); prefix caching never hits (R9b). **A fourth was added after this pass: what the campaign called "admission stagger" is not admission (R13's `Waiting: 0`, confirmed by R13c's curve), so the mechanism behind three rounds of `c>1` interpretation was wrong as well as the units. ⚠ A fifth closed it: R13b supplied the replacement — prefill-completion stagger — and did it by writing a client of its own, because the field it needed goes to the HTTP response body and llama-benchy discards it. That is the fifth distinct way this campaign's chosen instrument turned out not to carry the quantity the round was about.** *Surprise: the headline metric is a **scheduling** measurement wearing a throughput's units — R12 moved it +67.6% at c2 while the sustained hardware ceiling moved -0.5%, and R13c reproduced that shape across a whole curve (`tg` +233%, `peak_thr` +14%).* *Blindness, and this is the sharpest one left: the prefill cells. Our `pp2048 @ d32768 c1` reads 295.71 against 4644.54 for another vLLM NVFP4 entry in the same board cell — a 15x gap — while our decode rate sits within 3% of what a like-for-like incumbent's headline requires. A 15x like-for-like gap in one metric family and a 3% gap in another is the signature of a definition mismatch, not of a slow box, and nobody has read `pp_throughput`'s definition or the board's prefill test-type mapping.*
 
 **Process and cost.** Covered in the ledger above. One addition: the campaign's own predictions got sharply better once they were built by **decomposing the metric** rather than by scaling the previous round's percentages — R12 was the first round where both headline bands held, and it built them from `tg = c x tg_req / stagger`. R10 and R12 both wrote the same post-mortem: *the mechanism section was right and the numeric band was wrong, in the same document*, because the band was set by scaling while the generating model sat one paragraph above. That is a repeatable failure and it has a repeatable fix.
 
@@ -4484,6 +4627,15 @@ regularities; and one campaign `[COST]` total.
    observation behind for whoever does: **arm N does not hold full residency —
    `(3,1)` in 7 of 13 loaded samples at `c4`/`mns 4` with 3.34M tokens of KV
    free** — so R7's plain-queueing account is live again and unexplained.
+   ⚠ **SHARPENED BY R13b, and the reword above turns out to be exactly right.**
+   The 83% batch-span term is **first-token spread**, i.e. prefill-completion
+   stagger (`THE MECHANISM CHAIN`), so the question is no longer "what is the
+   span made of" — it is answered — but specifically **why does `align` mode make
+   five prefills finish 4.13x further apart**. That is a question about the
+   mamba2 chunking path and it is still a reading task, not a benchmark. **One
+   cheap measurement would help and it is not a benchmark either:** run R13b's
+   per-request probe against a caching-OFF engine and read the first-token
+   spread directly instead of inferring it from aggregates.
 2. ~~**Why does removing prefill work make the batch stagger WORSE?**~~
    **CLOSED — the question is dissolved, not answered.** It presupposed that the
    `ctx_` phase removes prefill work. It does not: `ctx_` is Phase 1, the
@@ -4628,6 +4780,19 @@ regularities; and one campaign `[COST]` total.
    receives the field and discards it. The floor is prefill-completion stagger;
    see item 7 of the numbered section above.
 
+8. **NEW — R13c-probe: re-run R13b's probe at two more budgets, and once with
+   prefix caching OFF.** This is the one soft link in `THE MECHANISM CHAIN`
+   (link 2) and the one inferred step in the R9c identification, and the same
+   probe closes both. The probe already exists
+   (`experiments/r13b-perreq-probe/`), it needs no llama-benchy grid, and each
+   batch is ~8 s of decode on an engine that is up anyway. Measure the
+   **first-token spread** at `mnbt 16384` and `65536` at c4 or c5 — the chain
+   predicts it falls with budget and floors where the span floors — and once with
+   `--no-enable-prefix-caching`, where it predicts ~6 s. **Ride it along with
+   whatever round is next; do not buy an engine start for it.** ⚠ Instrument
+   only — `recipe-r13b-perreq.yaml` must never be folded, and no row it produces
+   is scoreable.
+
 **R13 as originally queued — "c5 at `max_num_batched_tokens 81920`" — is DONE
 and it did not take the cell.** It ran at 98304, reached 0.73x, and its premise
 (c5's gap is 93% admission stagger) has since been withdrawn. Do not re-pose it.
@@ -4635,16 +4800,18 @@ and it did not take the cell.** It ran at 98304, reached 0.73x, and its premise
 Not worth running: anything at d131072 (~8x R3's box time, the cell is lost and
 was never tunable within the campaign's rules); any further budget increase at c4
 (the curve knees at 65536 and 131072 buys −1.4%); any round premised on the
-`ctx_` rows being the cached pass; and any round premised on admission stagger
-being the `c>1` mechanism. **And nothing is ever submitted to the arena — there
+`ctx_` rows being the cached pass; any round premised on admission stagger
+being the `c>1` mechanism; and ⚠ **any round premised on MTP acceptance
+dispersion explaining the span — refuted by R13b at 1.085 against 1.499, retired
+claim 22, and more acceptance telemetry will not change it.** **And nothing is ever submitted to the arena — there
 is no login.**
 
 ### HANDOFF
 
 **Start here and stop here — this revised synthesis is the whole handoff, and as
-of 2026-08-22 (post-R9c) it post-dates every round block in this file: the
-`ctx_` correction, R13c, R13d, **R11** (the fold) and **R9c**, which ran last.
-You do not need to read them.**
+of 2026-08-22 (post-R13b) it post-dates every round block in this file: the
+`ctx_` correction, R13c, R13d, **R11** (the fold), **R9c**, and **R13b**, which
+ran last and closed the mechanism. You do not need to read them.**
 
 **The state.** ⚠ `recipe.yaml` is **NO LONGER the one the campaign opened with**
 — R11 folded `max_num_batched_tokens: 65536` into it on 2026-08-22, the single
@@ -4674,6 +4841,25 @@ span / 17% per-request decode / 0.7% hardware**; the "57%" and the "2048x
 that the flag's effects cannot be separated in this engine, so open question 1's
 remainder is a reading task and must never be re-queued as a benchmark**. Its
 queued arm was **refused by a validator** and is recorded above under refusals.
+
+**R13b is DONE, it ran last, and it closed the campaign's mechanism story.** It
+moved no standing and produced no scoreable row. What it bought: the span
+ratio's ~1.50 floor identified as **prefill-completion stagger** — the first
+request to finish prefill decodes at **88.5 ms per verify step against 55–58 ms
+for the rest of its batch**, `corr = −0.980` over 35 requests — and the
+replacement candidate (**MTP acceptance dispersion**) refuted at **1.085 against
+1.499 observed** on the way. **Two mechanisms are now dead and one is live**, and
+the live one is the same physical term as R9c's 83% batch span: see
+`THE MECHANISM CHAIN` above, which is the section to read if you read only one.
+**Nobody should re-open this as an acceptance question** (retired claim 22), and
+nobody should re-derive it — the chain's one soft link is named there, it is
+cheap, and it is link 2. R13b also found the fifth distinct engine-log failure
+mode at zero cost: `--per-request-spec-decode-metrics` writes to the **HTTP
+response body**, and llama-benchy receives the field and discards it, so
+`sparkrun benchmark perf` could never have answered the question. Its probe was
+the campaign's **first cross-client reproduction** (+1.75% / −1.46% / −2.63% on
+`tg` / `tg_req` / span against R13's c5 cell). `recipe-r13b-perreq.yaml` is an
+instrument and must never be folded.
 
 **Pick up at `mnbt 65536 + mns 4` at c4** — the config the recipe now actually
 ships, which has been measured at c1 only. It is one invocation and it closes the
@@ -4747,7 +4933,11 @@ repeating that cell rather than claiming it, and the repeat came in 2.99% low,
 exactly as the refusal predicted. Its final round refuted its own sharpest
 prediction (`ttfr` was called to fall at c1 and rose) and refuted a sampling rule
 it had been pricing rounds on since R6, in the same document that licensed the
-only change it ever made to its config. None of that is
+only change it ever made to its config. **And its actual last round, R13b, wrote
+down before it ran that it expected to refute its own candidate, gave the
+arithmetic for why, and then did exactly that** — the mechanism paragraph and the
+numeric band written together, which is the one process fix this campaign kept
+having to relearn. None of that is
 tidied away above and none of it should be. **The standings survived all of it at
 8 won and 12 lost, which is the reason to trust them.**
 
@@ -7131,18 +7321,22 @@ the third consecutive round where reading the image beat benchmarking it.
 ## WHERE THE HANDOFF IS
 
 **This is the end of the round log, not the end of the campaign's conclusions.**
-The authoritative handoff is the **`CAMPAIGN SYNTHESIS — the whole campaign, R1
-through R13d and R11`** section above, revised 2026-08-22 (post-R9c) to cover
-everything below it: R5c, R13, the `ctx_` phase-label correction, R13c, R13d,
-**R11 — including its fold and the config-epoch rule that follows from it** —
-and **R9c**, whose prefix-caching decomposition rewrote the synthesis's numbered
-item 2 and whose refused arm is recorded there. It is the only
+The authoritative handoff is the **`CAMPAIGN SYNTHESIS`** section above, revised
+2026-08-22 (**post-R13b**, its sixth revision) to cover everything below it: R5c,
+R13, the `ctx_` phase-label correction, R13c, R13d, **R11 — including its fold
+and the config-epoch rule that follows from it** — **R9c**, whose prefix-caching
+decomposition rewrote the synthesis's numbered item 2 and whose refused arm is
+recorded there, and **R13b**, which ran last and whose span-floor result produced
+the synthesis's `THE MECHANISM CHAIN` section. It is the only
 synthesis in this file and it must stay the only one — revise it, never append a
 second.
 
 Short version for anyone who reads nothing else: **8 board cells won, 12 lost,
 nothing submitted to the arena and nothing ever will be. Widest margin **6.21x**
 (`ctx_tg @ d16384 c4` at `mnbt 131072 + mns 5`, 14 pooled runs, R13c + R13d). The
+campaign's mechanism story is CLOSED — the `c>1` numbers are prefill-completion
+stagger, not admission stagger (refuted R13) and not acceptance dispersion
+(refuted R13b), and R9c's 83% batch-span term is the same thing. The
 token budget is the campaign's big lever, its curve knees at 65536, and **R11
 folded that value into `recipe.yaml` after measuring the c1 anchor at it and
 finding it inert (+0.27%)** — so the recipe is no longer the one the campaign
