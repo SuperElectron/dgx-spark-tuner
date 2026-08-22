@@ -7703,3 +7703,267 @@ consequential round left) and did not touch open question 8.
 One engine start (~230 s), two probe passes (~7 min of grid total, the first
 discarded), **~22 min wall**, ~120k tokens, zero crashes. Cheapest mechanism
 result the campaign has bought.
+
+## Round 8c hypothesis — the last surviving deep inversion, and a protection point on a 3-run win: `ctx_tg32` / `tg32 @ d32768 c1`, runs=7, TWO budget arms
+
+Written BEFORE the run, 2026-08-22, on `feature/thin-cell-r20`.
+
+### THE QUEUED FRAMING IS HALF OBSOLETE. WHAT SURVIVES, AND WHAT REPLACES IT
+
+R8c was written after R8 and it was sold on **open question 4** — "the ctx
+inversion deepens with depth", and whether the `ctx_` cells "deserve their own
+tuning". Both halves of that sale are dead, and a round that ran on them would be
+spending box time on a settled point:
+
+- **The `ctx_` phase-label correction** established that `ctx_` is **Phase 1, the
+  uncached context load**, and the rows this campaign called "cold" are Phase 2,
+  the cache-eligible pass. The framing "cached versus cold" is gone. Retired
+  claims 11-15 cover it; **open question 4 as posed is retired claim 15** and
+  **its sharpened form is retired claim 13, dissolved rather than answered.**
+- **R9b** established prefix caching never engages at all — 158 consecutive
+  samples, zero hits — so no `ctx_` result can be a caching result.
+- **R9c** priced what the flag is actually worth (2.414x) and decomposed it
+  **83% batch span**; **R13b** identified the span's floor as
+  **prefill-completion stagger**. `THE MECHANISM CHAIN` in the synthesis is the
+  campaign's single explanation for every `c>1` number it has.
+
+So this round does **not** pose another form of "why does Phase 1 stagger", and
+it does not treat the cells as prefix-caching phases. **Do not read it as
+re-opening open question 4.**
+
+**What survives is sharper than what was queued, and it is two things.**
+
+**(1) The mechanism chain is DEFINITIONALLY SILENT AT c1, so it cannot have
+already explained this.** The synthesis says so in terms: *"the chain says
+nothing about c1, where there is no batch and the span is 1.000 by
+assignment."* Every explanation this campaign owns for a Phase-1-versus-Phase-2
+gap is a batch-span explanation. At `c1` there is no batch. R11 confirmed the
+arithmetic directly — `tg == tg_req` exactly at both phases at c1, which is
+`results.py:195`'s assignment. **The archives therefore do NOT already answer
+R8c**, and I checked before assuming they did. A −27% Phase-1 deficit at `c1` is
+outside everything the chain covers.
+
+**(2) The number itself is the least protected figure left in the standings, and
+it is TWO rows, not one.** `bench_25a0e7f36ab0` is a **runs=3** invocation from
+R1 and it is the sole source of both:
+
+| row | R1 figure (runs=3) | σ/med | standing |
+|---|---:|---:|---|
+| `tg32 @ d32768 c1` (Phase 2) | **115.56** | 9.0% | **WIN, 4.96x** vs 23.31 — ⚠ 3-run, flagged provisional |
+| `ctx_tg32 @ d32768 c1` (Phase 1) | **84.03** | 12.7% | **LOSS, 0.72x** vs 117.37 (Atlas) / 116.65 (best vLLM) |
+
+**So this is a protection round on a standing win before it is anything else.**
+The campaign's own rule: *"EVERY 3-run median this campaign promoted and later
+re-measured was TOO HIGH, and every one of them was eventually retired"* — R1's
+tg32 by 11%, R3's d65536 by 13%, R13's two by 2.9% and 1.3%. Four for four, same
+sign. 115.56 is a flattering 3-run draw that was promoted to a 4.96x margin and
+never repeated. It is exactly the profile the synthesis says to assume high.
+
+**REFRAMED IN ONE LINE: R8c is the protection sweep R13c ran for the six `c4`
+rows, applied to the two `d32768 c1` rows — and the inversion falls out of it for
+free, because both arms come from one invocation.**
+
+### The prior, assembled from the archives at zero box time
+
+Every archived `c1` phase pair in the campaign, Phase 1 against Phase 2 on `tg`
+(the `tg` comparison survives the token-count problem; the `pp` comparison does
+not):
+
+| depth | tg | runs | Phase 1 | Phase 2 | Phase1 vs Phase2 | round |
+|---:|---:|---:|---:|---:|---:|---|
+| 8192 | 32 | **3** | 126.52 | 106.24 | **+19.1%** | R1 |
+| 16384 | 32 | **3** | 130.16 | 129.32 | +0.6% | R1 |
+| 16384 | 32 | 7 | 122.97 | 116.43 | +5.6% | R6 |
+| 16384 | 128 | 7 | 104.85 | 111.11 | −5.6% | R6 |
+| 16384 | 128 | 7 | 102.68 | 113.06 | −9.2% | R8 |
+| 16384 | 128 | 7 | 98.72 | 112.92 | −12.6% | R11 (mnbt 65536) |
+| **32768** | **32** | **3** | **84.03** | **115.56** | **−27.3%** | **R1 — THIS ROUND'S TARGET** |
+| 65536 | 128 | **3** | 89.76 | 108.15 | **−17.0%** | R3 |
+| 65536 | 128 | 7 | 92.98 | 94.10 | **−1.2%** | R8 |
+| 131072 | 128 | **3** | 76.66 | 77.13 | −0.6% | R5 |
+
+**Read the `runs` column, not the `depth` column.** The five 3-run pairs span
+**+19.1% to −27.3%**, a 46-point range. The five 7-run pairs span **+5.6% to
+−12.6%**, an 18-point range. Every extreme in the table is a 3-run pair. There is
+no depth trend at all once sampling is held fixed: at d16384 the 7-run pairs read
++5.6 / −5.6 / −9.2 / −12.6 and at d65536 −1.2.
+
+**And the precedent is exact, not analogical.** R3 measured this same inversion
+at d65536 on 3 runs and read **−17.0%**. R8 re-measured it at runs=7 with both
+arms in one invocation and read **−1.2%**. The stored lesson from that round says
+it plainly: *"twice the deep inversion has vanished under better sampling."*
+d32768 is the third and last one, and it is the only one never re-measured.
+
+### THE HYPOTHESIS
+
+**H_sampling (predicted): the −27.3% is a 3-run draw and does not survive seven
+runs.** At runs=7 the Phase-1/Phase-2 gap at `d32768 c1 tg32` contracts toward
+the family value, and `tg32 @ d32768 c1` reproduces BELOW 115.56.
+
+**H_real (the alternative that would matter): the −27.3% is a real effect at
+d32768.** If it survives, the campaign has a `c1` Phase-1 deficit that its one
+surviving mechanism cannot touch by construction, at a depth flanked by
+non-effects on both sides (−12.6% at d16384, −1.2% at d65536). That would be a
+genuine finding and it would deserve a successor round — with per-request
+instrumentation, per open question 4's own closing instruction, not with more
+ratios.
+
+**Mechanism for H_sampling.** Nothing physical distinguishes d32768 from its
+neighbours. Both phases prefill at the same rate to within 4% at every depth,
+concurrency and budget in the 42-pair audit. Phase 1 loads `depth` tokens and
+Phase 2 loads `depth + 2048`; at c1 both then decode 32 tokens from a
+single-request batch with residency 1 of 1 and span 1.000 by assignment. The only
+term that differs between the phases at c1 is the prompt the decode starts from,
+and R6 showed generation length — a far larger structural difference — moves this
+metric ~2.9% net of arm-to-arm systematic. A 27% gap has no room to come from.
+What it does have is σ/med 12.7% and 9.0% on three runs each: SE of a 3-run
+median ≈ 0.61σ, so **SE on the R1 ratio is ~9.5%** and −27.3% sits ~1.8 SE from a
+−10% family value. It does not need a mechanism; it needs a bigger sample.
+
+### The exact configuration, and why there are TWO arms
+
+`pp 2048`, `depth 32768`, `tg 32`, `concurrency 1`, `runs 7`. Probe args
+identical to R1's d32768 leg, which is what makes this a protection point rather
+than a new cell.
+
+`-o max_model_len=40960` in **both** arms — d32768 + pp 2048 + tg 32 = 34848 does
+not fit the recipe's 32768 window. This is the probe-driven override R1 used at
+this exact depth and it is not a tuning mutation; R3, R5 and R8 treated their
+depth overrides the same way.
+
+- **Arm E (`-o max_num_batched_tokens=8192`) — the pre-fold replica.** Bit-for-bit
+  R1's condition. This is the arm the protection verdict is read from.
+- **Arm F (recipe as shipped, `mnbt 65536`) — the current epoch.** This is the arm
+  that produces a quotable, current-epoch `RESULTS.md` row.
+
+**Why I am spending the second engine start, stated plainly.** R11 folded
+`mnbt 65536` and the synthesis's standing warning is that comparing a post-fold
+number to a pre-fold row is *"the single move this campaign refuted more often
+than any other"* — R6 over R1, R8 over R3, R9b over R4, three real effects read
+out of uncontrolled condition differences. The whole protection half of this
+round is precisely such a comparison. One arm would force me to caveat the only
+verdict the round exists to deliver. Two arms cost ~110 s of extra start plus
+~120 s of extra grid and buy the verdict clean.
+
+**The weakness that remains, named rather than hidden:** the two arms are
+necessarily separate engine starts — two budgets cannot share one — so the
+Arm F versus Arm E comparison is itself cross-invocation and must be read against
+R9c's measured **±2.5% reproduction floor**, not as an exact quantity. That is
+unavoidable and it is the same design R13c used for its six-budget curve. **The
+primary reading and the protection reading are both intra-invocation and are not
+exposed to it:** each arm produces its own Phase 1 and Phase 2 under one engine
+start.
+
+`max_num_seqs` stays at the recipe's 4 in both arms. At c1 scheduler width does
+nothing and changing it would make this a two-mutation round for no reason.
+
+`runs=7` in both arms, non-negotiable: the synthesis's corrected rule is
+**runs=7 at c1 anywhere**, `runs=3` is defensible only at `c>=8`, and this is a
+tg32 cell — *"anything `tg32` ... runs=7, non-negotiable"*.
+
+### Numeric predictions, declared before the run
+
+**PRIMARY — the inversion, Arm E, intra-invocation.** Phase 1 versus Phase 2 at
+`d32768 c1 tg32`, runs=7:
+
+**Predicted −4%, band −18% to +8%.** Centre from the d65536 precedent: −17.0% at
+3 runs became −1.2% at 7, a contraction of ~14x; applying the same contraction to
+−27.3% gives −2%, and the tg32 arms of the family run positive (+19.1 / +0.6 /
++5.6), so I place the centre slightly negative rather than at zero.
+
+- **Gap ≤ −20% → H_real. The −27% survives in substance.** Retired claim 9 keeps
+  its last piece of evidence, the campaign owns a `c1` effect its mechanism chain
+  cannot explain, and R8c earns a successor. **I predict this does not happen.**
+- **Gap > −20% → H_sampling. The −27% is retired as a 3-run draw**, retired claim
+  9 loses its only surviving evidence and the "inversion deepens with depth"
+  story is dead outright rather than merely unreproduced.
+- **Gap in −20% to −18% → NOT ESTABLISHED either way.** Say so; do not round it
+  into a verdict.
+
+**Honest power statement, made in advance.** At runs=7 with σ/med ~10%, SE of a
+median ≈ 0.40σ, so SE on the new ratio is ~6%, and SE on the *change* from R1's
+ratio is ~11%. A shift from −27% to −4% is **~2 SE**. This round can retire a
+27-point effect; it could not resolve a 10-point one, and I am not claiming it
+can. If the reading lands mid-band the honest output is "the effect is smaller
+than R1 measured and this round cannot say by how much".
+
+**SECONDARY — the protection verdict, Arm E, against R1's rows.** Band declared
+in advance at **±10%**, R13c's protection band:
+
+| row | R1 (runs=3) | STANDS if | predicted | why |
+|---|---:|---|---:|---|
+| `tg32 @ d32768 c1` (Phase 2) | 115.56 | **104.0 – 127.1** | **107, band 100 – 116** | depth curve 113.06 @ d16384 → 94.10 @ d65536 is −8.8%/doubling, so tg128 @ d32768 ≈ 103; R6's tg32-over-tg128 offset is +4.79% → ≈ 108. Then the 4-for-4 rule and R9c's −2.5% floor pull it down, not up |
+| `ctx_tg32 @ d32768 c1` (Phase 1) | 84.03 | **75.6 – 92.4** | **102, band 88 – 115** | = predicted Phase 2 × the predicted ratio. **I am predicting this row moves OUTSIDE its own protection band, upward** — that is what H_sampling means here, and it is the round's sharpest call |
+
+**I am predicting a split protection verdict and saying so before the run:**
+Phase 2 stands (low in band), Phase 1 does **not** stand and comes in high. That
+is the only shape consistent with H_sampling, and it is falsifiable in both
+directions. Note the asymmetry of consequence: Phase 2 failing low costs the
+campaign a decimal on a 4.96x win that is not in danger either way (the incumbent
+is 23.31 — even a 30% fall leaves it above 3.4x); Phase 1 rising costs it a
+retired claim. **Neither cell changes side.** `ctx_tg @ d32768 c1` needs +39% to
+reach 116.65 and I predict +21%, so it stays a loss; I name the upside only so
+that nobody later reads a surprise as having been unanticipated.
+
+**TERTIARY — budget inertness at c1 at a second depth (Arm F vs Arm E, free).**
+
+**Predicted |Δ| < 2.5% on both phases; declared inert if < 5%.** R11 measured the
+budget inert at c1 at d16384 (+0.27%) and the mechanism is structural, not
+empirical: the two routes by which the budget has ever moved this metric are
+occupancy and span, and both are absent at c1 — residency is 1 of 1 at every
+budget, and `tg == tg_req` makes the span 1.000 by assignment. **This arm extends
+that result to a second depth, which it currently does not have**, and d32768 is
+a stiffer test than d16384: a Phase-2 prefill of 34816 tokens is **5** scheduler
+steps at 8192 against **1** at 65536, where R11's was 3 against 1. If it moves
+>5%, the fold's licence is depth-limited — which does **not** invalidate the fold
+(measured at the anchor depth) but does mean deep rows cannot be compared across
+the epoch, and that is worth escalating into the synthesis.
+
+**Free riders — zero box cost, recorded either way:**
+
+| quantity | predicted | why it is worth recording |
+|---|---|---|
+| MTP acceptance @ d32768 c1 | **length 3.2 – 3.7, acceptance 78 – 92%** | **the missing middle point of open question 3.** R5 read 93.6% at d16384 and 47.7% at d131072 and the campaign has never taken the point between them. Free from the engine log |
+| `ctx_pp / pp` | **16.4 – 17.9** (theory **17.00** = (32768+2048)/2048) | pairs **43 and 44** of the phase-label audit, currently 41 of 42. R1's d32768 pair read 17.20; these add the first at this depth **above** the old budget |
+| prefix cache hit rate | **0.0%** | 158+ consecutive samples, never a hit |
+| scheduler `Running/Waiting` | **`(1,0)` in 100% of loaded samples** | one request; this is the occupancy half of the inertness argument |
+| span ratio `tg / tg_req` | **exactly 1.000, both phases, both arms** | assignment, not measurement. Anything else voids the round |
+| `peak_throughput` (Phase 2) | 100 – 125 | the hardware ceiling; the budget has never moved it more than a few percent |
+| SM clock median | **2392 – 2398 MHz** | eighteen sessions agreeing; the box's most reproduced fact |
+| σ/med, both phases | 6 – 14% | R1 read 9.0% / 12.7% at 3 runs; σ is itself a draw (retired claim 19) |
+| grid time | **110 – 150 s per arm** | R1's d32768 leg at 3 runs, scaled |
+| engine start | **100 – 140 s (Arm E), 160 – 200 s (Arm F)** | start cost tracks budget SIZE, not novelty (R13c) |
+
+### What would make this round void
+
+- `crash_count > 0` or `session_count > 1` in either arm — each arm must be one
+  engine start.
+- The `Benchmark args:` echo not reading `pp: [2048]`, `depth: [32768]`,
+  `tg: [32]`, `concurrency: [1]`, `runs: 7`. **`sparkrun` silently defaults an
+  omitted `-b depth` to 0 and does not error** — R5 lost an engine start to it.
+  **Read the echo before letting the grid proceed, in both arms.**
+- `tg_throughput != tg_req_throughput` at c1.
+- `ctx_pp / pp` outside 15 – 19, which would mean the two phases are not doing
+  what they do at every other depth.
+- A container image other than `dgx-vllm-eugr-nightly:2026082102` in either
+  `state.yaml` — read `container_image_longterm_ref`, not the console line about
+  `:latest`.
+
+### Instrument plan
+
+Engine log per R13d's recipe: `docker exec <container> tail -f
+/tmp/sparkrun_serve.log`, container matched on **`^sparkrun_`** (it is named
+`sparkrun_<hash>_<hash>_solo`, **not** `vllm-*`), verified non-empty **during**
+the engine start rather than at grid start. `docker logs -f` does not work on
+this image and cost R12 its occupancy instrument. Telemetry alongside per arm.
+
+### Cost
+
+Two invocations, two engine starts. ~240 s grid + ~300 s starts, **~15 min wall**
+estimated. Against that: a protection point on a standing win, the retirement or
+survival of the campaign's last deep inversion, a second depth for R11's
+inertness result, and the missing acceptance point of open question 3.
+
+### ABSOLUTELY NO ARENA SUBMISSION
+
+No `--arena` flag, in either arm. There is no login and none will be attempted.
