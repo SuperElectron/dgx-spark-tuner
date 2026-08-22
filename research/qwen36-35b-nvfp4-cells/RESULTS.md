@@ -462,6 +462,32 @@ kept exceeding `peak_throughput`. **Report `tg_throughput` as the aggregate and
 per-request figure, when you want it, is llama-benchy's own
 `tg_req_throughput` — a separate field the campaign never used.
 
+**R5c CORROBORATION (2026-08-22, NO BOX TIME) — the source reading now has a
+second, independent instrument behind it.** R5c was queued to settle this from
+the board side; R10 settled it from llama-benchy's source first, so R5c re-tested
+the *conclusion* against all **34 archived `c>1` benchmark records** in
+`experiments/`. Three predictions the aggregate reading makes and the
+per-request reading does not:
+
+| prediction of the aggregate reading | result |
+|---|---|
+| `tg_throughput > tg_req_throughput` at every `c>1` point — they are different fields, not the same number | **34 / 34**, ratios 1.13x to 4.02x |
+| `tg_throughput <= peak_throughput` always — an aggregate cannot exceed the sustained ceiling | **34 / 34**, no violations |
+| `tg_throughput / tg_req_throughput <= c` always — the ratio is `c / stagger` and stagger >= 1 | **34 / 34**, no violations |
+
+The per-request reading predicts `tg ≈ tg_req` at `c>1` and is refuted in every
+single row. `c x tg_throughput` exceeds `peak_throughput` in **14 of 34** rows —
+the double-count made visible — and all fourteen are low-stagger arms, which is
+why the error hid until the raised-budget and c16 runs. **No board re-scrape was
+needed and none was done. No verdict, margin or standing changes.**
+
+One new methodology note falls out. `c / (tg/tg_req)` recovers R10's
+timestamp-measured stagger to within a few percent at c2 and c4, and at c5 **only
+when `max_num_seqs >= c`**. Where a request is excluded from residency (c5 at
+`max_num_seqs 4`) the aggregate-derived proxy reads ~3.9 against R10's measured
+~2.4. **The proxy is valid only at full residency** — read the scheduler's
+`Running/Waiting` lines before trusting it.
+
 **The span in the denominator is a measurement of the config, not noise.** Because
 `tg_duration` runs from the first request's first token to the last request's
 last token, anything that staggers admission is charged to this metric twice:
@@ -508,7 +534,7 @@ row, and they answer different questions:** `tg` is what the board ranks,
 | bench_3d8149654d1b | 2026-08-22 | tg128 @ d65536 c1 (**runs=7**, SAME engine start as the row above) | **94.10** | 8.44 | 17144.32 | 16.48 | **win — 5.71x incumbent; REVISES R3's 3-run 108.15 DOWN 13.0%**; worst of 7 runs 81.79 still 4.96x. **Depth is NOT flat: -16.8% below d16384 in the same invocation**, against a ±6% pre-declared resolution |
 | bench_3d8149654d1b | 2026-08-22 | ctx_tg128 @ d16384 c1 (runs=7) | 102.68 | 8.03 | 2809.36 | not scraped | hold — BELOW cold (-9.2%), same sign as R6's -5.63% at this depth and generation length; NOISIER than cold (7.8% vs 5.5%), the third break of the ctx-quietness rule |
 | bench_3d8149654d1b | 2026-08-22 | ctx_tg128 @ d65536 c1 (runs=7) | 92.98 | 8.07 | 16340.55 | 20.70 | **win — 4.49x incumbent** (was 4.34x at 89.76); worst of 7 runs 77.33 still 3.74x. **R3's -17% ctx inversion did NOT reproduce: -1.2% vs cold here** — treat the deep inversion as unmeasured |
-| bench_5399a85d7aec-a0 | 2026-08-22 | tg128 @ d16384 c4 (**arm A0 — campaign config, UNMUTATED**) | 52.64 | 0.58 | 10205.51 | 46.68 | hold — reproduces R2's pooled 52.85 to 0.4%. Same engine start as the c5 row below (`session_count: 1`). Verdict NOT rewritten: units dispute (R5c) still open. **Engine log shows this cell never reaches full occupancy** — see the R9 occupancy note |
+| bench_5399a85d7aec-a0 | 2026-08-22 | tg128 @ d16384 c4 (**arm A0 — campaign config, UNMUTATED**) | 52.64 | 0.58 | 10205.51 | 46.68 | hold — reproduces R2's pooled 52.85 to 0.4%. Same engine start as the c5 row below (`session_count: 1`). ~~Verdict NOT rewritten: units dispute (R5c) still open.~~ **R5c CLOSED 2026-08-22 — there was no dispute: the board reports the same aggregate field we do, so this row's 1.13x always compared like with like and the verdict stands unchanged.** **Engine log shows this cell never reaches full occupancy** — see the R9 occupancy note |
 | bench_5399a85d7aec-a0 | 2026-08-22 | tg128 @ d16384 c5 (**arm A0 — campaign config, UNMUTATED**) | 45.05 | 0.28 | 11847.76 | not scraped as per-request | hold — **D0 = -14.4% against the c4 row above, measured in ONE engine start**. R4 computed -13.7% across two invocations; the deficit is real and is not an engine-start artefact |
 | bench_5399a85d7aec-a0 | 2026-08-22 | ctx_tg128 @ d16384 c4 (arm A0, campaign config) | 54.98 | 0.19 | 8633.16 | not scraped | hold — ABOVE cold (+4.4%) |
 | bench_5399a85d7aec-a0 | 2026-08-22 | ctx_tg128 @ d16384 c5 (arm A0, campaign config) | 48.04 | 0.44 | 9840.74 | not scraped | hold — ABOVE cold (+6.6%); reproduces R4's 48.18 to 0.3% |
