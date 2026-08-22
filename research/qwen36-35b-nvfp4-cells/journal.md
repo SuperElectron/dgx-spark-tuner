@@ -3657,18 +3657,21 @@ interfering with it — and, chasing a validity gate that failed, discovered tha
 prefix caching has never once hit on this benchmark and that the campaign has had
 its two measurement phases labelled backwards since Round 1.**
 
-## CAMPAIGN SYNTHESIS — the whole campaign, R1 through R13d, R11 (which folded the recipe) and R13b (which ran last, and closed the mechanism)
+## CAMPAIGN SYNTHESIS — the whole campaign, R1 through R13d, R11 (which folded the recipe), R13b (which closed the mechanism) and R8c (which ran last, and corrected a standings margin UPWARD)
 
-**Written after R12 on 2026-08-22 and REVISED six times the same day: after
+**Written after R12 on 2026-08-22 and REVISED seven times the same day: after
 R13 / the `ctx_` phase-label correction / R5c / R13c; again after **R13d**;
 again after **R11**, the only round that ever changed
 `recipe.yaml`, to carry the config-epoch consequences of that change into the
 handoff itself — the cross-condition rule below the epoch warning, the
 `c1`-vs-`c>1` asymmetry of the budget lever, and the removal of the pre-fold
 "not folded" language this section carried; a fifth time, post-**R9c**, to fold
-its prefix-caching decomposition into every place it reaches; and a sixth and
-current time — **CURRENT AS OF 2026-08-22, post-R13b**, whose deltas are listed
-in the boxed note below the thesis paragraph. R9c's fifth-revision deltas were:**
+its prefix-caching decomposition into every place it reaches; a sixth time,
+post-**R13b**, whose deltas are listed in the boxed note below the thesis
+paragraph; and a seventh and current time — **CURRENT AS OF 2026-08-22,
+post-R8c**, which retired the campaign's last deep inversion and **broke this
+section's own four-for-four sampling warning**, whose deltas are in the boxed
+note directly below. R9c's fifth-revision deltas were:**
 
 > **What the R9c revision changes, so a reader who knows the earlier text can
 > find the deltas:** **open question 1** (premise wrong by two orders of
@@ -3737,7 +3740,24 @@ including two of its own widest wins and its central mechanism.
 > 16**, a corrected tail on the **`Model` observation**, and a rewritten
 > **HANDOFF**. No standing moves; R13b is a mechanism round and scored nothing.
 
-**The seven things that landed after the round-12 checkpoint, since they change
+> **SEVENTH REVISION — CURRENT AS OF 2026-08-22, post-R8c. THIS IS THE ONE THAT
+> BROKE THIS SECTION'S OWN SAMPLING WARNING.** R8c ran two arms at
+> `ctx_tg32` / `tg32 @ d32768 c1`, runs=7, and its deltas are: **retired claim 9**
+> (the deep ctx inversion, now dead outright rather than unreproduced), the
+> **widest-campaign-config-win** and **losses** bullets in the standings summary
+> (two margins corrected, no cell moved), the **three-run warning** in *the
+> central methodological result* — **rewritten, because R8c is a 3-run median
+> that was too LOW by 28.5% and the four-for-four one-directional claim this
+> section carried is withdrawn** — **rule (3)** of the four carried rules, which
+> rested on that claim, a **new priority re-measure list** attached to the
+> standings summary, *what to run next* item 5 (done) and a **new item 9** (the
+> best scoreable prospect left), the **phase-pair audit** (41 of 42 → **43 of
+> 44**), the **hardware power bound** (≤97.3 W → **≤99.5 W**), an **R8c
+> cost-ledger row**, and a rewritten **HANDOFF**. **No standing changes side —
+> still 8 won / 12 lost** — but `ctx_tg @ d32768 c1` is now **0.92x, not 0.72x**,
+> and reads a dead heat on the folded recipe.
+
+**The eight things that landed after the round-12 checkpoint, since they change
 how the rest of this section reads:**
 
 - **R13** widened the contested `c4` cell and set a record margin — and
@@ -3785,6 +3805,24 @@ how the rest of this section reads:**
   R13's c5 cell from an **independent client** to **+1.75% / −1.46% / −2.63%** on
   `tg` / `tg_req` / span — the campaign's first cross-client reproduction, and
   tighter than several of its cross-invocation ones.
+- **R8c** ran last, and it is the round that **corrected a recorded loss
+  upward**. Two arms at `ctx_tg32` / `tg32 @ d32768 c1`, runs=7. The campaign's
+  **last surviving deep inversion is retired**: R1's −27.3% read **+0.9%** at
+  runs=7 at R1's own condition and **+6.9%** on the folded recipe, so retired
+  claim 9 is dead outright and **no deep `ctx_`-versus-Phase-2 inversion exists
+  anywhere in this campaign's data**. Its protection half split exactly as
+  pre-declared: `tg32 @ d32768 c1` **STANDS** (−5.14%; the standings now carry
+  the pooled 10-run **112.59 = 4.83x**), while `ctx_tg32 @ d32768 c1` **failed
+  its band UPWARD by 31.64%** — R1's 84.03 was a 3-run **low** draw, the cell is
+  **0.92x rather than the 0.72x carried for the whole campaign**, and on the
+  folded recipe it reads **117.65 against a 117.37 incumbent: a dead heat,
+  deliberately not claimed** on one measurement at 0.06 SE. **That is the
+  campaign's largest single-figure retraction and it went the direction this
+  section said retractions do not go** — see the rewritten three-run warning
+  below. By-products: budget inertness at c1 confirmed at a **second depth** on
+  Phase 2 (+0.37% against R11's +0.27%), the d32768 acceptance point measured at
+  **two** engine starts (87.0% / 88.9%), audit pairs 43–44, 23 more zero-hit
+  prefix-cache samples, and the campaign's **noisiest cell** (σ/med 24.20%).
 
 ### What the campaign set out to do, and whether the thesis held
 
@@ -3875,13 +3913,45 @@ it got a round of its own (R13), and it ended at 0.73x against the board's own
 `Qwen3.6-35B-A3B-NVFP4` on vLLM — and 0.38x against the cell's actual top. Even
 clearing the like-for-like incumbent would not have taken the cell.
 
-Two of the losing figures and three of the winning ones are still 3-run medians.
-They are flagged in `RESULTS.md` and they should be read as provisional, for the
-reason the next section gives. **And R13c added a measured error bar on top of
-that:** every figure in this campaign taken exactly once carries a **~2%
-downward** correction of unknown origin — six of six protected rows reproduced
-low, mean −1.94%, which on a coin is p ≈ 3%. No verdict changes sign at that
-size, but no decimal should be quoted as if it were exact.
+⚠ **Four standings rows are still 3-run medians, and after R8c they are the
+campaign's priority re-measures — in this order.** R8c corrected a 3-run row
+**upward by 31.64%**, which means an unrepeated 3-run figure is provisional in
+**both** directions, not just the flattering one (see the rewritten warning in
+the next section). Ranked by what a re-measure could change:
+
+1. **`ctx_tg @ d8192 c1` — 126.52, scored 0.61x against the cell top and
+   `1.07x` against the best vLLM+NVFP4 entry. RUN THIS ONE FIRST.** It is the
+   direct sibling of the row R8c corrected: same phase, same `c1`, one depth
+   shallower, and **the same three-run invocation** (`bench_25a0e7f36ab0`) that
+   produced the 84.03 which turned out 28.5% low. That invocation's four rows
+   have now been audited three times and moved **+11%, +5.4% and −28.5%** — both
+   signs, large — so nothing predicts which way this one goes. A `tg32` cell at
+   d8192 is also the campaign's second-noisiest (σ/med 21.4%). runs=7, one arm.
+2. **`tg128 @ d131072 c1` — 77.13, recorded LOST by 5.5% (0.95x).** σ/med 9.3%
+   on three runs is a standard error near 5.4%, so **the recorded deficit is
+   one standard error and the loss is not established.** This is the only
+   recorded loss that a re-measure could plausibly turn into a win. ⚠ Against
+   that: d131072 costs ~8x a shallow round (R5's ledger row is the campaign's
+   worst) and the standing advice below is not to return to that depth. It is a
+   genuine cost/value call and it should be made deliberately, not by inheriting
+   the old "do not go back" line, which was written when the deficit was assumed
+   real.
+3. **`tg32 @ d8192 c1` — 106.24, an uncontested win.** The board publishes no
+   figure, so the margin cannot move whichever way the number lands. Re-measure
+   it only if a round is at that depth anyway.
+4. **`tg128 @ d16384` c2 (84.00) and c5 (48.12), the R4 pre-fold rows.** Both
+   lose by more than 2x at the pre-fold budget and no sampling error of this
+   size closes that. Not worth box time; their tuned successors at raised
+   budgets are 7-run rows already.
+
+**And R13c added a measured error bar on top of that:** every figure in this
+campaign taken exactly once carries a **~2% downward** correction of unknown
+origin — six of six protected rows reproduced low, mean −1.94%, which on a coin
+is p ≈ 3%. ⚠ **R8c's Phase-2 arm is the ninth same-sign low reproduction
+(−5.14%)** and does not change that reading; R9c had already weakened the
+systematic to a ±2.5% noise floor, and −5.14% on a σ/med 15.82% cell is 0.8
+standard errors. No verdict changes sign at that size, but no decimal should be
+quoted as if it were exact.
 
 ### THE CENTRAL METHODOLOGICAL RESULT — single-invocation controls kept overturning cross-invocation inference
 
@@ -3952,16 +4022,40 @@ round-12 checkpoint could not include, and they follow.
   so no night-wide slowdown is visible — but `pp` is prefill and `tg` is decode,
   so a decode-only session effect would not show there.
 
-**And here is the part worth carrying forward as a warning: EVERY 3-run median
-this campaign promoted and later re-measured was TOO HIGH, and every one of them
-was eventually retired.** R1's tg32 was 11% above its 7-run value; R3's d65536
-was 13% above; R13's 174.68 and 170.59 were 2.9% and 1.3% above their pooled
-14-run values. Four for four, always in the same direction. That is not chance. A 3-run median at a cell whose σ is ~9% has a
-standard error near 6.5%, so draws land on both sides — but a high draw becomes a
-claimed win and gets defended, while a low draw looks like a bad run and gets
-re-measured. **The sampling error is symmetric and the surviving error is
-one-sided.** Any figure in this campaign that was flattering and never repeated
-should be assumed high until it is repeated.
+**And here is the part worth carrying forward as a warning — REWRITTEN BY R8c,
+BECAUSE THE VERSION THIS SECTION CARRIED WAS ITSELF A SMALL-SAMPLE ARTEFACT.**
+
+**What this paragraph used to say:** *every* 3-run median the campaign promoted
+and later re-measured came in TOO HIGH — R1's tg32 by 11%, R3's d65536 by 13%,
+R13's 174.68 and 170.59 by 2.9% and 1.3% — four for four, same direction, "not
+chance", so treat any unrepeated flattering figure as high.
+
+**What R8c did to it.** R8c re-measured a 3-run median that had never been
+promoted, because it was a **loss**: `ctx_tg32 @ d32768 c1`, R1's 84.03. Seven
+runs at R1's identical condition read **110.61 — the figure was 28.5% too LOW**,
+the largest single-figure retraction in the campaign, and it had sat in the
+standings as a 0.72x loss for eleven rounds because nobody re-measures a number
+that is merely disappointing.
+
+**So the corrected statement, and it is the one to carry:** ⚠ **a 3-run median
+is unreliable in BOTH directions and by more than anyone here assumed.** At a
+cell whose σ/med is ~9–15% the standard error is 6–10%, draws land on both
+sides, and the campaign has now seen both tails — +11%, +13%, +2.9%, +1.3% and
+**−28.5%**.
+
+**And the irony is worth one sentence, because the campaign made the exact error
+it was warning about.** The four-for-four "always high" pattern was never a
+property of the sampling; it was a property of **which rounds got re-measured**.
+Flattering draws become claims, claims get defended, defended figures get
+audited — and the audit sample was therefore one-sided by construction. **The
+campaign generalised from four re-measurements chosen by how flattering they
+were, which is a small-sample inference drawn from a biased sample: the same
+mistake, one level up, as promoting a 3-run median.** The half of the old
+warning that survives is the mechanism, not the direction: **the sampling error
+is symmetric; the error that SURVIVES in a document is whatever nobody had a
+motive to check.** Any unrepeated figure should be assumed wrong by ~1 SE in an
+unknown direction — and the ones nobody has any motive to re-measure are the
+losses, which is exactly where R8c found the campaign's largest error.
 
 Practical form of the rule, for the next campaign: never infer from two numbers
 taken under two engine starts if the design can put them under one; declare the
@@ -4310,6 +4404,26 @@ R9b's finding that turning chunked prefill *off* cuts `tg_req` 44% while
 that reading is inferred and was never tested.** And the chain says nothing about
 c1, where there is no batch and the span is 1.000 by assignment.
 
+⚠ **AND THAT LAST SENTENCE IS WHY THE d32768 c1 INVERSION HAD TO GO — R8c,
+added in the seventh revision.** For most of the campaign the `−27.3%` Phase-1
+deficit at `ctx_tg32 @ d32768 c1` looked like a deep-context effect awaiting a
+mechanism. Two things then removed every candidate mechanism it could have had.
+**First the `ctx_` phase-label correction (R9b):** the `ctx_` phase is the
+context-**load** pass, not a cached one, so "the cached pass is slower at depth"
+was never a coherent reading of it — and prefix caching never engaged in this
+campaign at all, in 180-plus consecutive samples. **Then the chain above, via
+R9c and R13b:** the campaign's one surviving mechanism is prefill-completion
+stagger acting through the batch span, and at `c1` it is **silent by
+construction** — R8c measured `tg == tg_req` exactly in all four phase-arms, so
+the span ratio is **1.0000 by assignment**, and residency read `(1,0)` in 9 of 9
+loaded samples. There is no stagger, no span and no admission term at `c1` for a
+depth effect to ride on. **So a surviving −27% would have left the campaign
+owning a `c1` effect that nothing in its closed mechanism story could explain.**
+R8c's pre-run hypothesis said the gap needed a bigger sample rather than a
+mechanism, and at runs=7 it read **+0.9%** at R1's own condition and **+6.9%**
+on the folded recipe. **The chain is not merely consistent with the retirement —
+it predicted it, and it is the reason the retirement needs no new physics.**
+
 ### The depth curve, as finally measured
 
 | depth | tg128 c1 median | vs previous | per doubling | source |
@@ -4338,8 +4452,11 @@ engine start and lost the engine log. That measurement is still outstanding and
 still cheap.
 
 The d131072 point is a 3-run median from a separate invocation at σ 9.3% — the
-same instrument that has now failed twice — so the last leg of the curve is the
-least trustworthy part of it.
+same instrument that has now failed **three** times, once by 28.5% and upward
+(R8c) — so the last leg of the curve is the least trustworthy part of it. ⚠ It
+is also the standings row whose verdict that instrument could still flip: the
+same 77.13 is recorded as a **5.5% loss**, which is one standard error. It is
+number 2 on the priority re-measure list above.
 
 ### Claims this campaign published and later withdrew
 
@@ -4862,14 +4979,15 @@ is no login.**
 ### HANDOFF
 
 **Start here and stop here — this revised synthesis is the whole handoff, and as
-of 2026-08-22 (post-R13b) it post-dates every round block in this file: the
-`ctx_` correction, R13c, R13d, **R11** (the fold), **R9c**, and **R13b**, which
-ran last and closed the mechanism. You do not need to read them.**
+of 2026-08-22 (post-R8c) it post-dates every round block in this file: the
+`ctx_` correction, R13c, R13d, **R11** (the fold), **R9c**, **R13b** (which
+closed the mechanism), and **R8c**, which ran last. You do not need to read
+them.**
 
 **The state.** ⚠ `recipe.yaml` is **NO LONGER the one the campaign opened with**
 — R11 folded `max_num_batched_tokens: 65536` into it on 2026-08-22, the single
 change in the campaign's history, with the reasoning written into the file
-itself. Fourteen rounds plus three no-box-time passes are archived under
+itself. Fifteen rounds plus three no-box-time passes are archived under
 `experiments/`. `RESULTS.md` carries **8 won cells over 18 rows, 12 lost,
 and the unscoreable remainder**, every row naming its configuration and every
 retired figure marked as retired. **Eight of the eighteen win rows are now the config the
@@ -4914,10 +5032,34 @@ the campaign's **first cross-client reproduction** (+1.75% / −1.46% / −2.63%
 `tg` / `tg_req` / span against R13's c5 cell). `recipe-r13b-perreq.yaml` is an
 instrument and must never be folded.
 
-**Pick up at `mnbt 65536 + mns 4` at c4** — the config the recipe now actually
-ships, which has been measured at c1 only. It is one invocation and it closes the
-last gap between what this file claims and what the recipe does. Then the
-zero-box-time prefill metric check.
+**R8c IS DONE, IT RAN LAST, AND IT IS THE ROUND THAT CHANGED A NUMBER IN THE
+STANDINGS — UPWARD.** Two arms at `ctx_tg32` / `tg32 @ d32768 c1`, runs=7. It
+retired the campaign's **last deep inversion** (−27.3% → **+0.9%**; retired
+claim 9 is dead outright, and `THE MECHANISM CHAIN` explains why it had to be:
+at `c1` the chain is silent by construction, so a surviving −27% would have been
+an effect nothing in this campaign could explain). Its **protection half is the
+part that matters**: `tg32 @ d32768 c1` **stands** and now carries a pooled
+10-run **4.83x**, while `ctx_tg32 @ d32768 c1` **failed its band upward by
+31.64%** — R1's 84.03 was a 3-run **low** draw, the cell is **0.92x, not the
+0.72x this file published for eleven rounds**, and on the folded recipe it reads
+**117.65 against a 117.37 incumbent**. That last figure is **a dead heat and is
+NOT claimed** (one measurement, +0.24%, 0.06 SE) — but it makes a 125-entry
+crowded cell the closest unclaimed cell in the campaign. **The reusable lesson
+is in the rewritten three-run warning above: this section's own "every 3-run
+median came in high" rule was a small-sample artefact of which figures anyone
+bothered to re-measure, and the campaign made exactly the error it was
+warning about. Audit the unflattering figures first.**
+
+**Pick up at one of two places, and they are close in value.** (a)
+**`mnbt 65536 + mns 4` at c4** — the config the recipe now actually ships, which
+has been measured at c1 only. It is one invocation and it closes the last gap
+between what this file claims and what the recipe does. (b) ⚠ **the protection
+round on `ctx_tg @ d32768 c1` at BOTH budgets** (*what to run next* item 9) —
+**the one place left where box time can change the standings**, since the cell
+already reads 1.002x once. Then the zero-box-time prefill metric check, and then
+the priority re-measure list attached to the standings summary above —
+`ctx_tg @ d8192 c1` first, because it is the direct sibling of the row R8c
+corrected and comes from the same three-run invocation.
 
 **THE TOKEN BUDGET IS A `c>1` LEVER AND ONLY A `c>1` LEVER — this is the
 campaign's clearest tuning result, and its three legs belong together.** Three
@@ -4969,10 +5111,15 @@ reading the instrument.** The fourth is still sitting unread in
 
 **Carry these four rules, in this order.** (1) Put the compared quantities under
 one engine start; declare the resolution budget and reading thresholds before the
-run. (2) Read the instrument's source before spending the box. (3) Treat any
-flattering figure that was never repeated as too high — this campaign retired
-four such figures and **all four were high**, and R13c put the residual bias at
-~2% even on figures that stand. (4) Schedule a protection round: re-measure your
+run. (2) Read the instrument's source before spending the box. (3) ⚠ **REVISED
+BY R8c — treat any figure that was never repeated as wrong by ~1 standard error
+in an UNKNOWN direction, and audit the unflattering ones first, because nobody
+else will.** This rule used to read "assume any flattering figure is too high",
+on the strength of four retired figures that were all high; R8c then retired a
+fifth that was **28.5% low**, and the all-high pattern turned out to describe
+which figures got re-measured, not how sampling behaves. R13c's residual ~2%
+downward bias on figures that stand is a separate and much smaller effect. (4)
+Schedule a protection round: re-measure your
 published figures from a separate engine start against a pre-declared band, and
 pool same-config repeats instead of picking the better draw.
 
@@ -4990,7 +5137,13 @@ only change it ever made to its config. **And its actual last round, R13b, wrote
 down before it ran that it expected to refute its own candidate, gave the
 arithmetic for why, and then did exactly that** — the mechanism paragraph and the
 numeric band written together, which is the one process fix this campaign kept
-having to relearn. None of that is
+having to relearn. **And its actual last round, R8c, caught the campaign making
+the very error this section had spent six revisions warning about** — it had
+generalised "3-run medians always come in high" from four re-measurements it had
+chosen by how flattering they were, and the first unflattering row anyone
+audited came back **28.5% low**, correcting a published loss from 0.72x to
+0.92x. The warning was right about the mechanism and wrong about the direction,
+and it is rewritten above rather than quietly deleted. None of that is
 tidied away above and none of it should be. **The standings survived all of it at
 8 won and 12 lost, which is the reason to trust them.**
 
@@ -7375,14 +7528,16 @@ the third consecutive round where reading the image beat benchmarking it.
 
 **This is the end of the round log, not the end of the campaign's conclusions.**
 The authoritative handoff is the **`CAMPAIGN SYNTHESIS`** section above, revised
-2026-08-22 (**post-R13b**, its sixth revision) to cover everything below it: R5c,
-R13, the `ctx_` phase-label correction, R13c, R13d, **R11 — including its fold
-and the config-epoch rule that follows from it** — **R9c**, whose prefix-caching
-decomposition rewrote the synthesis's numbered item 2 and whose refused arm is
-recorded there, and **R13b**, which ran last and whose span-floor result produced
-the synthesis's `THE MECHANISM CHAIN` section. It is the only
-synthesis in this file and it must stay the only one — revise it, never append a
-second.
+2026-08-22 (**post-R8c**, its seventh revision) to cover everything below it:
+R5c, R13, the `ctx_` phase-label correction, R13c, R13d, **R11 — including its
+fold and the config-epoch rule that follows from it** — **R9c**, whose
+prefix-caching decomposition rewrote the synthesis's numbered item 2 and whose
+refused arm is recorded there, **R13b**, whose span-floor result produced the
+synthesis's `THE MECHANISM CHAIN` section, and **R8c**, which ran last, retired
+the last deep inversion and **corrected a published loss upward from 0.72x to
+0.92x**, rewriting the synthesis's three-run sampling warning in the process. It
+is the only synthesis in this file and it must stay the only one — revise it,
+never append a second.
 
 Short version for anyone who reads nothing else: **8 board cells won, 12 lost,
 nothing submitted to the arena and nothing ever will be. Widest margin **6.21x**
@@ -7394,8 +7549,13 @@ token budget is the campaign's big lever, its curve knees at 65536, and **R11
 folded that value into `recipe.yaml` after measuring the c1 anchor at it and
 finding it inert (+0.27%)** — so the recipe is no longer the one the campaign
 opened with, and any row labelled "mnbt 8192 — PRE-FOLD recipe" now needs an
-explicit `-o` to reproduce. **Pick up at `mnbt 65536 + mns 4` at c4**, the config
-the recipe actually ships and the one cell nobody has measured it at.**
+explicit `-o` to reproduce. ⚠ **R8c ran last and corrected `ctx_tg @ d32768 c1`
+from 0.72x to 0.92x — a 3-run median that was 28.5% too LOW — which retired the
+campaign's "3-run medians always come in high" rule as a small-sample artefact
+of which figures got audited. Pick up at `mnbt 65536 + mns 4` at c4**, the
+config the recipe actually ships and the one cell nobody has measured it at, or
+at the protection round on `ctx_tg @ d32768 c1` at both budgets, which is the
+only box time left that can change the standings.**
 
 ## Round 13b hypothesis — per-request MTP acceptance, and whether it is what the span ratio is made of (2026-08-22)
 
