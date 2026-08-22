@@ -92,6 +92,15 @@ backlog). The lock guards every read-modify-write on the outbox file, so
 concurrent `remember.sh` calls and a concurrent `--drain` never lose or
 duplicate a queued line.
 
+Durability against a killed process: the lock is released by a trap on
+`EXIT`/`INT`/`TERM`, and `acquire_lock` steals a lock dir older than 60s
+(the case a trap can't cover — nothing catches `SIGKILL`). A drain moves
+the outbox to a `.inflight` file first and deletes each line from it only
+after a confirmed 2xx, so a kill mid-drain leaves every undelivered line
+on disk (never held only in a shell variable); a leftover `.inflight` is
+folded back into the outbox at the start of the next `remember.sh` run,
+write or drain.
+
 Example: `remember.sh "[VERDICT] bench_4f9da10931e0: ngram spec decode (n=4) — KEEP: +3.9 tg over band" experiment:qwen35-08b-tg128-c1`
 
 ### `recall.sh "<query>" [entity] [k=10]`
@@ -118,8 +127,9 @@ at the end.
 ### `memory-backfill.sh [-n] <experiment-dir>`
 
 Rebuilds mem0's index for one experiment from its canonical
-`RESULTS.md` table — every row becomes a one-liner, tagged `[CRASH]` when
-the verdict column starts with "crash" and `[VERDICT]` otherwise. Each
+`RESULTS.md` table — every row with a non-empty verdict becomes a
+one-liner, tagged `[CRASH]` when the verdict column starts with "crash"
+and `[VERDICT]` otherwise. Each
 entry is tagged `entity=experiment:<dirname>` and deduped via
 `POST /memories/list` with `filters: {sha256: ...}` — an exact-match
 check, not a similarity search, so it never posts a false-positive

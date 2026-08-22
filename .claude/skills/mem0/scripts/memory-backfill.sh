@@ -94,6 +94,7 @@ parse_results() {
     esac
     mutation="$(trim "${cols[2]:-}")"
     verdict="$(trim "${cols[$((n - 1))]:-}")"
+    [ -z "$verdict" ] && continue
     tag="VERDICT"
     case "$(lower "$verdict")" in
       crash*) tag="CRASH" ;;
