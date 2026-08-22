@@ -1,0 +1,299 @@
+(APIServer pid=94) INFO 08-22 20:28:47 [api_utils.py:347] 
+(APIServer pid=94) INFO 08-22 20:28:47 [api_utils.py:347]        █     █     █▄   ▄█
+(APIServer pid=94) INFO 08-22 20:28:47 [api_utils.py:347]  ▄▄ ▄█ █     █     █ ▀▄▀ █  version 0.27.2rc1.dev360+ge85d1b69c.d20260821
+(APIServer pid=94) INFO 08-22 20:28:47 [api_utils.py:347]   █▄█▀ █     █     █     █  model   nvidia/Qwen3.6-35B-A3B-NVFP4
+(APIServer pid=94) INFO 08-22 20:28:47 [api_utils.py:347]    ▀▀  ▀▀▀▀▀ ▀▀▀▀▀ ▀     ▀
+(APIServer pid=94) INFO 08-22 20:28:47 [api_utils.py:347] 
+(APIServer pid=94) INFO 08-22 20:28:47 [api_utils.py:286] non-default args: {'model_tag': 'nvidia/Qwen3.6-35B-A3B-NVFP4', 'enable_auto_tool_choice': True, 'tool_call_parser': 'qwen3_xml', 'host': '0.0.0.0', 'model': 'nvidia/Qwen3.6-35B-A3B-NVFP4', 'trust_remote_code': True, 'max_model_len': 32768, 'load_format': 'fastsafetensors', 'attention_backend': 'flashinfer', 'reasoning_parser': 'qwen3', 'gpu_memory_utilization': 0.8, 'kv_cache_dtype': 'fp8', 'enable_prefix_caching': True, 'max_num_batched_tokens': 65536, 'max_num_seqs': 4, 'enable_chunked_prefill': True, 'async_scheduling': True, 'moe_backend': 'flashinfer_trtllm', 'speculative_config': {'method': 'mtp', 'num_speculative_tokens': 3, 'moe_backend': 'triton'}}
+(APIServer pid=94) INFO 08-22 20:28:47 [arg_utils.py:820] HF_HUB_OFFLINE is True, replace model_id [nvidia/Qwen3.6-35B-A3B-NVFP4] to model_path [/cache/huggingface/hub/models--nvidia--Qwen3.6-35B-A3B-NVFP4/snapshots/491c2f1ea524c639598bf8fa787a93fed5a6fbce]
+(APIServer pid=94) WARNING 08-22 20:28:47 [envs.py:2230] Unknown vLLM environment variable detected: VLLM_BASE_DIR
+(APIServer pid=94) INFO 08-22 20:28:47 [model.py:684] Resolved architecture: Qwen3_5MoeForConditionalGeneration
+(APIServer pid=94) INFO 08-22 20:28:47 [model.py:2017] Using max model len 32768
+(APIServer pid=94) [ERROR] `min_frames` is part of Qwen3VLVideoProcessorInitKwargs, but not documented. Make sure to add it to the docstring of the function in /usr/local/lib/python3.12/dist-packages/transformers/models/qwen3_vl/video_processing_qwen3_vl.py.
+(APIServer pid=94) [ERROR] `max_frames` is part of Qwen3VLVideoProcessorInitKwargs, but not documented. Make sure to add it to the docstring of the function in /usr/local/lib/python3.12/dist-packages/transformers/models/qwen3_vl/video_processing_qwen3_vl.py.
+(APIServer pid=94) INFO 08-22 20:28:49 [cache.py:304] Using fp8 data type to store kv cache. It reduces the GPU memory footprint and boosts the performance. Meanwhile, it may cause accuracy drop without a proper scaling factor
+(APIServer pid=94) INFO 08-22 20:28:49 [model.py:684] Resolved architecture: Qwen3_5MoeMTP
+(APIServer pid=94) INFO 08-22 20:28:49 [model.py:2017] Using max model len 262144
+(APIServer pid=94) INFO 08-22 20:28:49 [model.py:887] Disabled mm_prefix attention mode because multimodal inputs are configuration-disabled. Attention backends without mm_prefix support may now be selected.
+(APIServer pid=94) WARNING 08-22 20:28:49 [speculative.py:980] Enabling num_speculative_tokens > 1 will run multiple times of forward on same MTP layer,which may result in lower acceptance rate
+(APIServer pid=94) INFO 08-22 20:28:49 [speculative.py:1228] Overriding draft model max model len from 262144 to 32768
+(APIServer pid=94) INFO 08-22 20:28:49 [scheduler.py:242] Chunked prefill is enabled with max_num_batched_tokens=65536.
+(APIServer pid=94) INFO 08-22 20:28:49 [config.py:605] Mamba cache mode is set to 'align' for Qwen3_5MoeForConditionalGeneration by default when prefix caching is enabled
+(APIServer pid=94) WARNING 08-22 20:28:49 [modelopt.py:378] Detected ModelOpt fp8 checkpoint (quant_algo=FP8). Please note that the format is experimental and could change.
+(APIServer pid=94) WARNING 08-22 20:28:49 [modelopt.py:1028] Detected ModelOpt NVFP4 checkpoint (quant_algo=NVFP4). Please note that the format is experimental and could change in future.
+(APIServer pid=94) WARNING 08-22 20:28:49 [modelopt.py:1028] Detected ModelOpt NVFP4 checkpoint (quant_algo=W4A16_NVFP4). Please note that the format is experimental and could change in future.
+(APIServer pid=94) WARNING 08-22 20:28:49 [modelopt.py:1692] Detected ModelOpt MXFP8 checkpoint. Please note that the format is experimental and could change in future.
+(APIServer pid=94) INFO 08-22 20:28:49 [kernel.py:308] Final IR op priority after setting platform defaults: IrOpPriorityConfig(rms_norm=['native'], fused_add_rms_norm=['native'])
+(APIServer pid=94) [transformers] The `use_fast` parameter is deprecated and will be removed in a future version. Use `backend="torchvision"` instead of `use_fast=True`, or `backend="pil"` instead of `use_fast=False`.
+(EngineCore pid=338) INFO 08-22 20:29:02 [core.py:122] Initializing a V1 LLM engine (v0.27.2rc1.dev360+ge85d1b69c.d20260821) with config: model='/cache/huggingface/hub/models--nvidia--Qwen3.6-35B-A3B-NVFP4/snapshots/491c2f1ea524c639598bf8fa787a93fed5a6fbce', speculative_config=SpeculativeConfig(method='mtp', model='/cache/huggingface/hub/models--nvidia--Qwen3.6-35B-A3B-NVFP4/snapshots/491c2f1ea524c639598bf8fa787a93fed5a6fbce', num_spec_tokens=3), tokenizer='/cache/huggingface/hub/models--nvidia--Qwen3.6-35B-A3B-NVFP4/snapshots/491c2f1ea524c639598bf8fa787a93fed5a6fbce', skip_tokenizer_init=False, tokenizer_mode=auto, revision=None, tokenizer_revision=None, trust_remote_code=True, dtype=torch.bfloat16, max_seq_len=32768, download_dir=None, load_format=fastsafetensors, tensor_parallel_size=1, pipeline_parallel_size=1, data_parallel_size=1, decode_context_parallel_size=1, dcp_comm_backend=ag_rs, disable_custom_all_reduce=False, quantization=modelopt_mixed, quantization_config=None, enforce_eager=False, enable_return_routed_experts=False, kv_cache_dtype=fp8, device_config=cuda, structured_outputs_config=StructuredOutputsConfig(backend='auto', disable_any_whitespace=False, disable_additional_properties=False, reasoning_parser='qwen3', reasoning_parser_plugin='', enable_in_reasoning=False), observability_config=ObservabilityConfig(show_hidden_metrics_for_version=None, otlp_traces_endpoint=None, collect_detailed_traces=None, per_request_spec_decode_metrics='none', kv_cache_metrics=False, kv_cache_metrics_sample=0.01, cudagraph_metrics=False, enable_layerwise_nvtx_tracing=False, enable_mfu_metrics=False, enable_mm_processor_stats=False, enable_logging_iteration_details=False, jit_monitor_mode='warn', jit_monitor_verbose=False), seed=0, served_model_name=/cache/huggingface/hub/models--nvidia--Qwen3.6-35B-A3B-NVFP4/snapshots/491c2f1ea524c639598bf8fa787a93fed5a6fbce, enable_prefix_caching=True, enable_chunked_prefill=True, pooler_config=None, compilation_config={'mode': <CompilationMode.VLLM_COMPILE: 3>, 'debug_dump_path': None, 'cache_dir': '', 'compile_cache_save_format': 'binary', 'backend': 'inductor', 'custom_ops': ['none'], 'ir_enable_torch_wrap': True, 'splitting_ops': ['vllm::unified_attention_with_output', 'vllm::unified_mla_attention_with_output', 'vllm::mamba_mixer2', 'vllm::mamba_mixer', 'vllm::short_conv', 'vllm::linear_attention', 'vllm::qwen_gdn_attention_core', 'vllm::qwen_gdn_attention_core_fused_norm_packed', 'vllm::gdn_attention_core_xpu', 'vllm::olmo_hybrid_gdn_full_forward', 'vllm::sparse_attn_indexer', 'vllm::rocm_aiter_sparse_attn_indexer', 'vllm::deepseek_v4_attention', 'vllm::hpc_rope_norm_forward', 'vllm::unified_kv_cache_update', 'vllm::unified_mla_kv_cache_update'], 'compile_mm_encoder': False, 'cudagraph_mm_encoder': False, 'encoder_cudagraph_token_budgets': [], 'encoder_cudagraph_max_vision_items_per_batch': 0, 'encoder_cudagraph_max_frames_per_batch': None, 'compile_sizes': [], 'compile_ranges_endpoints': [65536], 'inductor_compile_config': {'enable_auto_functionalized_v2': False, 'combo_kernels': True, 'benchmark_combo_kernel': True}, 'inductor_passes': {}, 'cudagraph_mode': <CUDAGraphMode.FULL_AND_PIECEWISE: (2, 1)>, 'cudagraph_num_of_warmups': 1, 'cudagraph_capture_sizes': [1, 2, 4, 8, 16, 24, 32], 'cudagraph_copy_inputs': False, 'cudagraph_specialize_lora': True, 'use_inductor_graph_partition': False, 'pass_config': {'fuse_norm_quant': False, 'fuse_act_quant': False, 'fuse_attn_quant': False, 'enable_sp': False, 'fuse_gemm_comms': False, 'fuse_allreduce_rms': False, 'enable_qk_norm_rope_fusion': False, 'fuse_rope_kvcache_cat_mla': False, 'fuse_act_padding': False, 'fuse_qk_norm_rope_kvcache': False}, 'max_cudagraph_capture_size': 32, 'dynamic_shapes_config': {'type': <DynamicShapesType.BACKED: 'backed'>, 'evaluate_guards': False, 'assume_32_bit_indexing': False}, 'local_cache_dir': None, 'fast_moe_cold_start': False, 'static_all_moe_layers': []}, kernel_config=KernelConfig(ir_op_priority=IrOpPriorityConfig(rms_norm=['native'], fused_add_rms_norm=['native']), enable_flashinfer_autotune=True, enable_cutedsl_warmup=True, enable_jit_warmup=True, enable_bf16x3_router_gemm=False, moe_backend='flashinfer_trtllm', linear_backend='auto')
+(EngineCore pid=338) [ERROR] `min_frames` is part of Qwen3VLVideoProcessorInitKwargs, but not documented. Make sure to add it to the docstring of the function in /usr/local/lib/python3.12/dist-packages/transformers/models/qwen3_vl/video_processing_qwen3_vl.py.
+(EngineCore pid=338) [ERROR] `max_frames` is part of Qwen3VLVideoProcessorInitKwargs, but not documented. Make sure to add it to the docstring of the function in /usr/local/lib/python3.12/dist-packages/transformers/models/qwen3_vl/video_processing_qwen3_vl.py.
+(EngineCore pid=338) INFO 08-22 20:29:03 [parallel_state.py:1638] world_size=1 rank=0 local_rank=0 distributed_init_method=file:///tmp/vllm_dist_b7f7c58c41034250a600fbae6dad0acb backend=nccl
+(EngineCore pid=338) INFO 08-22 20:29:03 [parallel_state.py:1982] rank 0 in world size 1 is assigned as DP rank 0, PP rank 0, PCP rank 0, TP rank 0, EP rank 0, EPLB rank N/A
+(EngineCore pid=338) INFO 08-22 20:29:05 [topk_topp_sampler.py:62] Using FlashInfer for top-p & top-k sampling.
+(EngineCore pid=338) WARNING 08-22 20:29:06 [__init__.py:205] min_p and logit_bias parameters won't work with speculative decoding.
+(EngineCore pid=338) [transformers] The `use_fast` parameter is deprecated and will be removed in a future version. Use `backend="torchvision"` instead of `use_fast=True`, or `backend="pil"` instead of `use_fast=False`.
+(EngineCore pid=338) INFO 08-22 20:29:09 [gpu_model_runner.py:5418] Starting to load model /cache/huggingface/hub/models--nvidia--Qwen3.6-35B-A3B-NVFP4/snapshots/491c2f1ea524c639598bf8fa787a93fed5a6fbce...
+(EngineCore pid=338) INFO 08-22 20:29:10 [cuda.py:551] Using backend AttentionBackendEnum.FLASH_ATTN for vit attention
+(EngineCore pid=338) INFO 08-22 20:29:10 [mm_encoder_attention.py:375] Using AttentionBackendEnum.FLASH_ATTN for MMEncoderAttention.
+(EngineCore pid=338) INFO 08-22 20:29:10 [__init__.py:721] Selected FlashInferFP8ScaledMMLinearKernel for ModelOptFp8LinearMethod
+(EngineCore pid=338) INFO 08-22 20:29:10 [deep_gemm.py:186] deep_gemm not found in site-packages, trying vendored vllm.third_party.deep_gemm
+(EngineCore pid=338) INFO 08-22 20:29:10 [deep_gemm.py:213] DeepGEMM PDL enabled on vllm.third_party.deep_gemm.
+(EngineCore pid=338) INFO 08-22 20:29:10 [deep_gemm.py:131] DeepGEMM E8M0 enabled on current platform.
+(EngineCore pid=338) INFO 08-22 20:29:10 [qwen_gdn_linear_attn.py:158] Using Triton/FLA GDN prefill kernel (requested=auto, head_k_dim=128).
+(EngineCore pid=338) INFO 08-22 20:29:10 [qwen_gdn_linear_attn.py:505] GDN decode kernel: cuda
+(EngineCore pid=338) INFO 08-22 20:29:10 [__init__.py:1061] Using MarlinNvFp4LinearKernel for NVFP4 GEMM
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354] EngineCore failed to start.
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354] Traceback (most recent call last):
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]   File "/usr/local/lib/python3.12/dist-packages/vllm/v1/engine/core.py", line 1316, in run_engine_core
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]     engine_core = EngineCoreProc(*args, engine_index=dp_rank, **kwargs)
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]   File "/usr/local/lib/python3.12/dist-packages/vllm/tracing/otel.py", line 178, in sync_wrapper
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]     return func(*args, **kwargs)
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]            ^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]   File "/usr/local/lib/python3.12/dist-packages/vllm/v1/engine/core.py", line 1073, in __init__
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]     super().__init__(
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]   File "/usr/local/lib/python3.12/dist-packages/vllm/v1/engine/core.py", line 133, in __init__
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]     self.model_executor = executor_class(vllm_config)
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]   File "/usr/local/lib/python3.12/dist-packages/vllm/tracing/otel.py", line 178, in sync_wrapper
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]     return func(*args, **kwargs)
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]            ^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]   File "/usr/local/lib/python3.12/dist-packages/vllm/v1/executor/abstract.py", line 110, in __init__
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]     self._init_executor()
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]   File "/usr/local/lib/python3.12/dist-packages/vllm/v1/executor/uniproc_executor.py", line 74, in _init_executor
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]     self.driver_worker.load_model()
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]   File "/usr/local/lib/python3.12/dist-packages/vllm/v1/worker/gpu_worker.py", line 457, in load_model
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]     self.model_runner.load_model(load_dummy_weights=load_dummy_weights)
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]   File "/usr/local/lib/python3.12/dist-packages/vllm/tracing/otel.py", line 178, in sync_wrapper
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]     return func(*args, **kwargs)
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]            ^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]   File "/usr/local/lib/python3.12/dist-packages/vllm/v1/worker/gpu_model_runner.py", line 5434, in load_model
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]     self.model = model_loader.load_model(
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]                  ^^^^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]   File "/usr/local/lib/python3.12/dist-packages/vllm/tracing/otel.py", line 178, in sync_wrapper
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]     return func(*args, **kwargs)
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]            ^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]   File "/usr/local/lib/python3.12/dist-packages/vllm/model_executor/model_loader/base_loader.py", line 55, in load_model
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]     model = initialize_model(
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]             ^^^^^^^^^^^^^^^^^
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]   File "/usr/local/lib/python3.12/dist-packages/vllm/tracing/otel.py", line 178, in sync_wrapper
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]     return func(*args, **kwargs)
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]            ^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]   File "/usr/local/lib/python3.12/dist-packages/vllm/model_executor/model_loader/utils.py", line 59, in initialize_model
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]     model = model_class(vllm_config=vllm_config, prefix=prefix)
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]   File "/usr/local/lib/python3.12/dist-packages/vllm/model_executor/models/qwen3_5.py", line 732, in __init__
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]     self.language_model = Qwen3_5MoeForCausalLM(
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]                           ^^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]   File "/usr/local/lib/python3.12/dist-packages/vllm/model_executor/models/qwen3_5.py", line 451, in __init__
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]     super().__init__(vllm_config=vllm_config, prefix=prefix)
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]   File "/usr/local/lib/python3.12/dist-packages/vllm/model_executor/models/qwen3_5.py", line 342, in __init__
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]     self.model = Qwen3_5Model(
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]                  ^^^^^^^^^^^^^
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]   File "/usr/local/lib/python3.12/dist-packages/vllm/compilation/decorators.py", line 383, in __init__
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]     old_init(self, *args, **kwargs)
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]   File "/usr/local/lib/python3.12/dist-packages/vllm/model_executor/models/qwen3_5.py", line 257, in __init__
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]     self.start_layer, self.end_layer, self.layers = make_layers(
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]                                                     ^^^^^^^^^^^^
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]   File "/usr/local/lib/python3.12/dist-packages/vllm/model_executor/models/utils.py", line 858, in make_layers
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]     + get_offloader().wrap_modules(
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]   File "/usr/local/lib/python3.12/dist-packages/vllm/model_executor/offloader/base.py", line 104, in wrap_modules
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]     return list(modules_generator)
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]            ^^^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]   File "/usr/local/lib/python3.12/dist-packages/vllm/model_executor/models/utils.py", line 859, in <genexpr>
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]     layer_fn(prefix=f"{prefix}.{idx}") for idx in range(start_layer, end_layer)
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]   File "/usr/local/lib/python3.12/dist-packages/vllm/model_executor/models/qwen3_5.py", line 251, in get_layer
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]     return Qwen3_5DecoderLayer(
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]            ^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]   File "/usr/local/lib/python3.12/dist-packages/vllm/model_executor/models/qwen3_5.py", line 167, in __init__
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]     self.mlp = Qwen3NextSparseMoeBlock(
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]                ^^^^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]   File "/usr/local/lib/python3.12/dist-packages/vllm/model_executor/models/qwen3_next.py", line 165, in __init__
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]     self.experts = FusedMoEFactory(
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]                    ^^^^^^^^^^^^^^^^
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]   File "/usr/local/lib/python3.12/dist-packages/vllm/model_executor/layers/fused_moe/layer.py", line 366, in FusedMoEFactory
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]     routed_experts = routed_experts_cls(
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]                      ^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]   File "/usr/local/lib/python3.12/dist-packages/vllm/model_executor/layers/fused_moe/routed_experts.py", line 121, in __init__
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]     self.quant_method = self._get_quant_method(
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]                         ^^^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]   File "/usr/local/lib/python3.12/dist-packages/vllm/model_executor/layers/fused_moe/routed_experts.py", line 201, in _get_quant_method
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]     quant_method = quant_config.get_quant_method(self, prefix)
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]   File "/usr/local/lib/python3.12/dist-packages/vllm/model_executor/layers/quantization/modelopt.py", line 2433, in get_quant_method
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]     return ModelOptNvFp4FusedMoE(
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]            ^^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]   File "/usr/local/lib/python3.12/dist-packages/vllm/model_executor/layers/quantization/modelopt.py", line 1409, in __init__
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]     self.nvfp4_backend, self.experts_cls = select_nvfp4_moe_backend(
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]                                            ^^^^^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]   File "/usr/local/lib/python3.12/dist-packages/vllm/model_executor/layers/fused_moe/oracle/nvfp4.py", line 279, in select_nvfp4_moe_backend
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]     return _return_or_raise(
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]            ^^^^^^^^^^^^^^^^^
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]   File "/usr/local/lib/python3.12/dist-packages/vllm/model_executor/layers/fused_moe/oracle/nvfp4.py", line 256, in _return_or_raise
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354]     raise ValueError(_make_log_unsupported(backend, reason))
+(EngineCore pid=338) ERROR 08-22 20:29:10 [core.py:1354] ValueError: NvFp4 MoE backend 'FLASHINFER_TRTLLM' does not support the deployment configuration since kernel does not support current device cuda.
+(EngineCore pid=338) Process EngineCore:
+(EngineCore pid=338) Traceback (most recent call last):
+(EngineCore pid=338)   File "/usr/lib/python3.12/multiprocessing/process.py", line 314, in _bootstrap
+(EngineCore pid=338)     self.run()
+(EngineCore pid=338)   File "/usr/lib/python3.12/multiprocessing/process.py", line 108, in run
+(EngineCore pid=338)     self._target(*self._args, **self._kwargs)
+(EngineCore pid=338)   File "/usr/local/lib/python3.12/dist-packages/vllm/v1/engine/core.py", line 1358, in run_engine_core
+(EngineCore pid=338)     raise e
+(EngineCore pid=338)   File "/usr/local/lib/python3.12/dist-packages/vllm/v1/engine/core.py", line 1316, in run_engine_core
+(EngineCore pid=338)     engine_core = EngineCoreProc(*args, engine_index=dp_rank, **kwargs)
+(EngineCore pid=338)                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=338)   File "/usr/local/lib/python3.12/dist-packages/vllm/tracing/otel.py", line 178, in sync_wrapper
+(EngineCore pid=338)     return func(*args, **kwargs)
+(EngineCore pid=338)            ^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=338)   File "/usr/local/lib/python3.12/dist-packages/vllm/v1/engine/core.py", line 1073, in __init__
+(EngineCore pid=338)     super().__init__(
+(EngineCore pid=338)   File "/usr/local/lib/python3.12/dist-packages/vllm/v1/engine/core.py", line 133, in __init__
+(EngineCore pid=338)     self.model_executor = executor_class(vllm_config)
+(EngineCore pid=338)                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=338)   File "/usr/local/lib/python3.12/dist-packages/vllm/tracing/otel.py", line 178, in sync_wrapper
+(EngineCore pid=338)     return func(*args, **kwargs)
+(EngineCore pid=338)            ^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=338)   File "/usr/local/lib/python3.12/dist-packages/vllm/v1/executor/abstract.py", line 110, in __init__
+(EngineCore pid=338)     self._init_executor()
+(EngineCore pid=338)   File "/usr/local/lib/python3.12/dist-packages/vllm/v1/executor/uniproc_executor.py", line 74, in _init_executor
+(EngineCore pid=338)     self.driver_worker.load_model()
+(EngineCore pid=338)   File "/usr/local/lib/python3.12/dist-packages/vllm/v1/worker/gpu_worker.py", line 457, in load_model
+(EngineCore pid=338)     self.model_runner.load_model(load_dummy_weights=load_dummy_weights)
+(EngineCore pid=338)   File "/usr/local/lib/python3.12/dist-packages/vllm/tracing/otel.py", line 178, in sync_wrapper
+(EngineCore pid=338)     return func(*args, **kwargs)
+(EngineCore pid=338)            ^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=338)   File "/usr/local/lib/python3.12/dist-packages/vllm/v1/worker/gpu_model_runner.py", line 5434, in load_model
+(EngineCore pid=338)     self.model = model_loader.load_model(
+(EngineCore pid=338)                  ^^^^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=338)   File "/usr/local/lib/python3.12/dist-packages/vllm/tracing/otel.py", line 178, in sync_wrapper
+(EngineCore pid=338)     return func(*args, **kwargs)
+(EngineCore pid=338)            ^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=338)   File "/usr/local/lib/python3.12/dist-packages/vllm/model_executor/model_loader/base_loader.py", line 55, in load_model
+(EngineCore pid=338)     model = initialize_model(
+(EngineCore pid=338)             ^^^^^^^^^^^^^^^^^
+(EngineCore pid=338)   File "/usr/local/lib/python3.12/dist-packages/vllm/tracing/otel.py", line 178, in sync_wrapper
+(EngineCore pid=338)     return func(*args, **kwargs)
+(EngineCore pid=338)            ^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=338)   File "/usr/local/lib/python3.12/dist-packages/vllm/model_executor/model_loader/utils.py", line 59, in initialize_model
+(EngineCore pid=338)     model = model_class(vllm_config=vllm_config, prefix=prefix)
+(EngineCore pid=338)             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=338)   File "/usr/local/lib/python3.12/dist-packages/vllm/model_executor/models/qwen3_5.py", line 732, in __init__
+(EngineCore pid=338)     self.language_model = Qwen3_5MoeForCausalLM(
+(EngineCore pid=338)                           ^^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=338)   File "/usr/local/lib/python3.12/dist-packages/vllm/model_executor/models/qwen3_5.py", line 451, in __init__
+(EngineCore pid=338)     super().__init__(vllm_config=vllm_config, prefix=prefix)
+(EngineCore pid=338)   File "/usr/local/lib/python3.12/dist-packages/vllm/model_executor/models/qwen3_5.py", line 342, in __init__
+(EngineCore pid=338)     self.model = Qwen3_5Model(
+(EngineCore pid=338)                  ^^^^^^^^^^^^^
+(EngineCore pid=338)   File "/usr/local/lib/python3.12/dist-packages/vllm/compilation/decorators.py", line 383, in __init__
+(EngineCore pid=338)     old_init(self, *args, **kwargs)
+(EngineCore pid=338)   File "/usr/local/lib/python3.12/dist-packages/vllm/model_executor/models/qwen3_5.py", line 257, in __init__
+(EngineCore pid=338)     self.start_layer, self.end_layer, self.layers = make_layers(
+(EngineCore pid=338)                                                     ^^^^^^^^^^^^
+(EngineCore pid=338)   File "/usr/local/lib/python3.12/dist-packages/vllm/model_executor/models/utils.py", line 858, in make_layers
+(EngineCore pid=338)     + get_offloader().wrap_modules(
+(EngineCore pid=338)       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=338)   File "/usr/local/lib/python3.12/dist-packages/vllm/model_executor/offloader/base.py", line 104, in wrap_modules
+(EngineCore pid=338)     return list(modules_generator)
+(EngineCore pid=338)            ^^^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=338)   File "/usr/local/lib/python3.12/dist-packages/vllm/model_executor/models/utils.py", line 859, in <genexpr>
+(EngineCore pid=338)     layer_fn(prefix=f"{prefix}.{idx}") for idx in range(start_layer, end_layer)
+(EngineCore pid=338)     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=338)   File "/usr/local/lib/python3.12/dist-packages/vllm/model_executor/models/qwen3_5.py", line 251, in get_layer
+(EngineCore pid=338)     return Qwen3_5DecoderLayer(
+(EngineCore pid=338)            ^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=338)   File "/usr/local/lib/python3.12/dist-packages/vllm/model_executor/models/qwen3_5.py", line 167, in __init__
+(EngineCore pid=338)     self.mlp = Qwen3NextSparseMoeBlock(
+(EngineCore pid=338)                ^^^^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=338)   File "/usr/local/lib/python3.12/dist-packages/vllm/model_executor/models/qwen3_next.py", line 165, in __init__
+(EngineCore pid=338)     self.experts = FusedMoEFactory(
+(EngineCore pid=338)                    ^^^^^^^^^^^^^^^^
+(EngineCore pid=338)   File "/usr/local/lib/python3.12/dist-packages/vllm/model_executor/layers/fused_moe/layer.py", line 366, in FusedMoEFactory
+(EngineCore pid=338)     routed_experts = routed_experts_cls(
+(EngineCore pid=338)                      ^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=338)   File "/usr/local/lib/python3.12/dist-packages/vllm/model_executor/layers/fused_moe/routed_experts.py", line 121, in __init__
+(EngineCore pid=338)     self.quant_method = self._get_quant_method(
+(EngineCore pid=338)                         ^^^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=338)   File "/usr/local/lib/python3.12/dist-packages/vllm/model_executor/layers/fused_moe/routed_experts.py", line 201, in _get_quant_method
+(EngineCore pid=338)     quant_method = quant_config.get_quant_method(self, prefix)
+(EngineCore pid=338)                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=338)   File "/usr/local/lib/python3.12/dist-packages/vllm/model_executor/layers/quantization/modelopt.py", line 2433, in get_quant_method
+(EngineCore pid=338)     return ModelOptNvFp4FusedMoE(
+(EngineCore pid=338)            ^^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=338)   File "/usr/local/lib/python3.12/dist-packages/vllm/model_executor/layers/quantization/modelopt.py", line 1409, in __init__
+(EngineCore pid=338)     self.nvfp4_backend, self.experts_cls = select_nvfp4_moe_backend(
+(EngineCore pid=338)                                            ^^^^^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=338)   File "/usr/local/lib/python3.12/dist-packages/vllm/model_executor/layers/fused_moe/oracle/nvfp4.py", line 279, in select_nvfp4_moe_backend
+(EngineCore pid=338)     return _return_or_raise(
+(EngineCore pid=338)            ^^^^^^^^^^^^^^^^^
+(EngineCore pid=338)   File "/usr/local/lib/python3.12/dist-packages/vllm/model_executor/layers/fused_moe/oracle/nvfp4.py", line 256, in _return_or_raise
+(EngineCore pid=338)     raise ValueError(_make_log_unsupported(backend, reason))
+(EngineCore pid=338) ValueError: NvFp4 MoE backend 'FLASHINFER_TRTLLM' does not support the deployment configuration since kernel does not support current device cuda.
+[rank0]:[W822 20:29:11.048449613 ProcessGroupNCCL.cpp:1624] Warning: WARNING: destroy_process_group() was not called before program exit, which can leak resources. For more info, please see https://pytorch.org/docs/stable/distributed.html#shutdown (function operator())
+(APIServer pid=94) INFO 08-22 20:29:12 [utils.py:615] [shutdown] Process manager: send sigterm to process EngineCore
+(APIServer pid=94) Traceback (most recent call last):
+(APIServer pid=94)   File "/usr/local/bin/vllm", line 10, in <module>
+(APIServer pid=94)     sys.exit(main())
+(APIServer pid=94)              ^^^^^^
+(APIServer pid=94)   File "/usr/local/lib/python3.12/dist-packages/vllm/entrypoints/cli/main.py", line 97, in main
+(APIServer pid=94)     args.dispatch_function(args)
+(APIServer pid=94)   File "/usr/local/lib/python3.12/dist-packages/vllm/entrypoints/cli/serve.py", line 150, in cmd
+(APIServer pid=94)     uvloop.run(run_server(args))
+(APIServer pid=94)   File "/usr/local/lib/python3.12/dist-packages/uvloop/__init__.py", line 96, in run
+(APIServer pid=94)     return __asyncio.run(
+(APIServer pid=94)            ^^^^^^^^^^^^^^
+(APIServer pid=94)   File "/usr/lib/python3.12/asyncio/runners.py", line 194, in run
+(APIServer pid=94)     return runner.run(main)
+(APIServer pid=94)            ^^^^^^^^^^^^^^^^
+(APIServer pid=94)   File "/usr/lib/python3.12/asyncio/runners.py", line 118, in run
+(APIServer pid=94)     return self._loop.run_until_complete(task)
+(APIServer pid=94)            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+(APIServer pid=94)   File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+(APIServer pid=94)   File "/usr/local/lib/python3.12/dist-packages/uvloop/__init__.py", line 48, in wrapper
+(APIServer pid=94)     return await main
+(APIServer pid=94)            ^^^^^^^^^^
+(APIServer pid=94)   File "/usr/local/lib/python3.12/dist-packages/vllm/entrypoints/launchers/api_server/entry.py", line 176, in run_server
+(APIServer pid=94)     await run_server_worker(listen_address, sock, args, **uvicorn_kwargs)
+(APIServer pid=94)   File "/usr/local/lib/python3.12/dist-packages/vllm/entrypoints/launchers/api_server/entry.py", line 190, in run_server_worker
+(APIServer pid=94)     async with build_async_engine_client(
+(APIServer pid=94)   File "/usr/lib/python3.12/contextlib.py", line 210, in __aenter__
+(APIServer pid=94)     return await anext(self.gen)
+(APIServer pid=94)            ^^^^^^^^^^^^^^^^^^^^^
+(APIServer pid=94)   File "/usr/local/lib/python3.12/dist-packages/vllm/entrypoints/launchers/api_server/entry.py", line 58, in build_async_engine_client
+(APIServer pid=94)     async with build_async_engine_client_from_engine_args(
+(APIServer pid=94)   File "/usr/lib/python3.12/contextlib.py", line 210, in __aenter__
+(APIServer pid=94)     return await anext(self.gen)
+(APIServer pid=94)            ^^^^^^^^^^^^^^^^^^^^^
+(APIServer pid=94)   File "/usr/local/lib/python3.12/dist-packages/vllm/entrypoints/launchers/api_server/entry.py", line 94, in build_async_engine_client_from_engine_args
+(APIServer pid=94)     async_llm = AsyncLLM.from_vllm_config(
+(APIServer pid=94)                 ^^^^^^^^^^^^^^^^^^^^^^^^^^
+(APIServer pid=94)   File "/usr/local/lib/python3.12/dist-packages/vllm/v1/engine/async_llm.py", line 220, in from_vllm_config
+(APIServer pid=94)     return cls(
+(APIServer pid=94)            ^^^^
+(APIServer pid=94)   File "/usr/local/lib/python3.12/dist-packages/vllm/v1/engine/async_llm.py", line 149, in __init__
+(APIServer pid=94)     self.engine_core = EngineCoreClient.make_async_mp_client(
+(APIServer pid=94)                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+(APIServer pid=94)   File "/usr/local/lib/python3.12/dist-packages/vllm/tracing/otel.py", line 178, in sync_wrapper
+(APIServer pid=94)     return func(*args, **kwargs)
+(APIServer pid=94)            ^^^^^^^^^^^^^^^^^^^^^
+(APIServer pid=94)   File "/usr/local/lib/python3.12/dist-packages/vllm/v1/engine/core_client.py", line 139, in make_async_mp_client
+(APIServer pid=94)     return AsyncMPClient(*client_args)
+(APIServer pid=94)            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+(APIServer pid=94)   File "/usr/local/lib/python3.12/dist-packages/vllm/tracing/otel.py", line 178, in sync_wrapper
+(APIServer pid=94)     return func(*args, **kwargs)
+(APIServer pid=94)            ^^^^^^^^^^^^^^^^^^^^^
+(APIServer pid=94)   File "/usr/local/lib/python3.12/dist-packages/vllm/v1/engine/core_client.py", line 991, in __init__
+(APIServer pid=94)     super().__init__(
+(APIServer pid=94)   File "/usr/local/lib/python3.12/dist-packages/vllm/v1/engine/core_client.py", line 609, in __init__
+(APIServer pid=94)     with launch_core_engines(
+(APIServer pid=94)   File "/usr/lib/python3.12/contextlib.py", line 144, in __exit__
+(APIServer pid=94)     next(self.gen)
+(APIServer pid=94)   File "/usr/local/lib/python3.12/dist-packages/vllm/v1/engine/utils.py", line 1240, in launch_core_engines
+(APIServer pid=94)     wait_for_engine_startup(
+(APIServer pid=94)   File "/usr/local/lib/python3.12/dist-packages/vllm/v1/engine/utils.py", line 1320, in wait_for_engine_startup
+(APIServer pid=94)     raise RuntimeError(
+(APIServer pid=94) RuntimeError: Engine core initialization failed. See root cause above. Failed core proc(s): {}
