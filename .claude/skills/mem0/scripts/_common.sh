@@ -86,7 +86,9 @@ _box_curl() {
   if [ -n "$data" ]; then
     out="$(printf '%s' "$data" | ssh -o ConnectTimeout=10 -o BatchMode=yes "$BOX_HOST" "$remote" 2>/dev/null)" || true
   else
-    out="$(ssh -o ConnectTimeout=10 -o BatchMode=yes "$BOX_HOST" "$remote" 2>/dev/null)" || true
+    # -n is load-bearing: without it ssh reads stdin, and a bodiless call made
+    # inside a `while read` loop swallows the rest of the caller's input.
+    out="$(ssh -n -o ConnectTimeout=10 -o BatchMode=yes "$BOX_HOST" "$remote" 2>/dev/null)" || true
   fi
 
   if [[ "$out" == *$'\n'"${marker}"[0-9][0-9][0-9] ]]; then

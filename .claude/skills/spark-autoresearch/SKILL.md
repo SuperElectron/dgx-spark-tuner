@@ -63,16 +63,38 @@ research/<name>/
    section below BEFORE quoting any throughput. Verify any apparent win
    with a repeat run before keeping. Keep → fold the mutation into recipe.yaml. Revert →
    recipe.yaml untouched. Crash → journal the lesson; run dir stays.
-5. Append one row to RESULTS.md:
+5. Append one row to RESULTS.md. Per-run table (the default — the recipe
+   moves, the probe is fixed):
    `| bench_<id> | <date> | <mutation> | <tg mean> | <tg σ> | <pp mean> | <pp σ> | <ttfr mean> | keep/revert/crash — note |`
-6. Journal the outcome. Write the verdict to memory (best-effort, never
-   blocking — see the mem0 skill's guardrail: on failure spawn a background
-   agent to run `memory-doctor.sh`, never gate the round on it):
+
+   A campaign that varies the PROBE instead of the recipe (depth,
+   concurrency, tg length) may use a per-cell table instead — one row per
+   measured cell, carrying the configuration it was measured under:
+   `| bench_<id> | <date> | <cell> | <configuration> | <ours> | <runs> | <board top> | <margin> | <note> |`
+
+   EITHER schema MUST carry `benchId` and `date` columns. Without them a
+   row cannot be traced back to its archive under `experiments/`, and
+   `memory-backfill.sh` cannot produce a provenanced memory from it.
+6. Journal the outcome, then derive the round's verdict memories from the
+   canonical table (best-effort, never blocking — see the mem0 skill's
+   guardrail: on failure spawn a background agent to run
+   `memory-doctor.sh`, never gate the round on it):
    ```
-   .claude/skills/mem0/scripts/remember.sh "[VERDICT] <one-liner>" experiment:<name>
+   .claude/skills/mem0/scripts/memory-backfill.sh --reconcile research/<name>
    ```
-   Also write `[ENV]`, `[CRASH]`, or `[LESSON]` lines the same way when the
-   round surfaced one. Commit per repo workflow rules.
+   `--reconcile` adds the new rows AND drops `[VERDICT]`/`[CRASH]`
+   entries the table no longer produces, so the index converges on
+   RESULTS.md instead of accreting retired figures. Never hand-write a
+   `[VERDICT]` with `remember.sh` — a hand-written one has no row to
+   reconcile against, and that is precisely how the index diverged from
+   the table.
+
+   Hand-written `remember.sh` calls stay correct for `[LESSON]`, `[ENV]`
+   and `[IDEA]` findings that are NOT derivable from the results table. A
+   crash belongs in RESULTS.md as a row — backfill tags it `[CRASH]` — with
+   the takeaway written as a `[LESSON]`; a hand-written `[CRASH]` under the
+   experiment entity is a reconcile deletion candidate. Commit per repo
+   workflow rules.
 
 ## Reading benchy metrics at concurrency > 1
 
