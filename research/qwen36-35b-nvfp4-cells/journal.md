@@ -590,3 +590,263 @@ than R3's ~35k because of the second arm and the telemetry pass. Four board
 cells' worth of measurement (c2 cold, c2 ctx, c5 cold, c5 ctx) produced no
 claimable standing, which is the price of running a cell whose board figure was
 never scraped. R5b is now the round with the best ratio left in the queue.
+
+## Round 5 hypothesis — tg128 @ d131072 c1 (the stretch point)
+
+The deepest cell the campaign will attempt, and the first one queued in advance
+as a probable LOSS. tg128 @ d131072 c1 is topped at 81.60 by Nemotron Lightning
+NVFP4 — the same holder as tg128 @ d32768 (115.53), so this is a competitor that
+scales its own depth curve well rather than a weak sole entry. The queue's
+pre-campaign estimate for us is 55-70, which would lose by 15-30%. The round is
+queued anyway, for the depth curve rather than for the cell, and it is NOT to be
+tuned for: the recipe stays exactly as it has been for five rounds and only the
+probe moves.
+
+**The round brief's 55-70 estimate is one of two competing hypotheses, and this
+round discriminates between them.** That estimate predates R3. It is worth
+stating both plainly, with distinct predicted bands, so the measurement decides.
+
+Hypothesis A — the naive memory-bandwidth model, which is what 55-70 rests on.
+A decode step at c1 reads the weights (~1.7 GB of active NVFP4 parameters, fixed)
+plus the KV cache for the current depth. sparkrun's own VRAM estimates pin the KV
+cost at exactly 40 KB/token on this config (1.25 GB at a 32768 window, 2.81 GB at
+73728 — the same constant to three figures). So the depth-dependent read is
+0.62 GB at d16384, 2.50 GB at d65536, and 5.00 GB at d131072. If step time scales
+with (weights + KV), then relative to our d16384 figure of 102.2 the model
+predicts 102.2 x 2.32/6.70 = 35 at d131072, and predicts 56 at d65536.
+
+**Hypothesis A is already refuted by our own d65536 point.** It predicted 56
+there; R3 measured 108.15. The model is not off by noise, it is off by a factor
+of two, and it fails in the direction that matters. Whatever the attention kernel
+is doing over a 2.5 GB KV cache, it is not paying naive bandwidth for it — the
+MTP verify batch amortizes the read over ~4 tokens, and the 30 of 40 Gated
+DeltaNet layers contribute no depth-dependent read at all. So the arithmetic that
+produces 55-70 has been measured wrong once already at half this depth, and it
+should not be used to set this round's band.
+
+Hypothesis B — extrapolate our own measured points, which is the only method that
+has worked on this box. R4's methodological lesson was explicit: the campaign's
+sole accurate prediction (c2, 84.00 against a predicted 75-88) was the one built
+by interpolating measured cells, and all three predictions built forward from the
+model card were refuted upward. Our tg128 c1 depth series is 102.2 at d16384 and
+108.15 at d65536 — flat within noise across 4x, which R3 read as the depth term
+being smaller than c1 run-to-run variance over that whole range. Extrapolating
+flatness across one more doubling gives 100-110.
+
+**Numeric prediction: median 85-105, centre ~95.** That is hypothesis B with a
+deliberate downward tilt, not flatness taken at face value. The tilt is there
+because d131072 is the first depth at which the KV read (5.00 GB) clearly exceeds
+the weight read (1.7 GB), and because the one phase that genuinely does scale with
+depth — cold prefill — stopped falling inverse-linearly at d65536 and started
+falling worse (ratio 0.40x rather than 0.50x per doubling), which is the quadratic
+attention term becoming visible. Some of that should leak into decode out here
+even if the last four depths gave no sign of it. But the honest position is that
+there is no validated model on this box that produces a decline, so the band sits
+high and the tilt is small.
+
+If the median lands at 85-105 we WIN this cell against 81.60, by 1.04x to 1.29x —
+a margin under 2x, so a win here triggers the mandatory verify repeat, and the
+round should budget for a second invocation. If it lands at 55-70 the queue's
+estimate was right, hypothesis A survives at this depth after failing at d65536,
+and we take a clean loss that is worth more than the cell. Either outcome is
+recorded exactly as measured.
+
+Three more falsifiable claims, so the round can refute them:
+
+- **ctx_tg128 @ d131072 comes in BELOW cold, by 12-22%** — predict 70-88. The
+  sign change is established: ctx above cold at d8192/d16384, below at d32768
+  (-27%) and d65536 (-17%). Two independent depths, two invocations. R4 showed
+  the sign also moves with concurrency at fixed depth, so this is not a pure
+  depth law and the prediction is an extrapolation of a pattern, not of a
+  mechanism. Board figure for this cell was never scraped: held, not claimed.
+- **pp2048 @ d131072 lands at 40-48.** Cold prefill has gone 1187.51 / 637.09 /
+  295.71 / 118.59 across d8192-d65536, with the last ratio 0.40x. If the
+  steepening continues the next ratio is at or below 0.40x, so at or below 47.4.
+  A figure above 55 would mean the d65536 steepening was itself the artefact.
+  ctx_pp2048 should continue its own gentler fall (6148.56 / 5910.22 / 5086.51 /
+  4004.76): predict 2800-3400.
+- **σ on the cold cell is wide, above 8% of the median.** This is c1, the bimodal
+  MTP-acceptance regime; R1 ran σ to 22% and R3 to 9.6% there. Three runs cannot
+  pin this and do not need to — the verdict is a margin question against 81.60.
+  The ctx_ phase should again be far quieter, σ under 3% of its median, which
+  would be the fifth consecutive observation of that.
+
+Config. Mutation: NONE. Incumbent recipe.yaml, new probe. `-o
+max_model_len=139264` raises the window from the recipe default 32768 to fit
+depth 131072 + pp 2048 + tg 128 with headroom — the same probe-driven override
+R1 and R3 used at 40960 and 73728, not a tuning change. Two config risks were
+checked in advance rather than discovered at runtime: the model's native
+`max_position_embeddings` is 262144, so 139264 needs no rope scaling and is not
+an extrapolated-context measurement; and at 40 KB/token the KV cache for that
+window is 5.31 GB against the ~75 GB sparkrun reported free in R3 and R4, a 14x
+context multiplier, so an engine OOM at startup is not expected. If the engine
+nevertheless fails to start, that is a config failure to fix once and journal,
+not a box failure.
+
+Probe: -b tg=128 -b depth=131072 -b concurrency=1 -b runs=3 -o
+max_model_len=139264 (pp=2048 rides along by default, so the pp2048 and both
+ctx_ phases are measured in the same invocation).
+
+Cost note in advance: this is the campaign's most expensive round per run, and
+the cost is dominated by cold prefill of the context before a single token is
+generated. The instrument for that is ttfr, not the pp2048 metric — pp2048 is a
+normalized per-prompt-token figure, not the wall rate at which the depth context
+is filled. R3's ttfr at d65536 was 17.28 s cold and 16.38 s cached; at d16384 it
+was 3.23 s. That series is slightly worse than linear in depth, so predict ttfr
+35-45 s cold at d131072 and a whole-round benchmark time of roughly 400-600 s
+against R3's 150.8 s. Expensive but not prohibitive, and the expense is itself an
+argument against ever returning to this depth to tune it.
+
+## Round 5 outcome — bench_076db52d341c (2026-08-22)
+
+| Cell | median | (mean) | σ | runs |
+|---|---:|---:|---:|---|
+| tg128 @ d131072 c1 | 77.13 | (79.63) | 7.17 | 72.37 / 89.39 / 77.13 |
+| ctx_tg128 @ d131072 c1 | 76.66 | (76.64) | 10.16 | 89.06 / 76.66 / 64.19 |
+| pp2048 @ d131072 c1 | 42.59 | (42.57) | 0.02 | 42.55 / 42.59 / 42.59 |
+| ctx_pp2048 @ d131072 c1 | 2803.17 | (2803.01) | 2.43 | 2799.96 / 2805.91 / 2803.17 |
+
+**Verdict: LOSS. The campaign's first, and it is recorded as one.** tg128 @
+d131072 c1 came in at median 77.13 against Nemotron Lightning NVFP4's 81.60 —
+0.95x, short by 5.5%. The cell was queued as a probable loss, run once for the
+depth curve, and deliberately not tuned for. recipe.yaml is untouched. Nothing
+here is to be re-run to chase the cell; the round bought a curve, and the curve
+is below.
+
+The loss is narrow enough to be worth stating precisely, because a narrow loss
+invites exactly the wrong follow-up. One of the three runs, 89.39, would have
+beaten 81.60 by 1.10x on its own. That is not a result — it is the top of a
+bimodal draw in the noisiest regime this campaign measures, and the discipline
+that made the c4 win trustworthy (medians, not best runs) is the same discipline
+that makes this a loss. σ is 7.17, 9.3% of the median. Three runs at c1 cannot
+resolve 5.5%, so the honest statement is "we lost this cell, by about 5%, with a
+run-to-run spread wider than the margin" — not "we nearly won it".
+
+**Both competing hypotheses were refuted, and they were refuted from opposite
+sides.** The hypothesis named two bands before the run and let the measurement
+choose. Hypothesis A, the naive weights-plus-KV bandwidth model that the queue's
+55-70 estimate rested on, predicted 35 (or 55-70 as the queue's softer version).
+Hypothesis B, extrapolating our own flat d16384-d65536 depth response with a
+small downward tilt, predicted 85-105, centre ~95. Measured: 77.13. That sits
+*between* the two bands, roughly equidistant — about 10% above the top of the
+queue's estimate and about 9% below the bottom of mine.
+
+That is the most useful outcome the round could have had, and it is the first
+time this campaign has been refuted DOWNWARD. Rounds 1, 2 and 3 all predicted a
+slowdown and measured the opposite; R4's one accurate prediction came from
+interpolating measured points. R5 interpolated measured points too — and this
+time the extrapolation was too optimistic, because it extrapolated a flatness
+that was about to end.
+
+**The depth term finally bites, and the round locates where.** The tg128 c1 depth
+series now reads 102.2 at d16384, 108.15 at d65536, 77.13 at d131072: flat within
+noise across the first 4x, then a 29% fall across the next 2x. R3 read the
+flatness correctly — the depth-dependent term was smaller than c1 noise over
+d8192-d65536 — but the natural extension of that reading, that it stays smaller,
+is now false. Somewhere between d65536 and d131072 the KV term stops being
+negligible against the fixed ~1.7 GB weight read. At 40 KB/token that puts the
+crossing near a 2.5-5.0 GB KV read, which is the region where the KV read first
+exceeds the weight read. The architecture argument from R3 was right about the
+mechanism and wrong only about where it runs out: 30 of 40 layers being
+fixed-state Gated DeltaNet buys three doublings of free depth, not unlimited
+depth.
+
+It is worth being precise about what "the depth term bites" is NOT. It is not the
+naive bandwidth model coming good. That model predicted 35 at this depth and 56
+at d65536, and it was wrong by a factor of two at d65536 and is still wrong by a
+factor of 2.2 here. Whatever amortizes the KV read — the MTP verify batch
+spreading it over ~4 tokens is the obvious candidate — is still amortizing it. The
+decline is real and the naive arithmetic still does not describe it.
+
+**MTP acceptance degrades badly at this depth, which is a mechanism the round saw
+directly rather than inferred.** The engine's own SpecDecoding metrics, sampled
+live during the run, went from a mean acceptance length of 3.81 and 93.6% draft
+acceptance early in the round to 2.43 and 47.7% once the deep contexts were in
+play. Per-position acceptance fell from 1.000/0.962/0.846 to 0.608/0.451/0.373.
+With `num_speculative_tokens=3`, halving the acceptance rate roughly halves the
+tokens-per-verify-step, and that is a decode-throughput cost that has nothing to
+do with KV bandwidth. This is the first time the campaign has watched the MTP
+acceptance distribution move rather than inferring it from σ, and it is a
+better candidate for the 29% fall than the memory argument above. It also
+explains why σ stays wide at c1: the acceptance draw is what is bimodal.
+
+**The ctx_ prediction was refuted on magnitude, and a five-round regularity
+broke.** Predicted: ctx below cold by 12-22%, and quieter — σ under 3% of its
+median, which would have been the fifth consecutive such observation. Measured:
+ctx_tg 76.66 against cold 77.13, a gap of -0.6%, which is nothing; and σ 10.16,
+13.3% of the median, which makes the prefix-caching phase NOISIER than the cold
+phase (9.3%) for the first time in the campaign. Its runs span 64.19 to 89.06.
+
+Both halves of that matter. The inversion did not deepen with depth — it
+disappeared, after -27% at d32768 and -17% at d65536, which continues the trend
+R3 already noticed (the inversion was shrinking, not growing) and takes it to
+zero. And the quietness of the ctx_ phase, which R3 and R4 had confirmed at four
+depths and three concurrencies and which RESULTS.md leaned on as "the cheapest
+place in this campaign to measure a real effect", does not survive to d131072.
+The tidy explanation for the quietness — that removing prefill removes the
+variance — cannot be right, because the prefill is removed here too and the
+variance is larger than ever. Open question 4 should now be read as being about
+MTP acceptance variance, not about prefill: at this depth the acceptance draw
+dominates both phases, and the cached phase has no prefill work to average it
+against.
+
+**The three quantitative side-predictions all held, and they are the round's
+tight measurements.** pp2048 @ d131072 predicted 40-48, measured 42.59 — and the
+predicted continued steepening is there: the cold-prefill ratio per doubling has
+gone 0.50x, 0.50x, 0.40x, now 0.359x, which is the quadratic attention term
+growing exactly as R3 first saw. σ 0.02 (0.05% of the median) makes this the
+tightest measurement in the whole campaign. ctx_pp2048 predicted 2800-3400,
+measured 2803.17, at the very bottom of the band; its own ratio is 0.70x, the
+steepest fall yet in a series that had been gentle (6148.56 / 5910.22 / 5086.51 /
+4004.76 / 2803.17). And cold σ was predicted above 8% of the median: 9.3%.
+ttfr was predicted at 35-45 s cold and came in at 48.10 s — a 7% miss, high, and
+the one side-prediction that slipped its band.
+
+Telemetry, sampled alongside the round (900 samples at 1 Hz, archived as
+`experiments/bench_076db52d341c/telemetry.log`). SM clock 2398 MHz median,
+2379-2411 across the window, against the same 3003 MHz ceiling — essentially
+identical to R4's 2392 MHz, which is the first time the clock figure has
+reproduced across sessions and puts R1's outlying 2554 MHz reading in doubt
+rather than the other two. Temperature peaked at 79 °C, the campaign's highest
+(R4 peaked at 72 °C) — this was by far the longest sustained load — and power
+peaked at 95.77 W, essentially R4's 95 W. The clock is flat through the
+temperature rise, so even at 79 °C there is no thermal throttling: the 80%-of-
+ceiling clock remains a policy figure. Open question 5 can be downgraded — the
+clock is stable session to session, at 2392-2398 MHz. No clock, power-policy,
+driver or kernel setting was touched, and none ever will be from this loop.
+
+Config and epoch notes. No mutation; incumbent recipe.yaml, new probe, with
+`-o max_model_len=139264` as the probe-driven override. Both config risks named
+in the hypothesis were checked in advance and neither materialized: the model's
+262144 native `max_position_embeddings` means d131072 is not an extrapolated-
+context measurement, and sparkrun's VRAM estimate put the KV cache at exactly the
+predicted 5.31 GB against 75.0 GB available (14.1x context multiplier), so the
+engine started clean on the first attempt. The 40 KB/token constant used in the
+hypothesis reproduced to three figures. Epoch unchanged: `state.yaml` records
+`container_image_longterm_ref: ghcr.io/spark-arena/dgx-vllm-eugr-nightly:2026082102`,
+pinned, identical to R1/R3/R4 — note that sparkrun's console line says it is
+distributing `:latest`, which resolves to the pinned longterm ref, so the console
+text is not evidence of an epoch change and the state.yaml field is what to read.
+Page cache again could not be cleared (no passwordless sudo), uniform as ever.
+
+**Process failure, recorded because it cost a wasted engine start.** The first
+invocation of this round was launched WITHOUT `-b depth=131072`. sparkrun does not
+error on a missing probe dimension — it silently defaults depth to 0 and would
+have measured a completely different cell at full cost. It was caught by reading
+the `Benchmark args:` block that sparkrun echoes before `Benchmark ID:`, which
+showed `depth: [0]`; the run was killed during engine startup, the box was checked
+clean of leftover containers, and the round was relaunched correctly as
+bench_076db52d341c. The aborted invocation (bench_8e4471b42bec) produced no
+measurements and is not archived. The lesson generalizes to every round in this
+campaign: the echoed `Benchmark args:` block is the only confirmation that the
+probe is the intended cell, and it must be read before letting a run proceed.
+
+Cost: one benchmark invocation, 397.6 s of llama-benchy task time against R3's
+150.8 s at half the depth, plus an engine start and roughly 20 minutes of
+corpus/context preparation before the engine saw its first request — call it
+~45 minutes of wall clock and ~50 minutes of box time including the wasted start.
+Roughly 60k harness tokens, higher than R4's ~55k because of the aborted
+invocation and the live engine-log diagnosis. Four cells measured, one scoreable,
+and that one lost. That is the honest ratio for a stretch round, and it is the
+argument for never returning to this depth: d131072 costs ~8x R3's box time per
+round and the cell is not winnable without tuning the campaign refuses to do.
