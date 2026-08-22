@@ -23,7 +23,14 @@ process. It is a lens, not a checklist: apply it to whatever artifacts exist.
      metric, quality, cost, or reliability? What would it take?
    - **Blindness**: what is this layer NOT telling us because we never
      measured it? Name the missing instrument.
-3. Record. Every observation becomes a memory (single line, evidence-linked):
+3. Scope each observation before recording: is it true only for this
+   experiment, this checkpoint, the model family, the serving stack, or the
+   box? Tag the widest entity it truly generalizes to (`experiment:` /
+   `model:` / `family:` / `stack:` / `box:` — see the mem0 skill). A
+   vLLM scheduler quirk is `stack:vllm`, not `experiment:...` — that's what
+   lets the next model's loop find it. And recall at those wider scopes
+   BEFORE the pass, so you extend knowledge instead of duplicating it.
+4. Record. Every observation becomes a memory (single line, evidence-linked):
    - `[ENV]` — a fact about the environment as it is
    - `[LESSON]` — a generalization future work should inherit
    - `[IDEA]` — a candidate intervention outside current scope (system
