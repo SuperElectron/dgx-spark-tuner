@@ -215,6 +215,47 @@ The d131072 point is still a 3-run median from a separate invocation with σ
 9.3%, i.e. the same instrument that just failed at d65536. Treat the last leg
 as the least trustworthy part of the curve.
 
+
+## ⚠️ R9b: TWO CORRECTIONS THAT REACH EVERY `ctx_` ROW IN THIS FILE
+
+Both came from reading llama-benchy 0.4.0's source and vLLM's own counters after
+R9b's validity gate failed. Neither cost box time. Neither changes a single
+claimed win — every standings row is a cold-phase `tg` figure — but both change
+what the `ctx_` rows and open question 4 have been talking about.
+
+**1. THE TWO MEASUREMENT PHASES ARE LABELLED BACKWARDS, and have been since R1.**
+`llama_benchy/runner.py:127-176` and `223-225`:
+
+    if self.config.enable_prefix_caching and depth > 0:
+        # Phase 1: Context Load  -> is_context_phase=True,  expected_ctx (16384)
+        # Phase 2: Inference     -> is_context_phase=False, expected_pp  (2048)
+
+The `ctx_` rows are **Phase 1, the context load** — the pass that *establishes*
+the cache, i.e. the uncached one. The rows this file calls **"cold" are Phase 2**,
+the cache-eligible one. And the two are charged **different token counts**
+(16384 vs 2048), so their `pp_throughput` figures were never comparable to one
+another. Every "the ctx phase is faster / inverts / is quieter" reading in the
+journal and in open question 4 needs re-reading against this. The `tg` figures
+are not distorted by the token count, but they are still mislabelled as to which
+phase is cached.
+
+**2. PREFIX CACHING HAS NEVER HIT ON THIS BENCHMARK.** vLLM's own counter reads
+`Prefix cache hit rate: 0.0%` in all 22 engine samples of R9's A1 and all 92 of
+R10 — **with the flag ON**. Independently, total prompt tokens processed by the
+engine (summed from vLLM's `Avg prompt throughput` windows) is **1,079,370 with
+caching on against 1,060,925 with caching off** — 1.7% apart. **No prefill work
+was ever saved.**
+
+Yet the flag is worth **57% of `tg` at c4** (R9 A1 143.08 → R9b A 62.13) while
+`peak_throughput` is **identical to the token** (297 vs 297) and `pp2048` is
+within 0.8%. The mechanism is **unexplained and R9b does not invent one**; the
+leading suspect is that prefix caching off also moves `mamba_block_size` from 16
+to 32768, changing the Gated DeltaNet state granularity for 30 of this model's
+40 layers by a factor of 2048. Queued as **R9c**.
+
+**Planning consequence:** do not describe this campaign's `c>1` gains as "prefix
+caching working". It is not working. Something riding along with the flag is.
+
 ## Concurrency curve at tg128 @ d16384 — REBUILT by R10
 
 Every point satisfies `max_num_seqs >= c`, i.e. no request ever waits for a
@@ -460,12 +501,27 @@ row, and they answer different questions:** `tg` is what the board ranks,
 | bench_ac37f5b64487 | 2026-08-22 | tg128 @ d16384 c5 (**MUTATION mnbt 32768 + mns 5**, runs=7) | **128.93** | 2.34 | 14484.92 | 225.46 best vLLM NVFP4 (428.95 overall) | **LOSS — 0.57x, short by 43%**, but was 0.21x on the campaign config (48.12): **+168%**. First run of c5 with BOTH settings raised (R9's arm A1 had mnbt 32768 but `mns 4`, so the fifth request still queued for a slot; it read 81.73). `peak_throughput` **290**, up +9.4% on 265. **Stagger 1.70**; zero-stagger bound `5 × tg_req` = **218.60 = 0.97x of the incumbent**, so **93% of the residual gap is admission stagger and 7% is decode rate**. Residency 4.92 of 5. σ 1.81%. ttfr ROSE +19.8% |
 | bench_ac37f5b64487 | 2026-08-22 | ctx_tg128 @ d16384 c5 (MUTATION mnbt 32768 + mns 5, runs=7) | 104.75 | 1.16 | 12731.35 | not scraped | hold — BELOW cold (−18.7%), a **SIGN FLIP** against the +6.5% the same cell shows at mnbt 8192, reproducing what R10 saw at c4 (+4.4% → −14.2%). `peak_throughput` 290. **Stagger 2.12 — HIGHER than cold's 1.70**, which contradicts R10's stated mechanism for the flip |
 
+| bench_9379c15468ec-a-chunk | 2026-08-22 | tg128 @ d16384 c4 (**R9b ARM A — prefix caching OFF, mnbt 32768, mns 4, chunked prefill ON**, runs=3) | 62.13 | 0.70 | 11559.86 | **NOT SCOREABLE** | diagnostic — three flags from the campaign config, not a standings row. `peak_throughput` **297**, IDENTICAL to R9's A1 with caching ON, while `tg` falls **−56.6%** (143.08 → 62.13): the hardware ceiling did not move, the batch span did. Stagger **3.32** vs A1's 1.62. `tg_req` 51.49 (−11.0%) |
+| bench_9379c15468ec-a-chunk | 2026-08-22 | tg128 @ d16384 c5 (**R9b ARM A**, runs=3) | 50.28 | 0.81 | 12309.92 | **NOT SCOREABLE** | diagnostic — `peak_throughput` 298, `tg_req` 25.46, stagger 2.53, residency 3.77 of 5. Scheduler `(4,1)` in four samples, reproducing R9's direct observation at this cell |
+| bench_9379c15468ec-a-chunk | 2026-08-22 | ctx_tg128 @ d16384 c4 (**R9b ARM A**, runs=3) | 70.90 | 0.56 | 10123 | **NOT SCOREABLE** | diagnostic — **and this row is the CONTEXT-LOAD pass, not a cached pass**: with prefix caching off there is no cache, and llama-benchy's `ctx_` phase was never the cached one anyway (see the phase-label correction above). `peak_throughput` 282 |
+| bench_9379c15468ec-a-chunk | 2026-08-22 | ctx_tg128 @ d16384 c5 (**R9b ARM A**, runs=3) | 57.48 | 0.47 | 10760 | **NOT SCOREABLE** | diagnostic — `peak_throughput` 281 |
+| bench_10496035f7fd-b-nochunk | 2026-08-22 | tg128 @ d16384 c4 (**R9b ARM B — prefix caching OFF, mnbt 32768, mns 4, chunked prefill OFF**, runs=3) | 52.92 | 0.83 | 9575.12 | **NOT SCOREABLE** | diagnostic — **the arm R9 could not start.** vs arm A: `tg` **−14.8%**, `tg_req` **−44.2%** (51.49 → 28.74), stagger IMPROVES 3.32 → **2.17**, ttfr IMPROVES **−17.2%**. Turning chunked prefill off halves per-request decode while tightening admission — it PROTECTS decode, it does not interfere. Scheduler sits at `(2,2)` in three of eight loaded samples and never holds a stable `(4,0)`. `peak_throughput` 285 |
+| bench_10496035f7fd-b-nochunk | 2026-08-22 | tg128 @ d16384 c5 (**R9b ARM B**, runs=3) | 45.28 | 0.36 | 11115.00 | **NOT SCOREABLE** | diagnostic — vs arm A: `tg` −9.9%, `tg_req` −21.7%, stagger 2.53 → 2.20, ttfr −9.7%. `peak_throughput` 276, `tg_req` 19.92, residency 3.94 of 5 |
+| bench_10496035f7fd-b-nochunk | 2026-08-22 | ctx_tg128 @ d16384 c4 (**R9b ARM B**, runs=3) | 58.80 | 0.16 | 8280 | **NOT SCOREABLE** | diagnostic — context-load pass. `peak_throughput` 269 |
+| bench_10496035f7fd-b-nochunk | 2026-08-22 | ctx_tg128 @ d16384 c5 (**R9b ARM B**, runs=3) | 49.54 | 0.60 | 9645 | **NOT SCOREABLE** | diagnostic — `peak_throughput` 288 |
+
 ## Prefill cells (pp2048)
 
 pp2048 rides along in every round by default, so these were measured at no extra
 cost. They are separate board cells and get their own rows. The cold rows fall
-steeply with depth because they prefill the whole context; the `ctx_` rows reuse
-the cached prefix and sit an order of magnitude higher.
+steeply with depth because they prefill the whole context.
+
+⚠️ **The old sentence here said the `ctx_` rows "reuse the cached prefix and sit
+an order of magnitude higher". R9b read llama-benchy's source and BOTH HALVES
+ARE WRONG.** The `ctx_` rows are the CONTEXT-LOAD pass — the uncached one — and
+they sit higher because they are charged **16384** prompt tokens per request
+against the cold rows' **2048**. The ~9x is `16384/2048`. See the phase-label
+correction above before comparing any `ctx_pp` figure to any cold one.
 
 | benchId | date | cell / probe | pp med t/s | pp σ | ttfr ms | board top | verdict |
 |---|---|---|---:|---:|---:|---:|---|
@@ -509,3 +565,9 @@ the cached prefix and sit an order of magnitude higher.
 | bench_ac37f5b64487 | 2026-08-22 | ctx_pp2048 @ d16384 c2 (MUTATION mnbt 32768 + mns 5) | 6065.02 | 53.65 | 5269.25 | not scraped | hold — above the 5772-5967 campaign-config series at this depth |
 | bench_ac37f5b64487 | 2026-08-22 | pp2048 @ d16384 c5 (MUTATION mnbt 32768 + mns 5) | 677.44 | 0.94 | 14484.92 | not scraped | hold — **R12 SESSION CONTROL PASSES, and it settles R4's depression**: the highest cold prefill figure at this depth in the campaign, against the 581.44 R4 measured at c5 with `mns 4` and mnbt 8192. Prediction 650-695 HELD. This is what licenses reading the R12 tg figures as scheduler effects |
 | bench_ac37f5b64487 | 2026-08-22 | ctx_pp2048 @ d16384 c5 (MUTATION mnbt 32768 + mns 5) | 6158.49 | 20.66 | 12731.35 | not scraped | hold — also restored, against R4's depressed 5236.80 at this cell |
+| bench_9379c15468ec-a-chunk | 2026-08-22 | pp2048 @ d16384 c4 (**R9b ARM A — prefix caching OFF, chunk ON, mnbt 32768**) | 663.93 | 0.75 | 11559.86 | **NOT SCOREABLE** | diagnostic — matches R9's A1 (669.28) to **0.8%** with prefix caching OFF, so the flag buys nothing in prefill. Session control passes |
+| bench_9379c15468ec-a-chunk | 2026-08-22 | pp2048 @ d16384 c5 (**R9b ARM A**) | 597.78 | 4.26 | 12309.92 | **NOT SCOREABLE** | diagnostic — **`D_pp` = −9.96%** against the c4 row. R4's c5 depression REPRODUCES with prefix caching off |
+| bench_9379c15468ec-a-chunk | 2026-08-22 | ctx_pp2048 @ d16384 c4 / c5 (**R9b ARM A**) | 6106.93 / 5379.73 | 16.60 / 16.34 | — | **NOT SCOREABLE** | diagnostic — **these figures broke the round's validity gate and the gate was wrong, not the arm.** They are the CONTEXT-LOAD pass, charged 16384 tokens per request against the cold rows' 2048, so the ~9x is `16384/2048` and not a cache effect. `Prefix cache hit rate: 0.0%` in all 22 engine samples |
+| bench_10496035f7fd-b-nochunk | 2026-08-22 | pp2048 @ d16384 c4 (**R9b ARM B — prefix caching OFF, chunk OFF, mnbt 32768**) | 655.82 | 1.48 | 9575.12 | **NOT SCOREABLE** | diagnostic — within 1.2% of arm A, so removing chunked prefill does not move the prefill rate at c4 |
+| bench_10496035f7fd-b-nochunk | 2026-08-22 | pp2048 @ d16384 c5 (**R9b ARM B**) | 584.04 | 1.24 | 11115.00 | **NOT SCOREABLE** | **THE ROUND'S PRIMARY MEASUREMENT. `D_pp` = −10.95%**, against arm A's −9.96% — so `R_pp` = **1.099**, above the pre-declared 0.60 refutation threshold and pointing the WRONG WAY. **R4's chunked-prefill mechanism is REFUTED**: the c5 prefill deficit survives, slightly enlarged, in an engine that physically cannot chunk a prefill into a decode step |
+| bench_10496035f7fd-b-nochunk | 2026-08-22 | ctx_pp2048 @ d16384 c4 / c5 (**R9b ARM B**) | 6008.87 / 5262.09 | 4.74 / 19.00 | — | **NOT SCOREABLE** | diagnostic — context-load pass, within 1.6% / 2.2% of arm A |

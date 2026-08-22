@@ -3129,3 +3129,457 @@ two thirds while moving the hardware ceiling by nothing, priced the entire
 remaining gap as 83-93% admission stagger against a per-request decode rate
 within 3% of the incumbent's — and lost its primary occupancy instrument to the
 wrong `docker` subcommand.**
+
+## Round 9b hypothesis — the chunked-prefill mechanism test, bought at the price of prefix caching: tg128 @ d16384, c4 and c5, TWO arms, runs=3, one engine start each
+
+Earned by R9, and it is the **only remaining route** to the mechanism R4
+inferred four rounds ago. R9 tried the obvious two-arm version and the engine
+refused to start: `--no-enable-chunked-prefill` parses, the warning fires, and
+then a validator kills it with **`Chunked prefill is required for mamba cache
+mode 'align'`**. R9 recorded that as "untestable by the obvious route". This
+round buys the way around it explicitly, and states the bill up front.
+
+### The bill, read from the source before spending an engine start
+
+R9's open question 11 asked for the validators to be read rather than guessed
+at, after R9 spent a start learning one the expensive way. Done, from
+`vllm/model_executor/models/config.py:600-638` and
+`vllm/config/scheduler.py:248-261` in the pinned image:
+
+    if cache_config.enable_prefix_caching:
+        if mamba_cache_mode == "none": mamba_cache_mode = "align"
+        if mamba_cache_mode == "align":
+            assert scheduler_config.enable_chunked_prefill, (
+                "Chunked prefill is required for mamba cache mode 'align'.")
+        if mamba_block_size is None: mamba_block_size = cache_config.block_size
+    else:
+        mamba_cache_mode = "none"
+        if mamba_block_size is None: mamba_block_size = model_config.max_model_len
+
+    # verify_max_model_len
+    if max_num_batched_tokens < max_model_len and not enable_chunked_prefill:
+        raise ValueError(...)
+
+So turning prefix caching OFF drops `mamba_cache_mode` to `none` and the
+assertion is never reached — both arms will start. And `mnbt 32768` is exactly
+`max_model_len 32768`, so the second validator passes at the boundary. **Both
+arms are cleared by reading, not by trying.** That is the whole of what R9's
+open question 11 asked for.
+
+**But the source also names a THIRD thing this change moves, which R9 did not
+know about.** With prefix caching on, `mamba_block_size = block_size` = 16.
+With it off, `mamba_block_size = max_model_len` = **32768**. Turning prefix
+caching off therefore changes the Gated DeltaNet state granularity for 30 of
+this model's 40 layers by a factor of **2048**. That is not a footnote — it is
+a bigger change to the layer stack than the flag under test.
+
+**It is survivable for exactly one reason: it is COMMON TO BOTH ARMS.** Both
+run at `mamba_cache_mode: none`, `mamba_block_size: 32768`, prefix caching off,
+mnbt 32768, `max_num_seqs 4`. The single difference between them is
+`--enable-chunked-prefill` vs `--no-enable-chunked-prefill`. So the
+**difference of deficits** is clean even though neither arm's absolute figures
+are comparable to anything the campaign has measured.
+
+### What is forfeit, said plainly
+
+**The `ctx_` rows are forfeit in both arms.** No prefix caching means no
+cached-prefix phase, so `ctx_tg128` and `ctx_pp2048` here measure a second cold
+pass and are not standings rows. They are not, however, waste — see the
+validity gate below, where they become this round's proof that the flag took
+effect.
+
+**And nothing here transfers to the campaign config.** The campaign runs with
+prefix caching ON. Whatever this round finds is a statement about the
+**no-prefix-caching regime only**. R8 already demolished one cross-condition
+inference this campaign made (R3's depth flatness, built from 3-run points
+across separate invocations); the same reading applied here would be the same
+error in a new place. The outcome section must repeat this, and the RESULTS
+rows must name the configuration.
+
+### The mechanism under test, stated as R4 stated it
+
+R4 observed that at c5 with `max_num_seqs 4` the fifth request cannot get a
+slot, and that `pp2048` fell to **581.44** against a flat 634-643 at c1/c2/c4 —
+the only depressed prefill row at this depth in the campaign. R4 *inferred* the
+cause: the queued request's prefill is **chunked into ongoing decode steps**, so
+prefill work and decode work interleave and both are charged for it. Raising
+`max_num_seqs` to 5 restored `pp2048` to 640.21, which is consistent but does
+not isolate chunking — it removes the queueing instead.
+
+R9 confirmed the deficit is real and not an engine-start artefact (**D0 =
+−14.4%** inside one invocation, against R4's −13.7% across two) and reproduced
+the depressed prefill row to 0.25% (579.98 vs 581.44). What R9 could not do is
+turn the chunking off. This round does.
+
+### The three deficits, and which one is the instrument
+
+Every quantity here is a `c5`-versus-`c4` deficit **within one arm**, so the
+engine start, thermal state and config are held fixed:
+
+    D_x = (x(c5) − x(c4)) / x(c4)
+
+R9's two measured arms, both with prefix caching ON, for reference:
+
+| arm | c4 tg | c5 tg | **D_tg** | c4 tg_req | c5 tg_req | **D_req** | c4 pp2048 | c5 pp2048 | **D_pp** |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| A0 (mnbt 8192) | 52.64 | 45.05 | **−14.4%** | 33.47 | 21.41 | **−36.0%** | 640.70 | 579.98 | **−9.5%** |
+| A1 (mnbt 32768) | 143.08 | 81.73 | **−42.9%** | 57.89 | 39.06 | **−32.5%** | 669.28 | 596.78 | **−10.8%** |
+
+**`D_pp` is the instrument, and the choice is made before the run.** Three
+reasons, and they are the round's most important design decision:
+
+1. **It is the quantity R4 actually observed.** R4's evidence was a depressed
+   prefill row. Everything else in R4's story is inference from it.
+2. **It is the only one that is stable across the budget change.** −9.5% and
+   −10.8% across a config that moved `tg` by 2.7x. `D_tg` moved from −14.4% to
+   −42.9% on the same change, so `D_tg` is measuring the scheduler's admission
+   span (R10's result: `tg_throughput` is a batch aggregate divided by
+   `max_last_token − min_first_token`), not the interference.
+3. **It is quiet.** `pp_throughput` σ runs under 1% of its median across the
+   campaign; R9's A1 `c5 tg` σ was 9.98% on three runs. With runs=3 the tg
+   figures cannot resolve a 10% effect and the pp figures resolve a 2% one.
+
+`D_req` is the secondary reading: it is per-request decode rate, so it is not
+charged for admission stagger, and R4's interference should show in it. It sat
+at −36.0% and −32.5% — notably stable too. `D_tg` is recorded because the board
+metric is `tg` and every c>1 row must carry it, but **this round does not lean
+on `D_tg` and says so in advance.**
+
+### The discriminator, declared before the run
+
+Let `R_x = D_x(arm B, chunk OFF) / D_x(arm A, chunk ON)`. Thresholds carried
+over from R9, which pre-declared 0.25/0.60 and never got to apply them:
+
+- **H_chunk CONFIRMED** — R4's mechanism is the cause — if **`R_pp < 0.25`**
+  (the prefill depression largely vanishes when chunking cannot happen)
+  **AND `R_req < 0.60`**.
+- **H_chunk REFUTED** if **`R_pp > 0.60`**: the c5 prefill depression survives
+  in an engine that is physically incapable of chunking a prefill into a decode
+  step, so chunking is not what causes it. The rival account is then plain
+  **queueing** — a fifth request waiting for a slot depresses the measured
+  prefill rate however its prefill is scheduled — which is what R9 observed
+  directly at the scheduler (`Running: 4, Waiting: 1` at c5, `Waiting: 0` at c4).
+- **Anything else is MIXED and is reported as mixed, not forced.** R12 had a
+  mixed discriminator and reported it as one; this round will do the same.
+
+**A refutation is the more useful outcome here and the round expects it.**
+R7 already found that matching `max_num_seqs` to the probe at c8 and c16 left
+`pp2048` at 631.25 and 628.74 — dead inside the flat series — which R7 read as
+"matching the scheduler width eliminated R4's interference, at 4x the batch
+size, so the interference is a QUEUEING effect and not a batch-size effect".
+That sentence already prefers queueing over chunking. This round tests it.
+
+### THE VALIDITY GATE, and it must pass before any number is read
+
+With prefix caching genuinely off there is no cache for the `ctx_` phase to hit,
+so **`ctx_pp2048` must collapse** from the 5100-6200 the campaign reads with
+caching on to roughly the cold value, and **`ctx_tg128` must land near cold**.
+
+- **Gate: `ctx_pp2048` < 1200 in BOTH arms.** If it still reads thousands,
+  prefix caching is not actually off, `mamba_cache_mode` is not `none`, and the
+  arms are not what they claim to be — in which case the round is **VOID** and
+  is archived as such with no verdict.
+- Cross-check: the engine log's non-default args must show
+  `'enable_prefix_caching': False` and the warning
+  `Mamba cache mode is set to 'none' when prefix caching is disabled`.
+
+This is a free instrument the queue entry did not anticipate: the forfeited
+`ctx_` rows are the proof that the price was actually paid.
+
+### Numeric predictions
+
+Arm A is a control for arm B, but it is also the campaign's first look at
+`mamba_cache_mode: none`, so it carries its own prediction. `align` mode
+checkpoints SSM state at 16-token block granularity; `none` mode checkpoints at
+32768. **Fewer state writes should make arm A FASTER than R9's A1**, which is
+the same config plus caching.
+
+| quantity | baseline (R9 A1, caching ON) | predicted | reasoning |
+|---|---:|---|---|
+| A: c4 `tg` | 143.08 | **140-175** | A1 plus whatever `mamba_cache_mode: none` is worth |
+| A: c5 `tg` | 81.73 | **75-110** | A1's σ here was 9.98%, band widened accordingly |
+| A: c4 `pp2048` | 669.28 | **660-760** | flat series is 623-643 at mnbt 8192; raised-budget arms read 669-677 |
+| A: c5 `pp2048` | 596.78 | **590-690** | depressed if the mechanism is present in this regime at all |
+| **A: `D_pp`** | −10.8% | **−7% to −14%** | the deficit must REPRODUCE in arm A or the round has nothing to divide by |
+| **A: `D_req`** | −32.5% | **−25% to −40%** | |
+| B: c4 `tg` | — | **125-170** | no chunking cannot help a single-shape c4 batch much |
+| **B: `D_pp`** | — | **see discriminator** | the whole round |
+| B: c4/c5 `ttfr` | 11799 / 11872 | **higher than arm A at c5** | an unchunked prefill blocks decode for a whole step |
+| `ctx_pp2048`, both arms | 5405-6175 (caching on) | **< 1200** | **THE VALIDITY GATE** |
+| `ctx_tg128` ≈ cold, both arms | — | **within ±10% of cold** | no cache to hit |
+| scheduler `Running`/`Waiting` at c5 | 4 / 1 | **4 / 1 in both arms** | R9 observed this directly; mns 4 is unchanged |
+| scheduler at c4 | 4 / 0 | **4 / 0 in both arms** | mnbt 32768 gave a clean `(4,0)` in R9's A1 and R10 |
+| MTP acceptance | 2.95-3.02 / 65-67% | **2.8-3.2 / 60-72%** | R8b, THIRD attempt — flat under every scheduler change so far |
+| SM clock median | 2392-2398 | **2392-2398** | tenth consecutive session |
+| grid time | — | **400-650 s** total | R9's two measured arms cost 442.5 s across three starts |
+
+### R8b rides along for the THIRD time, and the command is now known
+
+R8 lost the engine log by waiting until the container was gone. R12 tailed it
+from the start with `docker logs -f` and got 15 lines of CUDA entrypoint banner,
+because **vLLM's serve output does not reach container stdout on this image**.
+The correct capture is:
+
+    ssh <box> docker exec <container> tail -f /tmp/sparkrun_serve.log
+
+**and it will be verified live** — `grep -c 'Running:'` on the capture within a
+minute of the grid starting. If the capture is empty the round proceeds anyway
+(the tg and pp figures do not depend on it) but says so, rather than quoting a
+number it does not have. Two rounds have already shipped without this
+instrument and neither invented one.
+
+### Discipline for this round
+
+- **BOTH ESTIMATORS AT EVERY c>1 POINT.** `tg_throughput` and
+  `peak_throughput` side by side, plus `tg_req_throughput` for the stagger.
+  Never `tg × c` — R10 settled that it double-counts and R9 watched it break.
+- **Medians, not means. σ and the individual runs reported at every cell.**
+- **BOTH ARMS ARE MUTATIONS, and they are further from the campaign config than
+  any mutation so far** — three flags move, not one. `recipe.yaml` stays
+  untouched. Every R9b row in RESULTS.md names its configuration explicitly and
+  must not be allowed to look like a campaign-config row.
+- **Read the `Benchmark args:` echo before letting each run proceed.** R5 lost
+  an engine start to a silently-defaulted depth.
+- Two invocations, one per arm, because the flag lives in the recipe template
+  and not in `-o`. Serial — nothing else touches the box.
+- No arena submission — Mat has no Spark Arena login. No box system settings
+  touched. No `apt`.
+
+## Round 9b outcome — bench_9379c15468ec-a-chunk + bench_10496035f7fd-b-nochunk (2026-08-22)
+
+Two invocations, one arm each, both `session_count: 1`, `crash_count: 0`. Three
+runs at c4 and c5 in each. Same pinned image epoch as every round since R1.
+Both arms: `--no-enable-prefix-caching`, `-o max_num_batched_tokens=32768`,
+`max_num_seqs 4` (recipe default). Arm A `--enable-chunked-prefill`, arm B
+`--no-enable-chunked-prefill`. **Both arms are MUTATIONS and neither is the
+campaign config** — three flags away from it, not one.
+
+**ARM B STARTED.** R9's blocker is cleared exactly as the source said it would
+be: `enable_prefix_caching: False` drops `mamba_cache_mode` to `none`, the
+`align` assertion is never reached, and the engine came up with
+`enable_chunked_prefill: False` in its non-default args. The predicted
+"does not officially support disabling chunked prefill" warning fired and
+nothing killed the engine after it. **R9's untestable round is now tested.**
+
+| arm | cell | tg | σ | σ/med | peak_thr | tg_req | stagger | residency | runs |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---|
+| **A** chunk ON | c4 | **62.13** | 0.70 | 1.13% | 297 | 51.49 | 3.32 | 4.10 of 4 | 60.88 / 62.13 / 62.53 |
+| **A** chunk ON | c5 | **50.28** | 0.81 | 1.62% | 298 | 25.46 | 2.53 | 3.77 of 5 | 50.23 / 50.28 / 51.98 |
+| **B** chunk OFF | c4 | **52.92** | 0.83 | 1.57% | 285 | 28.74 | 2.17 | 4.01 of 4 | 53.58 / 51.58 / 52.92 |
+| **B** chunk OFF | c5 | **45.28** | 0.36 | 0.79% | 276 | 19.92 | 2.20 | 3.94 of 5 | 44.85 / 45.73 / 45.28 |
+
+`pp2048`: A 663.93 (c4) / 597.78 (c5); B 655.82 / 584.04. `ttfr`: A 11560 /
+12310; B 9575 / 11115. Both estimators are reported at every point and `tg` sits
+under `peak_thr` everywhere, so nothing here repeats R7's or R9's break.
+
+### THE DISCRIMINATOR: H_chunk is REFUTED, on the round's own pre-declared rule
+
+`R_x = D_x(arm B) / D_x(arm A)`; confirm below 0.25, refute above 0.60.
+
+| deficit | arm A (chunk ON) | arm B (chunk OFF) | **R** | verdict |
+|---|---:|---:|---:|---|
+| **`D_pp` (primary)** | **−9.96%** | **−10.95%** | **1.099** | **REFUTED** |
+| `D_req` (secondary) | −50.55% | −30.67% | **0.607** | refuting side |
+| `D_tg` (not leaned on) | −19.07% | −14.43% | 0.757 | refuting side |
+
+**The primary instrument does not merely fail to clear the bar — it points the
+wrong way.** The c5-versus-c4 prefill deficit is *slightly larger* in the arm
+that is physically incapable of chunking a prefill into a decode step. All three
+quantities land on the refuting side, and the primary one is unambiguous.
+
+**R4's chunked-prefill mechanism does not survive this test**, and the rival
+account R7 already preferred does: the deficit is **plain queueing**. A fifth
+request against `max_num_seqs 4` waits for a slot, and it depresses the measured
+prefill rate however its prefill is scheduled.
+
+### THE DEFICIT IS AN INVARIANT, and that is the strongest thing here
+
+`D_pp` across every configuration the campaign has measured it in:
+
+| round | prefix caching | mnbt | chunked prefill | `D_pp` |
+|---|---|---:|---|---:|
+| R9 A0 | ON | 8192 | ON | −9.5% |
+| R9 A1 | ON | 32768 | ON | −10.8% |
+| **R9b A** | **OFF** | 32768 | ON | **−9.96%** |
+| **R9b B** | **OFF** | 32768 | **OFF** | **−10.95%** |
+
+**Four configurations spanning the token budget, prefix caching, the mamba cache
+mode and chunked prefill itself, and the deficit sits in a 1.5-point band.** It
+is not a property of any of those flags. It is a property of `c > max_num_seqs`,
+which is the one thing all four arms share. R4 found a real effect and attached
+it to the wrong cause; R9b removes the cause and the effect stays put.
+
+### SECOND HEADLINE — chunked prefill PROTECTS decode, it does not interfere with it
+
+R4's framing was that chunked prefill steals decode budget. Measured directly,
+the sign is the other way round. Arm B against arm A, same engine minus the flag:
+
+| quantity | c4 | c5 |
+|---|---:|---:|
+| `tg` | **−14.8%** | **−9.9%** |
+| `tg_req` | **−44.2%** | **−21.7%** |
+| stagger | 3.32 → **2.17** (better) | 2.53 → **2.20** (better) |
+| `ttfr` | **−17.2%** (better) | **−9.7%** (better) |
+
+**Turning chunked prefill off halves the per-request decode rate at c4 while
+improving admission stagger and time-to-first-response.** That is exactly what
+an unchunked prefill does: it occupies a whole scheduler step and no request
+decodes during it, so first tokens arrive sooner and in tighter formation but
+every request's decode is repeatedly frozen. The scheduler log says the same
+thing without arithmetic — arm B's c4 sits at `(2,2)` in three of eight loaded
+samples and never holds a stable `(4,0)`, where arm A's c4 alternates `(4,0)`
+and `(3,1)`.
+
+So R4's *observation* that chunked prefill interleaves prefill into decode steps
+is confirmed — it shows up cleanly in `ttfr`, which is 17% worse at c4 with
+chunking on. What is refuted is that this interleaving is what depresses the c5
+prefill row. It is not, and the flag is a net win on `tg` at both concurrencies.
+
+### THE VALIDITY GATE FAILED AS WRITTEN, and it is being overridden — with documents, not with reasoning
+
+The hypothesis declared: `ctx_pp2048 < 1200` in both arms or the round is VOID.
+Measured: **6106.93 / 5379.73 (arm A)** and **6008.87 / 5262.09 (arm B)** —
+indistinguishable from the caching-ON figures. **By the letter of the rule this
+round is void.** Overriding a pre-declared void condition after seeing the data
+is exactly the move this campaign distrusts, so the override rests on documents
+only:
+
+1. **The engine's own non-default args, both arms: `'enable_prefix_caching':
+   False`.** Primary, and it is not an inference.
+2. **vLLM's own counter: `Prefix cache hit rate: 0.0%`** in all 22 samples of
+   each arm.
+3. **llama-benchy's source explains why the gate's premise was wrong** — see
+   below. The gate tested a belief about the metric, not a fact about the arm.
+
+**The gate was a bad instrument and the round says so rather than quietly
+dropping it.** The good instrument was sitting in the engine log the whole time
+and costs nothing: read `Prefix cache hit rate`.
+
+### THE ROUND'S MOST VALUABLE FINDING COST NO BOX TIME, and it inverts twelve rounds of labels
+
+Chasing the failed gate into `llama_benchy/runner.py:127-176` and `223-225`
+(pinned 0.4.0) turned up this, and every `ctx_` row in RESULTS.md depends on it:
+
+    if self.config.enable_prefix_caching and depth > 0:
+        # Phase 1: Context Load      -> is_context_phase=True,  expected_ctx (16384)
+        # Phase 2: Inference         -> is_context_phase=False, expected_pp  (2048)
+
+**The `ctx_` rows are the CONTEXT-LOAD pass — the uncached one that *establishes*
+the cache. The rows this campaign has been calling "cold" are the SECOND pass,
+the cache-eligible one.** The campaign has had the two phases backwards since R1.
+
+And the two phases are **charged different token counts** — 16384 against 2048 —
+so their `pp_throughput` figures were never comparable to each other. The ~9x
+`ctx_pp` advantage the campaign has read at every depth for twelve rounds is
+`16384/2048`, not a cache effect. **Open question 4 has been comparing a
+16384-token denominator against a 2048-token one and calling the ratio an
+inversion.** Every ctx-versus-cold `pp` reading in this journal needs re-reading
+in that light; the `tg` readings are unaffected by the token count but are still
+mislabelled as to which phase is cached.
+
+### THE THIRD FINDING, and it is the one that should worry the campaign
+
+**Prefix caching has never hit on this benchmark.** `Prefix cache hit rate: 0.0%`
+in all 22 samples of R9's A1 and all 92 samples of R10 — with the flag **ON**.
+Independently: total prompt tokens processed by the engine, summed from vLLM's
+own `Avg prompt throughput` windows, is **1,079,370 with caching on (R9 A1)
+against 1,060,925 with caching off (R9b A)** — a 1.7% difference. **No prefill
+work was ever saved.**
+
+And yet the flag is worth a great deal. Arm A against R9's A1 — same budget,
+same scheduler width, the flag being the only intended difference:
+
+| quantity | R9 A1 (caching ON) | R9b A (caching OFF) | change |
+|---|---:|---:|---:|
+| `tg` c4 | 143.08 | **62.13** | **−56.6%** |
+| `tg` c5 | 81.73 | **50.28** | **−38.5%** |
+| `tg_req` c4 | 57.89 | 51.49 | −11.0% |
+| stagger c4 | 1.62 | **3.32** | **+105%** |
+| `peak_throughput` c4 | 297 | **297** | **0.0%** |
+| `pp2048` c4 | 669.28 | 663.93 | −0.8% |
+
+**The hardware ceiling is identical to the token and the prefill rate is within
+0.8%, while the board metric falls by 57%.** This is R12's c2 result again in a
+new place: the flag bought nothing from the GPU, it bought a shorter denominator.
+The entire effect is the batch span.
+
+**The mechanism is NOT explained and this round does not invent one.** With zero
+cache hits and identical prefill work, why the four requests' decode windows
+overlap under `mamba_cache_mode: align` and serialize under `none` is unknown.
+What the source does say is that the flag never moves alone: prefix caching off
+also sets `mamba_block_size` from 16 to **32768**, changing the Gated DeltaNet
+state granularity for 30 of this model's 40 layers by a factor of 2048. That is
+the leading suspect and it is a bigger change than the flag under test. Queued
+as **R9c**.
+
+**Planning consequence, and it is immediate:** R11 and R13 both run with prefix
+caching ON, and both are fine — but nobody should describe the campaign's c>1
+gains as "prefix caching working". It is not working. Something that rides
+along with it is.
+
+### Side-predictions: 8 held, 6 missed, 1 gate broken
+
+- **`D_pp` arm A −7% to −14%: HELD** at −9.96%. The deficit reproduced in arm A,
+  which is what gave the discriminator something to divide by.
+- **`pp2048` arm A, both bands HELD**: 663.93 (660-760) and 597.78 (590-690).
+- **`D_req` arm A −25% to −40%: MISSED LOW** at −50.55%.
+- **`tg` arm A c4 140-175: MISSED CATASTROPHICALLY LOW** at 62.13, and c5
+  75-110 **MISSED LOW** at 50.28. Both bands were built on the assumption that
+  prefix caching is worth little because the campaign had never seen it hit.
+  It had never seen it hit because nobody read the hit-rate counter. **The
+  prediction was wrong for the same reason the validity gate was wrong**, and
+  the round's best finding is the correction.
+- **`tg` arm B c4 125-170: MISSED LOW** at 52.92, same cause.
+- **arm B `ttfr` higher than arm A at c5: MISSED, and the sign is backwards** —
+  11115 against 12310, i.e. **9.7% BETTER**. The reasoning ("an unchunked
+  prefill blocks decode for a whole step") was right about the mechanism and
+  wrong about which metric it helps. Unchunked prefill delivers first tokens
+  sooner and decodes slower afterwards.
+- **scheduler `(4,1)` at c5: HELD in arm A** (four `(4,1)` samples, reproducing
+  R9's direct observation). **`(4,0)` at c4: MISSED in both arms** — arm A
+  alternates `(4,0)`/`(3,1)`, arm B sits at `(2,2)` in three of eight loaded
+  samples. R9's and R10's clean `(4,0)` at c4 needed prefix caching on.
+- **MTP acceptance 2.8-3.2 / 60-72%: HELD**, and flat across all three arms:
+  **3.01 / 66.9%** (R9 A1), **3.05 / 68.5%** (R9b A), **3.01 / 66.9%** (R9b B).
+  Acceptance moves for neither prefix caching nor chunked prefill. **Fourth
+  consecutive round to rule acceptance out of a scheduling result.**
+- **R8b SUCCEEDED AT THE THIRD ATTEMPT.** `docker exec <container> tail -f
+  /tmp/sparkrun_serve.log`, verified live with `grep -c 'Running:'` while the
+  grid ran, exactly as the queue entry specified. 22 scheduler samples and 16-17
+  heavy-load SpecDecoding samples per arm, archived as `engine-serve.log` in
+  both dirs. **The command in R12's post-mortem is correct and is now proven.**
+- **Telemetry: HELD.** 1200 + 339 samples, SM clock **2398 MHz** median in both
+  arms (2340-2411 / 2346-2411), 76 °C peak both, 97.11 W / 96.65 W peak — the
+  **tenth and eleventh consecutive sessions** agreeing with R4's 2392. Open
+  question 5 stays closed. No clock, power-policy, driver or kernel setting was
+  touched, and no `apt` was run.
+- **Grid time 400-650 s: HELD** at **440.4 s** (A: 113.2 + 106.6; B: 112.8 +
+  107.8). Two engine starts, ~26 min wall, ~85k harness tokens.
+
+### STANDINGS: nothing is claimed, and that was known before the run
+
+No R9b row is a standings row. Both arms are three flags from the campaign
+config, the `ctx_` rows are the context-load pass rather than a cached phase,
+and c4/c5 figures from an engine with prefix caching off are not comparable to a
+board populated by engines that presumably have it on. The rows go into
+RESULTS.md as **diagnostic, explicitly not scoreable**, and the campaign's
+claimed cells are untouched.
+
+**And the reading does not transfer.** Everything above is a statement about the
+**no-prefix-caching regime**. The campaign config runs with prefix caching ON,
+and this round has just shown that flag is worth 57% of `tg` at c4 — so the two
+regimes are further apart than any pair the campaign has compared. Reading
+"chunked prefill is a net win" or "the deficit is queueing" straight into the
+campaign config would be precisely the cross-condition inference R8 demolished.
+What DOES transfer is the four-configuration invariance of `D_pp`, because two of
+those four points were measured with caching on.
+
+### The round's value, in one line
+
+**It ran the arm R9 could not start, refuted R4's four-round-old chunked-prefill
+mechanism on a pre-declared primary instrument that pointed the wrong way,
+showed the c5 deficit is invariant across four configurations and therefore
+belongs to queueing, found that chunked prefill protects decode rather than
+interfering with it — and, chasing a validity gate that failed, discovered that
+prefix caching has never once hit on this benchmark and that the campaign has had
+its two measurement phases labelled backwards since Round 1.**
