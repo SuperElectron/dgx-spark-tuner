@@ -11,8 +11,13 @@ standings. Board incumbents come from the 2026-08-21 scrape in
 **Every figure is a MEDIAN of the runs**, never a mean (MTP acceptance is
 bimodal). `SE` where quoted is the median standard error, `1.253 σ/√n`.
 
-**Reading the two columns that are easy to get wrong:**
+**Reading the columns that are easy to get wrong:**
 
+- **benchId / date.** The archive under `experiments/` that produced the row, and
+  the date of the run. A pooled row lists **every** contributing benchId and the
+  date of the **latest** one. `r13b-perreq-probe` is a directory name, not a
+  sparkrun benchId — that round has none. A blank cell means the row has no single
+  archive behind it (see the row's own text); it never means the archive is unknown.
 - **Configuration.** `recipe.yaml` changed once, at R11 on 2026-08-22, which
   folded `max_num_batched_tokens: 65536` (it was 8192). **`mnbt 8192 — pre-fold
   recipe` rows are no longer reproducible from `recipe.yaml`** and need an
@@ -42,51 +47,51 @@ section of `journal.md`. It is the one authoritative handoff.**
 The two `c4` cells each carry a pre-fold figure plus five token-budget points
 from R13c's curve, and `tg32 @ d32768 c1` carries both budgets.
 
-| Cell | Configuration | Ours | Runs | Board top | Margin | Note |
-|---|---|---:|---:|---:|---:|---|
-| tg32 @ d16384 c1 | mnbt 8192 — pre-fold recipe, mns 4 | 116.43 | 7 | 28.11 | **4.14x** | R6. Worst of 7 (108.96) still 3.88x |
-| tg32 @ d32768 c1 | mnbt 8192 — pre-fold recipe, mns 4 | **115.85** | 24 pooled (R1 3 + R8c E 7 + R22 G 14) | 23.31 | **4.97x** | The campaign's largest sample at any cell. σ/med 13.51%, SE 3.46%. Worst of 24 (93.54) still 4.01x |
-| tg32 @ d32768 c1 | **mnbt 65536 — folded recipe**, mns 4 | **110.16** | 21 pooled (R8c F 7 + R22 H 14) | 23.31 | **4.72x** | The current-epoch row for this cell — the only one quotable as what `recipe.yaml` produces here. Budget is inert at c1 (position-controlled, R22) |
-| tg32 @ d8192 c1 | mnbt 8192 — pre-fold recipe, mns 4 | **123.81** | 7 | sole entry, no number published | uncontested | R21. σ/med 13.18%. No margin moves either way |
-| tg128 @ d16384 c4 | mnbt 8192 — pre-fold recipe, mns 4 | 52.85 | 6 pooled (R2 + verify) | 46.68 | **1.13x** | The only contested cell we hold (8 entries). Worst of 6 (51.25) still +9.8% |
-| tg128 @ d16384 c4 | **MUTATION mnbt 32768 + mns 16** | **147.25** | 7 | 46.68 | **3.15x** | R10 |
-| tg128 @ d16384 c4 | **MUTATION mnbt 65536 + mns 5** | **173.34** | 7 | 46.68 | **3.71x** | R13c — **the knee of the budget curve**. `mns 5` is NOT in the recipe and `mnbt 65536 + mns 4` has never been measured; do not quote this as what the recipe ships |
-| tg128 @ d16384 c4 | **MUTATION mnbt 98304 + mns 5** | 171.31 | 14 pooled (R13 + R13c) | 46.68 | **3.67x** | Two engine starts, 174.68 and 169.69 |
-| tg128 @ d16384 c4 | **MUTATION mnbt 131072 + mns 5** | 170.84 | 14 pooled (R13c + R13d) | 46.68 | **3.66x** | Above the knee — buys nothing over 65536 |
-| tg128 @ d16384 c4 | **MUTATION mnbt 16384 + mns 5** | 85.90 | 7 | 46.68 | **1.84x** | R13c — below the knee, partial occupancy |
-| ctx_tg @ d16384 c4 | mnbt 8192 — pre-fold recipe, mns 4 | 56.36 | 6 pooled (R2 + verify) | 27.68 | **2.04x** | |
-| ctx_tg @ d16384 c4 | **MUTATION mnbt 32768 + mns 16** | 126.35 | 7 | 27.68 | **4.56x** | R10 |
-| ctx_tg @ d16384 c4 | **MUTATION mnbt 65536 + mns 5** | 164.95 | 7 | 27.68 | **5.96x** | R13c — the knee. Same `mns 5` caveat as the Phase-2 row |
-| ctx_tg @ d16384 c4 | **MUTATION mnbt 98304 + mns 5** | 170.36 | 14 pooled (R13 + R13c) | 27.68 | **6.15x** | |
-| ctx_tg @ d16384 c4 | **MUTATION mnbt 131072 + mns 5** | **171.77** | 14 pooled (R13c + R13d) | 27.68 | **6.21x** | **The campaign's widest margin.** Took the title from the 98304 row by 0.83% — a bookkeeping change, not a discovery |
-| ctx_tg @ d16384 c4 | **MUTATION mnbt 16384 + mns 5** | 68.79 | 7 | 27.68 | **2.49x** | R13c — below the knee |
-| tg128 @ d65536 c1 | mnbt 8192 — pre-fold recipe, mns 4 | 94.10 | 7 | 16.48 | **5.71x** | **The widest campaign-config win.** Worst of 7 (81.79) still 4.96x |
-| ctx_tg @ d65536 c1 | mnbt 8192 — pre-fold recipe, mns 4 | 92.98 | 7 | 20.70 | **4.49x** | Worst of 7 (77.33) still 3.74x |
-| ctx_pp @ d65536 c1 | mnbt 8192 — pre-fold recipe, mns 4 | 4013.59 | 7 | 1393.35 | **2.88x** | Sole-entry cell (1 board entry); the incumbent is three orders below the same test type at d32768, so the holder is probably a slow outlier |
+| benchId | date | Cell | Configuration | Ours | Runs | Board top | Margin | Note |
+|---|---|---|---|---:|---:|---:|---:|---|
+| bench_dd3afc9e1c94 | 2026-08-22 | tg32 @ d16384 c1 | mnbt 8192 — pre-fold recipe, mns 4 | 116.43 | 7 | 28.11 | **4.14x** | R6. Worst of 7 (108.96) still 3.88x |
+| bench_25a0e7f36ab0, bench_2b0f7bc8fb7b-mnbt8192, bench_8707c27ce1a4-r22-armG | 2026-08-22 | tg32 @ d32768 c1 | mnbt 8192 — pre-fold recipe, mns 4 | **115.85** | 24 pooled (R1 3 + R8c E 7 + R22 G 14) | 23.31 | **4.97x** | The campaign's largest sample at any cell. σ/med 13.51%, SE 3.46%. Worst of 24 (93.54) still 4.01x |
+| bench_964a188f3d16-mnbt65536, bench_bb4b8ef8a193-r22-armH | 2026-08-22 | tg32 @ d32768 c1 | **mnbt 65536 — folded recipe**, mns 4 | **110.16** | 21 pooled (R8c F 7 + R22 H 14) | 23.31 | **4.72x** | The current-epoch row for this cell — the only one quotable as what `recipe.yaml` produces here. Budget is inert at c1 (position-controlled, R22) |
+| bench_6921c874daee-r21-armB | 2026-08-22 | tg32 @ d8192 c1 | mnbt 8192 — pre-fold recipe, mns 4 | **123.81** | 7 | sole entry, no number published | uncontested | R21. σ/med 13.18%. No margin moves either way |
+| bench_f58c56da6658, bench_f58c56da6658-verify | 2026-08-21 | tg128 @ d16384 c4 | mnbt 8192 — pre-fold recipe, mns 4 | 52.85 | 6 pooled (R2 + verify) | 46.68 | **1.13x** | The only contested cell we hold (8 entries). Worst of 6 (51.25) still +9.8% |
+| bench_860b43edd154 | 2026-08-22 | tg128 @ d16384 c4 | **MUTATION mnbt 32768 + mns 16** | **147.25** | 7 | 46.68 | **3.15x** | R10 |
+| bench_0bd1f20dca74-mnbt65536 | 2026-08-22 | tg128 @ d16384 c4 | **MUTATION mnbt 65536 + mns 5** | **173.34** | 7 | 46.68 | **3.71x** | R13c — **the knee of the budget curve**. `mns 5` is NOT in the recipe and `mnbt 65536 + mns 4` has never been measured; do not quote this as what the recipe ships |
+| bench_433eeaf9827e, bench_d6cec044441c-mnbt98304 | 2026-08-22 | tg128 @ d16384 c4 | **MUTATION mnbt 98304 + mns 5** | 171.31 | 14 pooled (R13 + R13c) | 46.68 | **3.67x** | Two engine starts, 174.68 and 169.69 |
+| bench_0509b2a740f6-mnbt131072, bench_0509b2a740f6-r13d | 2026-08-22 | tg128 @ d16384 c4 | **MUTATION mnbt 131072 + mns 5** | 170.84 | 14 pooled (R13c + R13d) | 46.68 | **3.66x** | Above the knee — buys nothing over 65536 |
+| bench_fa5630a4ac79-mnbt16384 | 2026-08-22 | tg128 @ d16384 c4 | **MUTATION mnbt 16384 + mns 5** | 85.90 | 7 | 46.68 | **1.84x** | R13c — below the knee, partial occupancy |
+| bench_f58c56da6658, bench_f58c56da6658-verify | 2026-08-21 | ctx_tg @ d16384 c4 | mnbt 8192 — pre-fold recipe, mns 4 | 56.36 | 6 pooled (R2 + verify) | 27.68 | **2.04x** | |
+| bench_860b43edd154 | 2026-08-22 | ctx_tg @ d16384 c4 | **MUTATION mnbt 32768 + mns 16** | 126.35 | 7 | 27.68 | **4.56x** | R10 |
+| bench_0bd1f20dca74-mnbt65536 | 2026-08-22 | ctx_tg @ d16384 c4 | **MUTATION mnbt 65536 + mns 5** | 164.95 | 7 | 27.68 | **5.96x** | R13c — the knee. Same `mns 5` caveat as the Phase-2 row |
+| bench_433eeaf9827e, bench_d6cec044441c-mnbt98304 | 2026-08-22 | ctx_tg @ d16384 c4 | **MUTATION mnbt 98304 + mns 5** | 170.36 | 14 pooled (R13 + R13c) | 27.68 | **6.15x** | |
+| bench_0509b2a740f6-mnbt131072, bench_0509b2a740f6-r13d | 2026-08-22 | ctx_tg @ d16384 c4 | **MUTATION mnbt 131072 + mns 5** | **171.77** | 14 pooled (R13c + R13d) | 27.68 | **6.21x** | **The campaign's widest margin.** Took the title from the 98304 row by 0.83% — a bookkeeping change, not a discovery |
+| bench_fa5630a4ac79-mnbt16384 | 2026-08-22 | ctx_tg @ d16384 c4 | **MUTATION mnbt 16384 + mns 5** | 68.79 | 7 | 27.68 | **2.49x** | R13c — below the knee |
+| bench_3d8149654d1b | 2026-08-22 | tg128 @ d65536 c1 | mnbt 8192 — pre-fold recipe, mns 4 | 94.10 | 7 | 16.48 | **5.71x** | **The widest campaign-config win.** Worst of 7 (81.79) still 4.96x |
+| bench_3d8149654d1b | 2026-08-22 | ctx_tg @ d65536 c1 | mnbt 8192 — pre-fold recipe, mns 4 | 92.98 | 7 | 20.70 | **4.49x** | Worst of 7 (77.33) still 3.74x |
+| bench_3d8149654d1b | 2026-08-22 | ctx_pp @ d65536 c1 | mnbt 8192 — pre-fold recipe, mns 4 | 4013.59 | 7 | 1393.35 | **2.88x** | Sole-entry cell (1 board entry); the incumbent is three orders below the same test type at d32768, so the holder is probably a slow outlier |
 
 ## LOST — 12 cells, 16 rows
 
 `Like-for-like` is the best board entry at the same model/runtime/quant where
 the scrape carries one; the verdict is scored against `Board top`.
 
-| Cell | Configuration | Ours | Runs | Board top | Like-for-like | Verdict |
-|---|---|---:|---:|---:|---:|---|
-| tg128 @ d131072 c1 | mnbt 8192 — pre-fold recipe, mns 4 | **81.22** | 10 pooled (R5 3 + R21 7) | 81.60 (Nemotron Lightning NVFP4) | — | **0.995x — LOST by 0.47%**, which is **0.11 SE** at σ/med 10.56%. A dead heat we are on the wrong side of; **not claimed**. ⚠ Do not re-run — unresolvable at any affordable budget, and this is the campaign's most expensive depth |
-| tg128 @ d16384 c2 | mnbt 8192 — pre-fold recipe, mns 4 | 84.00 | ⚠ **3 — PROVISIONAL** | 325.44 (LFM2.5-350M BF16) | 163.27 (Qwen3.6-35B-A3B-NVFP4, vLLM) | **0.51x — LOST.** ⚠ Three runs, deliberately not re-measured (R21): the gap is >2x and no observed sampling error closes it. Kept as the pre-fold baseline for the row below; **not to be quoted as a measurement** |
-| tg128 @ d16384 c2 | **MUTATION mnbt 32768 + mns 5** | 140.77 | 7 | 325.44 | 163.27 | **0.86x — still LOST** |
-| tg128 @ d16384 c5 | mnbt 8192 — pre-fold recipe + **MUTATION mns 5** | 48.12 | ⚠ **3 — PROVISIONAL** | 428.95 (LFM2.5-350M BF16) | 225.46 (Qwen3.6-35B-A3B-NVFP4-Fast, vLLM) | **0.21x — LOST.** ⚠ Same status as the c2 row above |
-| tg128 @ d16384 c5 | **MUTATION mnbt 32768 + mns 5** | 128.93 | 7 | 428.95 | 225.46 | **0.57x — still LOST** |
-| tg128 @ d16384 c5 | **MUTATION mnbt 98304 + mns 5** | 164.27 | 7 | 428.95 | 225.46 | **0.73x — still LOST.** R13 aimed at this cell and did not take it; **0.38x against the cell top**. The only loss that ever had a live route to a win |
-| ctx_tg @ d8192 c1 | mnbt 8192 — pre-fold recipe, mns 4 (tg32 arm) | **127.64** | 10 pooled (R1 3 + R21 7) | 207.60 (LFM2.5-350M BF16) | 118.07 (Nemotron-3.5-Lightning-30B-A3B-NVFP4, vLLM) | **0.615x — LOST** to the top; **1.08x over best vLLM+NVFP4**, the campaign's thinnest surviving claim, protected by R21 |
-| ctx_tg @ d16384 c1 | mnbt 8192 — pre-fold recipe, mns 4 (tg32 arm) | 122.97 | 7 | 193.09 (LFM2.5-350M BF16) | 153.86 (our own model on **Atlas**) | **0.64x — LOST**; best vLLM+NVFP4 not in the scrape |
-| ctx_tg @ d32768 c1 | mnbt 8192 — pre-fold recipe, mns 4 (tg32 arm) | **115.86** | 24 pooled (R1 3 + R8c E 7 + R22 G 14) | 117.37 (Qwen3.6-35B-A3B-NVFP4 on **Atlas**) | 116.65 (Nemotron-3.5-Lightning-30B-A3B-NVFP4, vLLM) | **0.987x — LOST** by **0.34 SE**. ⚠ The R8c→R22 change of +11.02% **failed the ±10% protection band by 1.0 point**; the sets were pooled rather than replaced because the failing arm ran second and matches R22's position bias in sign and size. Recorded as a departure from procedure, not buried. ⚠ Do not go back |
-| ctx_tg @ d32768 c1 | **mnbt 65536 — folded recipe**, mns 4 | **113.37** | 21 pooled (R8c F 7 + R22 H 14) | 117.37 (Atlas) | 116.65 | **0.966x — LOST.** R22's pre-declared claim rule (pooled must clear 120.53) missed by 6.1%. One 14-run arm read 122.80 = 1.046x and was **not promoted** |
-| pp2048 @ d8192 c1 | mnbt 8192 — pre-fold recipe, mns 4 | 1187.51 | 3 | 215894.21 (Atlas) | not in scrape | **0.006x — LOST** |
-| pp2048 @ d16384 c1 | mnbt 8192 — pre-fold recipe, mns 4 | 628.66 | 7 (R1's 3-run figure was 637.09) | 99229.33 (Atlas) | not in scrape | **0.006x — LOST** |
-| pp2048 @ d32768 c1 | mnbt 8192 — pre-fold recipe, mns 4 | 295.71 | 3 | 63079.61 (Atlas) | 4644.54 (Laguna-XS-2.1-NVFP4) | **0.005x of top, 0.064x of best vLLM — LOST.** ⚠ A 15x gap against a like-for-like vLLM entry, while our decode figures sit within 3% of what a like-for-like incumbent requires: the signature of a metric mismatch. Recorded as the board reads it; the mismatch is an open question |
-| ctx_pp @ d8192 c1 | mnbt 8192 — pre-fold recipe, mns 4 | 6148.56 | 3 | 775122.96 (Atlas) | not in scrape | **LOST by ~126x** |
-| ctx_pp @ d16384 c1 | mnbt 8192 — pre-fold recipe, mns 4 | 5856.93 | 7 (R1's 3-run figure was 5910.22) | 884764.53 (Atlas) | not in scrape | **LOST by ~151x** |
-| ctx_pp @ d32768 c1 | mnbt 8192 — pre-fold recipe, mns 4 | 5086.51 | 3 | 945271.31 (Atlas) | not in scrape | **LOST by ~186x** |
+| benchId | date | Cell | Configuration | Ours | Runs | Board top | Like-for-like | Verdict |
+|---|---|---|---|---:|---:|---:|---:|---|
+| bench_076db52d341c, bench_deb3090b9a29-r21-armA | 2026-08-22 | tg128 @ d131072 c1 | mnbt 8192 — pre-fold recipe, mns 4 | **81.22** | 10 pooled (R5 3 + R21 7) | 81.60 (Nemotron Lightning NVFP4) | — | **0.995x — LOST by 0.47%**, which is **0.11 SE** at σ/med 10.56%. A dead heat we are on the wrong side of; **not claimed**. ⚠ Do not re-run — unresolvable at any affordable budget, and this is the campaign's most expensive depth |
+| bench_0ef7af8997ce | 2026-08-22 | tg128 @ d16384 c2 | mnbt 8192 — pre-fold recipe, mns 4 | 84.00 | ⚠ **3 — PROVISIONAL** | 325.44 (LFM2.5-350M BF16) | 163.27 (Qwen3.6-35B-A3B-NVFP4, vLLM) | **0.51x — LOST.** ⚠ Three runs, deliberately not re-measured (R21): the gap is >2x and no observed sampling error closes it. Kept as the pre-fold baseline for the row below; **not to be quoted as a measurement** |
+| bench_ac37f5b64487 | 2026-08-22 | tg128 @ d16384 c2 | **MUTATION mnbt 32768 + mns 5** | 140.77 | 7 | 325.44 | 163.27 | **0.86x — still LOST** |
+| bench_858173ba5753-mns5 | 2026-08-22 | tg128 @ d16384 c5 | mnbt 8192 — pre-fold recipe + **MUTATION mns 5** | 48.12 | ⚠ **3 — PROVISIONAL** | 428.95 (LFM2.5-350M BF16) | 225.46 (Qwen3.6-35B-A3B-NVFP4-Fast, vLLM) | **0.21x — LOST.** ⚠ Same status as the c2 row above |
+| bench_ac37f5b64487 | 2026-08-22 | tg128 @ d16384 c5 | **MUTATION mnbt 32768 + mns 5** | 128.93 | 7 | 428.95 | 225.46 | **0.57x — still LOST** |
+| bench_433eeaf9827e | 2026-08-22 | tg128 @ d16384 c5 | **MUTATION mnbt 98304 + mns 5** | 164.27 | 7 | 428.95 | 225.46 | **0.73x — still LOST.** R13 aimed at this cell and did not take it; **0.38x against the cell top**. The only loss that ever had a live route to a win |
+| bench_25a0e7f36ab0, bench_6921c874daee-r21-armB | 2026-08-22 | ctx_tg @ d8192 c1 | mnbt 8192 — pre-fold recipe, mns 4 (tg32 arm) | **127.64** | 10 pooled (R1 3 + R21 7) | 207.60 (LFM2.5-350M BF16) | 118.07 (Nemotron-3.5-Lightning-30B-A3B-NVFP4, vLLM) | **0.615x — LOST** to the top; **1.08x over best vLLM+NVFP4**, the campaign's thinnest surviving claim, protected by R21 |
+| bench_dd3afc9e1c94 | 2026-08-22 | ctx_tg @ d16384 c1 | mnbt 8192 — pre-fold recipe, mns 4 (tg32 arm) | 122.97 | 7 | 193.09 (LFM2.5-350M BF16) | 153.86 (our own model on **Atlas**) | **0.64x — LOST**; best vLLM+NVFP4 not in the scrape |
+| bench_25a0e7f36ab0, bench_2b0f7bc8fb7b-mnbt8192, bench_8707c27ce1a4-r22-armG | 2026-08-22 | ctx_tg @ d32768 c1 | mnbt 8192 — pre-fold recipe, mns 4 (tg32 arm) | **115.86** | 24 pooled (R1 3 + R8c E 7 + R22 G 14) | 117.37 (Qwen3.6-35B-A3B-NVFP4 on **Atlas**) | 116.65 (Nemotron-3.5-Lightning-30B-A3B-NVFP4, vLLM) | **0.987x — LOST** by **0.34 SE**. ⚠ The R8c→R22 change of +11.02% **failed the ±10% protection band by 1.0 point**; the sets were pooled rather than replaced because the failing arm ran second and matches R22's position bias in sign and size. Recorded as a departure from procedure, not buried. ⚠ Do not go back |
+| bench_964a188f3d16-mnbt65536, bench_bb4b8ef8a193-r22-armH | 2026-08-22 | ctx_tg @ d32768 c1 | **mnbt 65536 — folded recipe**, mns 4 | **113.37** | 21 pooled (R8c F 7 + R22 H 14) | 117.37 (Atlas) | 116.65 | **0.966x — LOST.** R22's pre-declared claim rule (pooled must clear 120.53) missed by 6.1%. One 14-run arm read 122.80 = 1.046x and was **not promoted** |
+| bench_25a0e7f36ab0 | 2026-08-21 | pp2048 @ d8192 c1 | mnbt 8192 — pre-fold recipe, mns 4 | 1187.51 | 3 | 215894.21 (Atlas) | not in scrape | **0.006x — LOST** |
+| bench_3d8149654d1b | 2026-08-22 | pp2048 @ d16384 c1 | mnbt 8192 — pre-fold recipe, mns 4 | 628.66 | 7 (R1's 3-run figure was 637.09) | 99229.33 (Atlas) | not in scrape | **0.006x — LOST** |
+| bench_25a0e7f36ab0 | 2026-08-21 | pp2048 @ d32768 c1 | mnbt 8192 — pre-fold recipe, mns 4 | 295.71 | 3 | 63079.61 (Atlas) | 4644.54 (Laguna-XS-2.1-NVFP4) | **0.005x of top, 0.064x of best vLLM — LOST.** ⚠ A 15x gap against a like-for-like vLLM entry, while our decode figures sit within 3% of what a like-for-like incumbent requires: the signature of a metric mismatch. Recorded as the board reads it; the mismatch is an open question |
+| bench_25a0e7f36ab0 | 2026-08-21 | ctx_pp @ d8192 c1 | mnbt 8192 — pre-fold recipe, mns 4 | 6148.56 | 3 | 775122.96 (Atlas) | not in scrape | **LOST by ~126x** |
+| bench_3d8149654d1b | 2026-08-22 | ctx_pp @ d16384 c1 | mnbt 8192 — pre-fold recipe, mns 4 | 5856.93 | 7 (R1's 3-run figure was 5910.22) | 884764.53 (Atlas) | not in scrape | **LOST by ~151x** |
+| bench_25a0e7f36ab0 | 2026-08-21 | ctx_pp @ d32768 c1 | mnbt 8192 — pre-fold recipe, mns 4 | 5086.51 | 3 | 945271.31 (Atlas) | not in scrape | **LOST by ~186x** |
 
 ⚠ **The phase-label correction does NOT rescue the prefill losses.** Rescaling
 our `pp2048` figures by `(depth+2048)/2048` would turn d32768 into a win against
@@ -97,43 +102,51 @@ Atlas, which is out of scope — these were cells we entered and lost, not targe
 
 ## NOT SCORED — no board figure, or never a campaign target
 
-| Cell | Configuration | Ours | Runs | Why it is not scored |
-|---|---|---:|---:|---|
-| tg128 @ d16384 c1 | mnbt 8192 — pre-fold recipe, mns 4 | 112.62 | 14 pooled (R6 7 + R8 7) | The crowded cell (188.47 top, 116.03 best vLLM NVFP4 → **0.97x**), **never a campaign target**. Listed for the reproduction gap, now −2.9% |
-| tg128 @ d16384 c1 | **mnbt 65536 — folded recipe**, mns 4 | 112.92 | 7 | R11's fold anchor: **+0.27%** on the row above, i.e. nothing. NOT pooled — different configuration. This is what licenses every cross-fold comparison in this file |
-| ctx_tg @ d16384 c1 | mnbt 8192 pre-fold / mnbt 65536 folded | 102.99 pooled / 98.72 | 14 / 7 | Never scraped |
-| ctx_tg @ d131072 c1 | mnbt 8192 — pre-fold recipe, mns 4 | 77.52 | 10 pooled (R5 3 + R21 7) | Never scraped, so held rather than claimed |
-| pp2048 @ d65536 c1 | mnbt 8192 — pre-fold recipe, mns 4 | 119.54 | 7 | The board has **zero entries** at that depth — an empty cell, not a won one, and nothing can be posted to it |
-| tg128 @ d16384 c8 | **MUTATION mns 8**, mnbt 8192 | 43.51 | 3 | The scrape covers c1, c2, c4 and c5 only |
-| tg128 @ d16384 c16 | **MUTATION mns 16**, mnbt 8192 | 40.47 | 3 | Same |
-| tg128 @ d16384 c16 | **MUTATION mnbt 32768 + mns 16** | 53.45 | 7 | Same. `peak_throughput` **515**, the campaign's largest sustained aggregate |
-| ctx_tg @ d16384 c2 | pre-fold / **MUTATION mnbt 32768 + mns 5** | 79.44 / 127.09 | 3 / 7 | The board publishes `ctx_` cells at c1 only |
-| ctx_tg @ d16384 c5 | pre-fold + mns 5 / mnbt 32768 + mns 5 / mnbt 98304 + mns 5 | 51.25 / 104.75 / 160.67 | 3 / 7 / 7 | Same |
-| ctx_tg @ d16384 c8, c16 | **MUTATION mns 8 / mns 16** at mnbt 8192; c16 also at mnbt 32768 | 47.75 / 45.61 / 54.54 | 3 / 3 / 7 | Same |
-| every `pp2048` / `ctx_pp` cell at `c>1` | various | see archives | — | The board's prefill and context cells are c1 only |
-| every R9b and R9c row | prefix caching OFF, `--block-size 32768`, chunked prefill OFF, all at `mnbt 32768` | see archives | 3 / 7 | Deliberately diagnostic: they mutate a flag the recipe ships and sit at a budget it does not. **No standings row was ever measured with prefix caching off** |
-| R13b probe rows | `mnbt 98304 + mns 5` + `--per-request-spec-decode-metrics detailed` | 167.14 / 161.68 | 7 batches | Not measured by llama-benchy and there is no benchId; a reproduction check for a mechanism round. The instrument recipe must never be folded |
+| benchId | date | Cell | Configuration | Ours | Runs | Why it is not scored |
+|---|---|---|---|---:|---:|---|
+| bench_dd3afc9e1c94, bench_3d8149654d1b | 2026-08-22 | tg128 @ d16384 c1 | mnbt 8192 — pre-fold recipe, mns 4 | 112.62 | 14 pooled (R6 7 + R8 7) | The crowded cell (188.47 top, 116.03 best vLLM NVFP4 → **0.97x**), **never a campaign target**. Listed for the reproduction gap, now −2.9% |
+| bench_c9518e3e96a3-r11 | 2026-08-22 | tg128 @ d16384 c1 | **mnbt 65536 — folded recipe**, mns 4 | 112.92 | 7 | R11's fold anchor: **+0.27%** on the row above, i.e. nothing. NOT pooled — different configuration. This is what licenses every cross-fold comparison in this file |
+| bench_dd3afc9e1c94, bench_3d8149654d1b / bench_c9518e3e96a3-r11 | 2026-08-22 | ctx_tg @ d16384 c1 | mnbt 8192 pre-fold / mnbt 65536 folded | 102.99 pooled / 98.72 | 14 / 7 | Never scraped |
+| bench_076db52d341c, bench_deb3090b9a29-r21-armA | 2026-08-22 | ctx_tg @ d131072 c1 | mnbt 8192 — pre-fold recipe, mns 4 | 77.52 | 10 pooled (R5 3 + R21 7) | Never scraped, so held rather than claimed |
+| bench_3d8149654d1b | 2026-08-22 | pp2048 @ d65536 c1 | mnbt 8192 — pre-fold recipe, mns 4 | 119.54 | 7 | The board has **zero entries** at that depth — an empty cell, not a won one, and nothing can be posted to it |
+| bench_0954971b5dfa | 2026-08-22 | tg128 @ d16384 c8 | **MUTATION mns 8**, mnbt 8192 | 43.51 | 3 | The scrape covers c1, c2, c4 and c5 only |
+| bench_a769c1142e15 | 2026-08-22 | tg128 @ d16384 c16 | **MUTATION mns 16**, mnbt 8192 | 40.47 | 3 | Same |
+| bench_860b43edd154 | 2026-08-22 | tg128 @ d16384 c16 | **MUTATION mnbt 32768 + mns 16** | 53.45 | 7 | Same. `peak_throughput` **515**, the campaign's largest sustained aggregate |
+| bench_0ef7af8997ce / bench_ac37f5b64487 | 2026-08-22 | ctx_tg @ d16384 c2 | pre-fold / **MUTATION mnbt 32768 + mns 5** | 79.44 / 127.09 | 3 / 7 | The board publishes `ctx_` cells at c1 only |
+| bench_858173ba5753-mns5 / bench_ac37f5b64487 / bench_433eeaf9827e | 2026-08-22 | ctx_tg @ d16384 c5 | pre-fold + mns 5 / mnbt 32768 + mns 5 / mnbt 98304 + mns 5 | 51.25 / 104.75 / 160.67 | 3 / 7 / 7 | Same |
+| bench_0954971b5dfa / bench_a769c1142e15 / bench_860b43edd154 | 2026-08-22 | ctx_tg @ d16384 c8, c16 | **MUTATION mns 8 / mns 16** at mnbt 8192; c16 also at mnbt 32768 | 47.75 / 45.61 / 54.54 | 3 / 3 / 7 | Same |
+| | | every `pp2048` / `ctx_pp` cell at `c>1` | various | see archives | — | The board's prefill and context cells are c1 only |
+| bench_9379c15468ec-a-chunk, bench_10496035f7fd-b-nochunk (R9b); bench_30d6586cc70a-p-pc-on, bench_76bccce3d8b3-g-block32768, bench_76bccce3d8b3-g-block32768-repeat, bench_107f95223a60-n-pc-off (R9c) | 2026-08-22 | every R9b and R9c row | prefix caching OFF, `--block-size 32768`, chunked prefill OFF, all at `mnbt 32768` | see archives | 3 / 7 | Deliberately diagnostic: they mutate a flag the recipe ships and sit at a budget it does not. **No standings row was ever measured with prefix caching off** |
+| r13b-perreq-probe | 2026-08-22 | R13b probe rows | `mnbt 98304 + mns 5` + `--per-request-spec-decode-metrics detailed` | 167.14 / 161.68 | 7 batches | Not measured by llama-benchy and there is no benchId; a reproduction check for a mechanism round. The instrument recipe must never be folded |
 
 ## RETIRED FIGURES — published here once, do not quote
 
-| Figure | Cell | Retired by | Replacement |
-|---|---|---|---|
-| 129.32 (4.60x) | tg32 @ d16384 c1 | R6 | 116.43 = 4.14x |
-| 115.56 (4.96x), then pooled 112.59 (4.83x) | tg32 @ d32768 c1 | R8c, then R22 | 115.85 = 4.97x, pooled 24 |
-| 106.24 | tg32 @ d8192 c1 | R21 (band failure, +16.54%) | 123.81 |
-| 84.03 (0.72x), then 0.92x | ctx_tg @ d32768 c1 | R8c, then R22 | 0.987x / 0.966x |
-| 117.65 = **1.002x dead heat** | ctx_tg @ d32768 c1, mnbt 65536 | R22 (re-measures 109.41, −7.00%) | 113.37 = 0.966x, pooled 21 |
-| 108.15 (6.56x) | tg128 @ d65536 c1 | R8 | 94.10 = 5.71x |
-| 89.76 (4.34x) | ctx_tg @ d65536 c1 | R8 | 92.98 = 4.49x |
-| 77.13 (0.95x, "short by 5.5%") | tg128 @ d131072 c1 | R21 | 81.22 = 0.995x, short by 0.47% |
-| 76.66 | ctx_tg @ d131072 c1 | R21 | 77.52, pooled 10 |
-| 174.68 (3.74x) | tg128 @ d16384 c4, mnbt 98304 | R13c | 171.31 = 3.67x, pooled 14 |
-| 170.59 (6.16x) | ctx_tg @ d16384 c4, mnbt 98304 | R13c | 170.36 = 6.15x, pooled 14 |
-| 175.40 (**6.34x**, never promoted) | ctx_tg @ d16384 c4, mnbt 131072 | R13d | 171.77 = 6.21x, pooled 14 |
-| σ/med **24.20%**, "the noisiest cell in the campaign" | tg32 @ d32768 c1, mnbt 65536 | R22 (11.39% at the identical config) | none — stop naming σ records from a single arm; σ from 7 runs carries ~±50% of itself |
-| "+6.36% from the folded budget on Phase 1" | ctx_tg @ d32768 c1 | R22 | It was **arm position**, not budget. Position-controlled the budget reads −1.08% / +0.86% — inert at c1 on both phases |
-| `tg` aggregate = per-request × c (168.0, 228.0, 647.6, 4.53x at c4) | every `c>1` row | R10 from llama-benchy's source, corroborated by R5c over 34 records | `tg_throughput` is already a batch aggregate; `peak_throughput` is the ceiling it must sit under. Never multiply |
-| "the `ctx_` phase is prefill-free, so it is ~9x faster at prefill" and the five claims built on it | every `ctx_pp`-vs-`pp` comparison | the `ctx_` phase-label correction | **Withdrawn, not adjusted.** The ratio is `(depth+2048)/2048` to within 4% in 45 of 46 archived phase pairs. Prefix caching **never hit once** in 220+ engine samples |
+`Source archive` / `date` are the archive and date the **retired** figure came
+from, not the round that retired it — that is the `Retired by` column, and not
+the archive the `Replacement` came from either. The column is deliberately NOT
+called `benchId`: `memory-backfill.sh` reads a `benchId` header as a standings
+schema and would emit each row as an observation asserting the replacement
+figure against the retired run's archive. Renaming it makes the backfill skip
+this table, which is correct — nothing here is quotable.
+
+| Source archive | date | Figure | Cell | Retired by | Replacement |
+|---|---|---|---|---|---|
+| bench_25a0e7f36ab0 | 2026-08-21 | 129.32 (4.60x) | tg32 @ d16384 c1 | R6 | 116.43 = 4.14x |
+| bench_25a0e7f36ab0, bench_2b0f7bc8fb7b-mnbt8192 | 2026-08-22 | 115.56 (4.96x), then pooled 112.59 (4.83x) | tg32 @ d32768 c1 | R8c, then R22 | 115.85 = 4.97x, pooled 24 |
+| bench_25a0e7f36ab0 | 2026-08-21 | 106.24 | tg32 @ d8192 c1 | R21 (band failure, +16.54%) | 123.81 |
+| bench_25a0e7f36ab0, bench_2b0f7bc8fb7b-mnbt8192 | 2026-08-22 | 84.03 (0.72x), then 0.92x | ctx_tg @ d32768 c1 | R8c, then R22 | 0.987x / 0.966x |
+| bench_964a188f3d16-mnbt65536 | 2026-08-22 | 117.65 = **1.002x dead heat** | ctx_tg @ d32768 c1, mnbt 65536 | R22 (re-measures 109.41, −7.00%) | 113.37 = 0.966x, pooled 21 |
+| bench_dab043abba20 | 2026-08-21 | 108.15 (6.56x) | tg128 @ d65536 c1 | R8 | 94.10 = 5.71x |
+| bench_dab043abba20 | 2026-08-21 | 89.76 (4.34x) | ctx_tg @ d65536 c1 | R8 | 92.98 = 4.49x |
+| bench_076db52d341c | 2026-08-22 | 77.13 (0.95x, "short by 5.5%") | tg128 @ d131072 c1 | R21 | 81.22 = 0.995x, short by 0.47% |
+| bench_076db52d341c | 2026-08-22 | 76.66 | ctx_tg @ d131072 c1 | R21 | 77.52, pooled 10 |
+| bench_433eeaf9827e | 2026-08-22 | 174.68 (3.74x) | tg128 @ d16384 c4, mnbt 98304 | R13c | 171.31 = 3.67x, pooled 14 |
+| bench_433eeaf9827e | 2026-08-22 | 170.59 (6.16x) | ctx_tg @ d16384 c4, mnbt 98304 | R13c | 170.36 = 6.15x, pooled 14 |
+| bench_0509b2a740f6-mnbt131072 | 2026-08-22 | 175.40 (**6.34x**, never promoted) | ctx_tg @ d16384 c4, mnbt 131072 | R13d | 171.77 = 6.21x, pooled 14 |
+| bench_964a188f3d16-mnbt65536 | 2026-08-22 | σ/med **24.20%**, "the noisiest cell in the campaign" | tg32 @ d32768 c1, mnbt 65536 | R22 (11.39% at the identical config) | none — stop naming σ records from a single arm; σ from 7 runs carries ~±50% of itself |
+| bench_2b0f7bc8fb7b-mnbt8192, bench_964a188f3d16-mnbt65536 | 2026-08-22 | "+6.36% from the folded budget on Phase 1" | ctx_tg @ d32768 c1 | R22 | It was **arm position**, not budget. Position-controlled the budget reads −1.08% / +0.86% — inert at c1 on both phases |
+| | | `tg` aggregate = per-request × c (168.0, 228.0, 647.6, 4.53x at c4) | every `c>1` row | R10 from llama-benchy's source, corroborated by R5c over 34 records | `tg_throughput` is already a batch aggregate; `peak_throughput` is the ceiling it must sit under. Never multiply |
+| | | "the `ctx_` phase is prefill-free, so it is ~9x faster at prefill" and the five claims built on it | every `ctx_pp`-vs-`pp` comparison | the `ctx_` phase-label correction | **Withdrawn, not adjusted.** The ratio is `(depth+2048)/2048` to within 4% in 45 of 46 archived phase pairs. Prefix caching **never hit once** in 220+ engine samples |
 
 ## Two cautions that reach every row above
 
