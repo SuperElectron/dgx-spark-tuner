@@ -8447,3 +8447,322 @@ missing acceptance point of open question 3 measured twice, audit pairs 43-44,
 23 more zero-hit prefix-cache samples, the campaign's noisiest cell characterised
 — and the discovery that a 125-entry cell recorded as a 0.72x loss is a coin
 flip. **Good ratio: it sits between R6 and R8 in the ledger.**
+
+## Round 21 hypothesis — the three-run audit: re-measure the surviving `runs=3` standings rows at runs=7, TWO arms
+
+Written BEFORE the run, 2026-08-22, on `feature/thin-cell-r21`.
+
+### WHY THIS ROUND EXISTS, AND IT IS THE CAMPAIGN'S OWN ARGUMENT TURNED ON ITSELF
+
+For eleven rounds this file published a rule: **every 3-run median the campaign
+re-measured came in too high.** Four for four — R1's `tg32 @ d16384` by 11%,
+R3's `d65536` by 13%, R13's two pooled figures by 2.9% and 1.3%. The rule was
+used to justify treating unrepeated wins as inflated.
+
+**R8c broke it, and broke it in the expensive direction.** `ctx_tg32 @ d32768 c1`
+had been carried as a **0.72x loss** since R1 on a 3-run median of 84.03. Seven
+runs at R1's own condition read **110.61 — +31.64%**. The cell is **0.92x**, and
+on the folded recipe it is a **dead heat at 1.002x**. The campaign spent eleven
+rounds not looking at a cell it had written off on a bad draw.
+
+The synthesis's revised reading is the one this round acts on: the four-for-four
+pattern was **an artefact of which rows got audited, not of sampling.** A
+flattering draw becomes a claimed win, a claimed win gets defended, and defended
+figures get re-measured. **An unflattering draw becomes a recorded loss and
+nobody looks at it again.** Sampling error is symmetric; the error that survives
+in a results file is whichever direction nobody was auditing.
+
+**R21 is the audit of the rows nobody had a motive to check.** It is a
+standings-protection round, not a new-cell hunt. **No cells are added.**
+
+### THE FOUR ROWS, AND WHICH TWO INVOCATIONS COVER THEM
+
+`RESULTS.md` lists four standings rows still standing on 3-run medians. Ordered
+by what a re-measure could change — losses that could flip first, thin claims
+second:
+
+| # | row | recorded | σ/med | SE of a 3-run median (≈0.61σ) | what could move |
+|---:|---|---:|---:|---:|---|
+| 1 | `tg128 @ d131072 c1` | 77.13 | 9.3% | **5.7%** | ⚠ **LOST by 5.5% to 81.60.** The deficit is **one SE**. The only recorded loss on the board that a re-measure could plausibly **flip to a win** |
+| 2 | `ctx_tg @ d8192 c1` | 126.52 | 6.3% | **3.8%** | Carries a published **1.07x over best vLLM+NVFP4** (118.07). A thin claim; 1.07x is 1.8 SE and a downward correction would withdraw it |
+| 3 | `tg32 @ d8192 c1` | 106.24 | **21.4%** | **13.0%** | Uncontested — the board publishes no figure, so **no margin can move whichever way it lands.** The noisiest 3-run row in the standings; rides along free with #2 |
+| 4 | `tg128 @ d16384` c2 (84.00) and c5 (48.12) | losses by **>2x** | — | — | **NOT MEASURED THIS ROUND, deliberately.** No sampling error of this size closes a 2x gap, and both already have 7-run tuned successors. Box time spent here buys nothing |
+
+**Rows 2 and 3 are the same invocation** — Phase 1 and Phase 2 of one
+`tg32 @ d8192 c1` grid, exactly as they were in R1. So **three of the four rows
+cost two engine starts**, and the fourth is declined on the record rather than
+forgotten.
+
+### ARM A — `tg128 @ d131072 c1`, runs=7. The flip candidate
+
+Reproduces **R5's `bench_076db52d341c`** condition exactly:
+
+```
+-b pp=2048 -b tg=128 -b depth=131072 -b concurrency=1 -b runs=7
+-o max_model_len=139264 -o max_num_batched_tokens=8192
+```
+
+⚠ **`-o max_num_batched_tokens=8192` is mandatory and is what makes this a
+re-measure rather than a new cell.** R5 ran before R11's fold; `recipe.yaml` now
+ships **65536**. Running it bare would measure a different engine and the
+protection verdict would be uninterpretable. `max_model_len=139264` is R5's own
+probe-driven window override (depth 131072 + pp 2048 + tg 128 with headroom),
+not a tuning change. `max_num_seqs` stays at the recipe's 4 — at c1 scheduler
+width does nothing.
+
+**The cost objection, stated and overruled.** The journal's standing advice is
+not to return to d131072: it is the campaign's most expensive depth, ~8x a
+shallow round, and R5 itself said "the expense is itself an argument against ever
+returning to this depth to tune it." **That advice was about tuning the cell, and
+this is not tuning — it is auditing a loss that sits one standard error from a
+win.** R5's 3-run grid ran 398 s (05:52:22 → 05:59:00), so seven runs is ~930 s
+of grid plus ~150 s of engine start — **about 18 minutes.** That is the price of
+finding out whether the campaign is publishing a loss it does not have, and R8c
+just demonstrated the failure mode costs more.
+
+**Prediction, declared before the run: median 72-88, centre ~78, and I do NOT
+predict a flip.** R5's three runs were 72.37 / 89.39 / 77.13 — the mean (79.63)
+sits above the median, so if anything the median is the low-ish summary of that
+draw, but only by ~3%. To take the cell the 7-run median must clear **81.60**,
+i.e. come in **+5.8%** on 77.13. That is inside one SE, which is exactly why the
+round is worth running and exactly why it is not a prediction of a win. **Call
+it ~30% that the cell flips.** Anything from 72 to 88 is an ordinary draw of the
+same population and would be recorded as such.
+
+**Free riders in the same invocation, none of them scoreable:**
+`ctx_tg128 @ d131072 c1` (76.66 — never scraped, so held not claimed),
+`pp2048 @ d131072` (42.59) and `ctx_pp2048 @ d131072` (2803.17). They are
+recorded because they are measured, and the two `pp` figures had σ near zero
+(0.02 and 2.43), so they are also this round's cheapest instrument check: if
+either moves more than a percent, something about the invocation differs from
+R5's and the whole arm's verdict is suspect.
+
+### ARM B — `tg32 @ d8192 c1`, runs=7. The thin claim and the noisy row
+
+Reproduces **R1's d8192 leg of `bench_25a0e7f36ab0`**:
+
+```
+-b pp=2048 -b tg=32 -b depth=8192 -b concurrency=1 -b runs=7
+-o max_model_len=40960 -o max_num_batched_tokens=8192
+```
+
+`-o max_model_len=40960` is R1's window override, kept even though d8192 alone
+would fit the recipe's 32768 — **the row was measured with a 40960 window and the
+KV allocation follows the window, so reproducing the row means reproducing it.**
+R1 swept three depths in one invocation and this runs one; that is a probe
+difference, not a config difference, and it is the same design R8c used when it
+re-measured R1's d32768 leg alone.
+
+**This is the exact sibling of the row R8c corrected.** Same invocation, same
+phase, same `c1`, one depth shallower. **That invocation's rows have now moved
++11%, +5.4% and −28.5% on re-measurement** — both signs, all large. Nothing about
+`bench_25a0e7f36ab0` should be trusted at 3 runs.
+
+**Predictions:**
+
+- **`ctx_tg @ d8192 c1` (row 2): 118-135, centre ~126.** σ/med was 6.3%, the
+  quietest of the three R1 Phase-1 cells. **The claim at risk is the 1.07x over
+  118.07 (Nemotron-3.5-Lightning-30B-A3B-NVFP4, vLLM), not the 0.61x against the
+  cell top** — 207.60 is 64% away and no sampling can reach it. If the median
+  lands below 118.07 the 1.07x is withdrawn. I put that at ~35%.
+- **`tg32 @ d8192 c1` (row 3): 85-125, centre ~105, and the band is that wide
+  because σ/med here is 21.4% — the widest in the standings** (runs 128.35 /
+  106.24 / 73.07, a 1.76x spread inside one cell). **Whatever it reads, no margin
+  moves**, because the board publishes no figure for the cell. The value of
+  measuring it is that it is free and that it retires the campaign's single
+  worst-sampled number.
+- **Phase 1 vs Phase 2 at this depth reads +19.1% on R1's 3 runs. Predict the gap
+  contracts to +0-10%.** Every extreme in the campaign's phase-pair table is a
+  3-run pair (five 3-run pairs span +19.1% to −27.3%; five 7-run pairs span +5.6%
+  to −12.6%). d8192 is the last unaudited extreme. This is not a mechanism claim
+  — the mechanism chain is definitionally silent at c1 — it is the sampling
+  prediction that has now been right at d65536 (R8) and d32768 (R8c).
+
+### THE PROTECTION BAND, DECLARED BEFORE THE RUN
+
+Same rule R8c and R13c ran under: **±10%.** A re-measure inside the band means
+the row **STANDS** and, because both arms reproduce the original configuration
+exactly, the two 3-run and 7-run sets are **POOLED to a 10-run median** — which
+is what R8c did for `tg32 @ d32768 c1` and what R13c did for the c4 pairs.
+Outside the band, the original figure is **RETIRED** and the 7-run median
+replaces it outright.
+
+**Pooling is legitimate here and I have checked why**: both arms run the row's
+own configuration, and pooling across a configuration difference is the one thing
+this file says must never happen. It does not happen in this round.
+
+**A corrected row must not read as a new one.** Any row that moves is edited in
+place in `RESULTS.md` with its old figure named and marked retired, so the
+standings stay honest about what changed. Any row left on 3 runs — row 4 — is
+labelled provisional in `RESULTS.md` and named in the outcome below.
+
+### WHAT WOULD MAKE THIS ROUND A FAILURE
+
+Not a row that fails to move. **A row that moves and gets quietly overwritten**,
+or the fourth row silently left at 3 runs with no note. The round's product is
+the honesty of the standings, not a new margin.
+
+## Round 21 outcome — bench_deb3090b9a29-r21-armA + bench_6921c874daee-r21-armB (2026-08-22)
+
+**Verdict: FOUR ROWS RE-MEASURED, FOUR ROWS MOVED, AND ALL FOUR MOVED UPWARD.
+No cell changed hands; the counts stay 8 won / 12 lost. The round's product is
+that three standings figures are no longer 3-run medians and one recorded margin
+was overstated by a factor of ten.**
+
+### The numbers
+
+**Arm A — `bench_deb3090b9a29-r21-armA`**, reproducing R5's condition
+(`pp 2048`, `depth 131072`, `tg 128`, `c1`, `runs=7`, `-o max_model_len=139264`,
+`-o max_num_batched_tokens=8192`). One session, **crash_count 0**, grid 784.5 s
+(15:27:19 → 15:40:24 UTC).
+
+| Cell | R5 (runs=3) | R21 (runs=7) | σ (σ/med) | change | pooled (10) |
+|---|---:|---:|---:|---:|---:|
+| `tg128 @ d131072 c1` | 77.13 | **81.32** | 8.59 (10.56%) | **+5.43%** | **81.22** |
+| `ctx_tg128 @ d131072 c1` | 76.66 | **78.38** | 8.99 (11.47%) | **+2.24%** | **77.52** |
+| `pp2048 @ d131072` | 42.59 | 42.74 | 0.01 | +0.35% | — |
+| `ctx_pp2048 @ d131072` | 2803.17 | 2811.63 | 1.76 | +0.30% | — |
+
+Arm A runs, `tg128 @ d131072 c1`: 81.32 / 83.59 / 79.20 / 88.93 / 81.12 / 92.89 /
+63.56. ttfr 47.9 s.
+
+**Arm B — `bench_6921c874daee-r21-armB`**, reproducing R1's d8192 leg
+(`pp 2048`, `depth 8192`, `tg 32`, `c1`, `runs=7`, `-o max_model_len=40960`,
+`-o max_num_batched_tokens=8192`). One session, **crash_count 0**, grid 31 s.
+
+| Cell | R1 (runs=3) | R21 (runs=7) | σ (σ/med) | change | outcome |
+|---|---:|---:|---:|---:|---|
+| `ctx_tg @ d8192 c1` | 126.52 | **128.76** | 10.66 (8.28%) | **+1.77%** | pooled → **127.64** |
+| `tg32 @ d8192 c1` | 106.24 | **123.81** | 16.31 (13.18%) | **+16.54%** | ⚠ **outside band — R1 RETIRED, not pooled** |
+| `pp2048 @ d8192` | 1187.51 | 1158.52 | 19.25 | −2.44% | — |
+| `ctx_pp2048 @ d8192` | 6148.56 | 6101.75 | 77.66 | −0.76% | — |
+
+Arm B runs, `tg32 @ d8192 c1`: 118.58 / 112.49 / 125.59 / 152.31 / 140.64 /
+123.81 / 99.04.
+
+### THE HEADLINE — a recorded loss was overstated by a factor of ten
+
+`tg128 @ d131072 c1` has been carried as **0.95x, "short by 5.5%"** since R5. The
+pooled 10-run median is **81.22 against 81.60 — 0.995x, short by 0.47%.** At
+σ/med 10.56% the standard error on the pooled median is ~4.2%, so **the deficit
+is 0.11 SE.** The cell is a dead heat and we are on the wrong side of it.
+
+**It did not flip and it is NOT claimed as a win.** This is the same discipline
+R8c applied to `ctx_tg @ d32768 c1`'s 1.002x: a figure that cannot be
+distinguished from the incumbent is not a win, in either direction. The row stays
+in the LOST table. What changed is that the campaign was publishing a 5.5%
+deficit it did not have.
+
+⚠ **And it should not be re-run.** 0.11 SE is not resolvable at any run budget
+this campaign can afford — halving the SE needs 4x the runs, and this is the
+most expensive depth on the box (784 s of grid for seven runs, ttfr 47.9 s per
+request). R5's standing advice not to return to d131072 was right; this round was
+the exception that audits it, not the start of a campaign there.
+
+### The band verdicts, against the rule declared before the run
+
+±10%, declared in the hypothesis. Three of four inside → **STAND and POOL**. One
+outside → **RETIRE and REPLACE**.
+
+- `ctx_tg @ d8192 c1` **+1.77% — STANDS**, pooled to 127.64. **The thin claim
+  survived:** 1.07x over best vLLM+NVFP4 (118.07) firms to **1.08x**. The 0.61x
+  loss to the cell top (207.60) was never in play and reads 0.615x.
+- `tg128 @ d131072 c1` **+5.43% — STANDS**, pooled to 81.22.
+- `ctx_tg128 @ d131072 c1` **+2.24% — STANDS**, pooled to 77.52. Never scraped,
+  so held not claimed.
+- `tg32 @ d8192 c1` **+16.54% — OUTSIDE. R1's 106.24 is RETIRED** and 123.81
+  replaces it outright; the sets are **not** pooled, per the rule. This was the
+  campaign's worst-sampled standings row (R1 σ/med **21.4%**, runs 73.07–128.35,
+  a 1.76x spread inside one cell). **No margin moves** — the board publishes no
+  figure for the cell — which is why it was third in priority and not first.
+
+### The instrument check passed, and it is what makes Arm A trustworthy
+
+The hypothesis named the two near-zero-σ `pp` figures as the round's cheapest
+control: if either moved more than a percent, the invocation differed from R5's
+and the whole arm was suspect. **`pp2048` moved +0.35% and `ctx_pp2048` +0.30%**,
+both on σ of 0.01 and 1.76. Arm A reproduces R5's invocation. Arm B's `pp2048` at
+−2.44% is larger but sits exactly on the campaign's known ~2% reproduction floor
+(R13c's six-of-six −1.94%), and its Phase-1 partner moved −0.76%.
+
+⚠ **A methodological correction to something I asserted mid-round.** I noted that
+Arm A's `intent_id` (`55e0583fe6b308a0`) matched R5's and read it as proof the
+engine configuration was reproduced exactly. **It is not proof: R1's `intent_id`
+is the same value**, and R1 ran a different depth sweep. The id is a
+recipe-level hash and is constant across this whole campaign. What actually
+establishes the reproduction is the explicit `-o max_num_batched_tokens=8192`
+restoring the pre-fold budget, the identical `base_args` apart from `runs`, the
+identical pinned image (`dgx-vllm-eugr-nightly:2026082102`) and framework
+(0.4.0), and the `pp` controls above.
+
+### THE FINDING: five up, five down, and the sign is predicted by motive
+
+This is the round's real contribution and it closes the question R8c opened.
+
+| direction | rows | corrections |
+|---|---|---|
+| **Re-measured because it was a CLAIM somebody defended** | R1 `tg32@d16384`, R3 `d65536`, R13 ×2 pooled, R8c arm E `tg32@d32768` | **−10.0%, −13.0%, −2.86%, −1.30%, −5.14%** — all DOWN |
+| **Re-measured because nobody had audited it** | R8c `ctx_tg32@d32768`, R21 ×4 | **+31.64%, +16.54%, +5.43%, +2.24%, +1.77%** — all UP |
+
+**Ten re-measurements, five each way, and the sign is perfectly predicted by
+whether anyone had a motive to check the row.** Sampling error is symmetric;
+what is not symmetric is which errors survive in a results file. A flattering
+draw becomes a claim, a claim gets defended, and defended figures get audited
+back down. An unflattering draw becomes a recorded loss and sits there.
+
+**This is ordinary regression to the mean observed from both ends at once**, and
+it needs no mechanism — every extreme 3-run draw moves toward the family value
+regardless of sign. The campaign's pre-R8c rule ("3-run medians always come in
+high") was never a property of sampling; it was a description of its own audit
+queue. R21 was designed to test that reading and it holds five for five.
+
+**The operational rule stands and is now evidenced: treat any unrepeated figure
+as wrong by ~1 SE in an unknown direction, and re-measure the unflattering rows
+first — they are the ones nobody else will.**
+
+### Predictions, scored
+
+All three declared predictions were correct, which is unusual for this campaign.
+
+- `tg128 @ d131072 c1` predicted **72–88, centre ~78, ~30% chance of a flip** →
+  **81.32.** Inside the band, above centre, and it did not flip. Correct
+  including the refusal to predict a win.
+- `ctx_tg @ d8192 c1` predicted **118–135, centre ~126**, with the 1.07x claim
+  put at ~35% risk of withdrawal → **128.76**, claim survived. Correct.
+- `tg32 @ d8192 c1` predicted **85–125, centre ~105** → **123.81**, inside the
+  band at the top. Correct, and the wide band was justified by the σ.
+- The Phase-1/Phase-2 gap at d8192 predicted to **contract from +19.1% to
+  +0–10%** → **+4.00%.** Correct. **d8192 was the last unaudited extreme in the
+  phase-pair table**, and like d65536 (R8) and d32768 (R8c) it collapsed toward
+  the family value under better sampling. At d131072 the gap read −0.61% on 3
+  runs and **−3.62%** on 7. Every extreme in that table was a 3-run artefact;
+  none survived.
+
+### What was NOT done, and why — stated so it is not mistaken for an oversight
+
+**`tg128 @ d16384` c2 (84.00) and c5 (48.12) remain on three runs and are
+labelled provisional in RESULTS.md.** They were the fourth priority and were
+declined deliberately: both are losses by **more than 2x**, and the largest
+correction this round produced was 16.5%. Nothing in the observed range of
+sampling error closes a 2x gap. Both also already have 7-run tuned successors at
+raised budgets (c2 → 140.77, c5 → 128.93 and 164.27), which are what the
+standings actually rest on; the 3-run figures survive only as the pre-fold
+baselines those successors are measured against. **They should not be quoted as
+measurements.**
+
+### Cost ledger — R21
+
+Two engine starts, two invocations, **crash_count 0** on both. Grid time
+**784.5 s + 31 s = ~816 s**; wall including both engine starts ~28 min. Arm A is
+**96% of the grid bill** — seven runs at d131072 cost 25x seven runs at d8192.
+Harness tokens for the round: **~95k**.
+
+**Value: three standings rows retired from 3-run status and one recorded margin
+corrected by 10x, for ~14 minutes of grid.** Arm B in particular is the best
+ratio in the campaign — **31 seconds of grid** cleared two rows, one of them the
+worst-sampled figure in the standings. Arm A is defensible but expensive, and it
+bought a correction rather than a cell; the honest accounting is that the
+campaign paid ~13 minutes to find out it was not nearly winning d131072 after
+all, which is worth knowing precisely because the old 5.5% figure was the kind
+of near-miss that invites a tuning round. **It has now been priced out properly:
+do not go back.**
