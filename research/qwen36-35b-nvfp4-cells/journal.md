@@ -2440,3 +2440,361 @@ engine start and its queueing claim is real in the scheduler's own log, showed
 that R4's mechanism cannot be tested on this stack at all, and found by accident
 that the campaign's token budget was starving the very cell its only marginal
 win sits in.** Two of those three were not what the round was for.
+
+## Round 10 hypothesis — the token-budget round: tg128 @ d16384, c4 and c16 at `max_num_batched_tokens 32768`, runs=7, one engine start
+
+Earned twice over. R7 found `--max-num-batched-tokens 8192` gating admission at
+c16 and queued this round as a high-concurrency repair. R9 then found the same
+gate biting at **c4**, which is the cell holding the campaign's only marginal
+win, so the round is repriced: it runs both concurrencies, and it reports **both
+throughput estimators at every point** because R9 watched `per-request x c`
+break at c4 as well as at c16.
+
+### What is already paid for, and what this round still owes the box
+
+R9's arm A1 (`bench_d9fdc68576f2-a1`) is already the c4 half at
+`max_num_batched_tokens 32768`, and it was read in full before any box time was
+spent this round. It is **not** re-run. What it says, with both estimators:
+
+| arm | cell | tg | peak_thr | peak/peak_req | pp2048 | ttfr |
+|---|---|---:|---:|---:|---:|---:|
+| A0 (mnbt 8192, mns 4) | c4 | 52.64 | 272 | 3.78 of 4 | 640.70 | 10205.51 |
+| A1 (mnbt 32768, mns 4) | c4 | 143.08 | **297** | 3.88 of 4 | 669.28 | 11798.88 |
+| R7 (mnbt 8192, mns 16) | c16 | 40.47 | 440 | **11.89 of 16** | 628.74 | 29751.25 |
+
+So the box owes this round the **c16 point at the raised budget**, and nothing
+else that R9 already bought.
+
+It is run in ONE invocation with a **c4 arm alongside it**, at
+`-o max_num_seqs=16 -o max_num_batched_tokens=32768`. That c4 arm is not a
+re-run of A1: A1 carried `max_num_seqs 4`, this carries 16. It costs roughly
+260 s on a ~980 s grid and buys two things the round cannot get otherwise —
+a **within-invocation** c4-vs-c16 comparison at one budget and one thermal
+state (R8's lesson: this campaign's cross-invocation comparisons have twice
+been wrong by more than the effect under test), and an independent second look
+at A1's startling 143.08 from a separate engine start. If `max_num_seqs`
+comfortably above `c` is neutral, the c4 arm reproduces A1; if it does not,
+A1's figure was a fluke and R9's most consequential unplanned finding needs
+re-reading.
+
+### Why runs=7, against the standing guidance
+
+R6 priced tg128 @ d16384 at runs=3 and that pricing is right **for `tg`**. It
+is the wrong estimator to price this round on. `tg x c` is already known to be
+invalid at both of this round's concurrencies, so the round's verdict rests
+entirely on `peak_throughput` — and `peak_throughput` is the noisy one:
+**σ 5.0% at R7's c16 (440, runs 440/418/472) and σ 8.6% at R9's A1 c4 (297,
+runs 297/333/271)**, against `tg`'s 0.14% and 2.77% in the same measurements.
+At 5-9%, three runs give a standard error near 3-5%, which is the same size as
+the effect being tested. Two 3-run medians have already had to be retired this
+campaign and both were too high. **The sampling budget belongs to the estimator
+the round actually depends on**, so: runs=7.
+
+### The mechanism, stated as arithmetic rather than as a story
+
+At d16384 a request's prefill is 16384 tokens. A scheduler step with
+`max_num_batched_tokens 8192` therefore fits **half** of one prefill; at 32768
+it fits **two whole ones**. That is a 4x admission rate, and it is the entire
+intervention.
+
+Decode is not involved. Sixteen resident sequences drafting 3 MTP tokens each
+need about `16 x 4 = 64` tokens per step — three orders of magnitude under
+either budget. **The token budget has never gated decode in this campaign; it
+gates the rate at which requests are let in.** 32768 does not admit all sixteen
+at once either — that would take 262144 — so even the raised arm is
+admission-rate-limited at c16. The round tests whether 4x closes the residency
+gap, not whether the gate is removed.
+
+That distinction produces the round's discriminator, and it is declared here:
+
+- **H_ramp** — the budget throttled the *ramp* and the replacement of finished
+  requests, but steady-state aggregate was near its ceiling anyway. Prediction:
+  `peak_throughput` at c16 moves by single digits, the way c4 moved +9.2%
+  (272 -> 297), residency improves, and R7's "~440" stands.
+- **H_gate** — with sixteen requests in flight there is *always* a replacement
+  prefill competing for the budget, so the gate is a steady-state one and
+  residency is the binding constraint. Prediction: `peak_throughput` rises
+  roughly in proportion to residency, 440 x (16/11.89) ≈ **590**, and c16
+  becomes the largest aggregate figure the campaign has.
+
+**Threshold, written down before the run: `peak_throughput` at c16 above 500
+(+13.6%) reads H_gate; below 470 (+6.8%) reads H_ramp; 470-500 is
+indeterminate and will be reported as indeterminate.** c4's measured +9.2% sits
+in the H_ramp band, which is what a shallow queue should look like, so the two
+concurrencies are allowed to answer differently — that would itself be the
+result.
+
+### Numeric predictions
+
+| quantity | baseline | predicted | reasoning |
+|---|---|---|---|
+| c16 residency (peak/peak_req) | 11.89 of 16 | **14-16** | 4x admission rate |
+| c16 `Running` median (engine log) | 9 | **13-16** | primary evidence, as R7 and R9 |
+| c16 `Waiting` median | 6 | **0-3** | ditto |
+| c16 `peak_throughput` | 440 | **480-620**, centre 550 | see discriminator |
+| c16 `tg_throughput` | 40.47 | **60-160** | wide on purpose — nobody knows what it measures at c>1 |
+| c16 `tg x c` vs peak | 647.5 vs 440, INVALID | **INVALID again, by more** | pre-declared, not a finding |
+| c16 pp2048 | 628.74 | **640-700** | c4 rose +4.5% on the same change |
+| c16 ttfr | 29751 | **28000-40000** | betting AGAINST the naive fall |
+| c16 σ on tg | 0.14% | **0.5-5%** | raised budget inflated σ at c4 and c5 |
+| c4 (mns 16) tg | A1's 143.08 | **129-157** | reproduction check |
+| c4 (mns 16) `peak_throughput` | A1's 297 | **270-325** | reproduction check |
+| MTP acceptance @ c16 | 2.94 / 64.5% | **2.7-3.2 / 58-72%** | R8b rides along |
+| SM clock median | 2392-2398 | **2392-2398** | eighth session |
+| grid time | — | **1050-1500 s** | R7's c16 419.7 s scaled 7/3, plus c4 |
+
+The ttfr prediction is the one worth flagging, because the obvious reasoning
+gets it backwards. A 4x faster ramp ought to bring first responses sooner. But
+R9 measured the opposite when it raised the budget at c4: ttfr went **up**,
+10205 -> 11799 (+15.6%), because a larger budget batches more prefill work
+together and each individual request's prefill then competes with more of its
+peers. This round bets on the R9-informed direction, flat to higher.
+
+### What is NOT in scope, and what rides along free
+
+`max_num_batched_tokens 32768` is a **MUTATION**. It is not folded into
+`recipe.yaml`, and every RESULTS.md row it produces says so in the cell name —
+a tuned row and an untuned row must never sit in that table looking alike.
+
+Nothing here can be scored. The board has no c16 figure at all, and c4 sits
+behind the unresolved units dispute (open question 7, R5c). **No verdict on any
+board cell will be written by this round in either direction.**
+
+Two ride-alongs, both zero box time, both taken while the grid runs:
+
+- **R8b** — tail the engine log through the grid and capture MTP acceptance,
+  the way R7 and R9 did and R8 failed to.
+- **Open question 10** — read llama-benchy 0.4.0's own definition of
+  `tg_throughput`. It is the most valuable item in the queue, it costs nothing,
+  and this round is a c>1 round whose numbers cannot be interpreted without it.
+  The campaign has been inferring this metric's meaning for nine rounds; the
+  source is the instrument and nobody has read it.
+
+## Round 10 outcome — bench_860b43edd154 (2026-08-22)
+
+One invocation, `session_count: 1`, so c4 and c16 shared one engine start and one
+thermal state. Seven runs at each. Same pinned image epoch
+(`dgx-vllm-eugr-nightly:2026082102`) as every round since R1.
+
+| cell | tg (board metric) | (mean) | σ | σ/med | peak_thr | runs |
+|---|---:|---:|---:|---:|---:|---|
+| tg128 @ d16384 c4 | **147.25** | (145.67) | 4.78 | 3.25% | **284** | 148.47 / 143.25 / 137.11 / 147.25 / 142.81 / 147.40 / 153.39 |
+| tg128 @ d16384 c16 | **53.45** | (53.34) | 0.28 | 0.52% | **515** | 53.38 / 53.27 / 52.70 / 53.48 / 53.51 / 53.45 / 53.59 |
+| ctx_tg128 @ c4 | 126.35 | (126.54) | 1.64 | 1.30% | 290 | 129.54 / 127.05 / 126.27 / 124.87 / 124.17 / 126.35 / 127.55 |
+| ctx_tg128 @ c16 | 54.54 | (54.52) | 0.10 | 0.18% | **566** | 54.58 / 54.54 / 54.68 / 54.38 / 54.41 / 54.48 / 54.58 |
+| pp2048 @ c4 | 672.59 | — | 0.88 | — | — | — |
+| pp2048 @ c16 | 667.00 | — | 1.75 | — | — | — |
+
+### THE ROUND'S BIGGEST RESULT COST NO BOX TIME, and it is a rebuke to nine rounds of inference
+
+The ride-along was supposed to be a nicety. It is the headline.
+**llama-benchy 0.4.0's `results.py`, lines 194 and 352:**
+
+    run_metric_tg_throughput = self._calculate_metric(
+        agg_batch_tg_throughputs if concurrency > 1 else agg_tg_speeds)
+    run_metric_tg_req_throughput = run_metric_tg_throughput if concurrency == 1 \
+        else self._calculate_metric(agg_tg_speeds)
+    ...
+    tg_duration = max_last_token - min_first_token
+    observed_decode_tokens = sum(... for r in valid_results)
+    batch_tg_throughput = observed_decode_tokens / tg_duration
+
+**At `c>1`, `tg_throughput` is a BATCH AGGREGATE.** Total decode tokens across
+every request in the batch, divided by the span from the *first* request's first
+token to the *last* request's last token.
+
+**Open question 10 is ANSWERED, and R2's units correction is retired.** R2's
+proof was "at c1 `tg_throughput == tg_req_throughput` exactly, therefore tg is
+per-request". Line 195 shows the c1 equality is an *assignment* — the two names
+are bound to the same object when `concurrency == 1`. It is a tautology. It was
+always going to hold, for any definition whatsoever of the `c>1` branch, and the
+campaign built nine rounds of `c>1` interpretation on it. The lesson is not
+"R2 was careless"; R2 checked something real. The lesson is that **a consistency
+check that cannot fail is not evidence**, and the source was three minutes away
+the whole time.
+
+**Open question 7 is ANSWERED too, as a side effect.** sparkrun's arena upload
+ships llama-benchy's own CSV, and `llama_benchy.py`'s row builder maps
+`t_s <- tg_throughput` with `_CSV_HEADERS` naming the column. The board's
+headline decode figure is therefore **the same field we already record**. Every
+`c>1` comparison this campaign made was like-for-like all along.
+
+So both prior readings were wrong, and they were wrong in opposite directions:
+R2's "ours is per-request, theirs is per-request" and R7's "theirs is aggregate,
+so multiply ours by `c`". The truth is **"both are the same aggregate, so
+multiply nothing"** — and `per-request x c` was never the aggregate, it was an
+aggregate multiplied by `c` a second time. That is why it kept exceeding
+`peak_throughput`: not a subtle scheduling artefact, just double-counting.
+**Two rounds of open question 9 diagnosis were chasing an arithmetic error.**
+
+### The mechanism, and why this metric is so violently config-sensitive
+
+`tg_duration` includes admission stagger. So a starved token budget is charged
+to the board metric **twice** — once by holding fewer sequences resident, and
+again by stretching the denominator. Measured directly, as
+`batch span / single-request decode span` over every archived `c>1` run:
+
+| config | c2 | c4 | c5 | c8 | c16 |
+|---|---:|---:|---:|---:|---:|
+| mnbt 8192 | 1.61 | 2.54 | 2.38 | 2.08 | 2.06 |
+| mnbt 32768 | — | **1.57** (R10) | 2.39 (R9) | — | **2.89** (R10) |
+
+It is never 1.0, so requests never run in lockstep, and at c4 raising the budget
+cuts it from 2.54 to 1.57. **That single number is the whole c4 result.**
+
+It also explains the thing R7 could not: why the board's figure RISES with
+concurrency for LFM2.5-350M (188.47 / 325.44 / 428.95) while ours FALLS. A 350M
+model prefills d16384 almost instantly, so its stagger is nil and its aggregate
+climbs the way batching says it should. Our 35B model at mnbt 8192 staggers by
+2-2.5x and the dilution beats the batching gain. **Same metric, different
+prefill cost.** R7's counter-evidence dissolves the same way: 46.68 as an
+aggregate at c4 is not implausibly slow, it is exactly the regime our own 52.85
+sits in.
+
+### STANDINGS — the campaign's thinnest win is no longer thin
+
+**`tg128 @ d16384 c4`: 52.85 -> 147.25, i.e. 1.13x -> 3.15x** against the same
+incumbent 46.68, at runs=7. The worst of the seven runs, 137.11, is still 2.94x.
+This reproduces R9's arm A1 (143.08, three runs, `max_num_seqs 4`) to **+2.9%
+from a separate engine start with a different scheduler width** — so A1's
+startling figure was real, and `max_num_seqs` comfortably above `c` is neutral.
+By the campaign's own "verify a win with a repeat before keeping" rule, this
+mutation is **verified**.
+
+`ctx_tg128 @ d16384 c4` goes 56.36 -> 126.35 against a board figure of 27.68
+(from R5b's scrape), i.e. **2.04x -> 4.56x**.
+
+And the two cells that were "UNITS DISPUTED" resolve as **losses**: c2 is 84.00
+against the board's own Qwen3.6-35B-A3B-NVFP4-on-vLLM 163.27 (**0.51x**) and c5
+is 48.12 against 225.46 (**0.21x**). Same model, same runtime, same quant, same
+metric — so that gap is entirely **config**, and R10 has just shown what most of
+it is. Recording a loss honestly here is worth more than the disputed label was.
+
+### THE HYPOTHESIS: H_gate, but only just, and the occupancy predictions MISSED
+
+The pre-declared threshold was `peak_throughput` at c16 **above 500 reads H_gate,
+below 470 reads H_ramp**. Measured **515** (runs 524 / 515 / 495 / 512 / 530 /
+498 / 541, σ 3.0%, SE ~1.1%), so the median clears the line robustly even though
+one run does not. **H_gate.**
+
+And the proportionality it predicted holds well. Residency at peak went
+**11.89 -> 14.31 of 16** (+20.4%) and `peak_throughput` went **440 -> 515**
+(+17.0%). Scaling R7's 440 by the residency ratio predicts 530 against 515
+measured — **2.8% apart**. Residency really is what sets the aggregate ceiling,
+which is the cleanest thing this round establishes about the hardware.
+
+**But three predictions missed, they missed together, and they say the round
+oversold its own intervention.** The scheduler log — the primary instrument,
+same one R7 and R9 used — reads `Running` median **11** against a predicted
+13-16, and `Waiting` median **5** against a predicted 0-3:
+
+| arm | Running med | Waiting med | full-occupancy samples |
+|---|---:|---:|---:|
+| R7 c16 (mnbt 8192) | 9 | 6 | 4 of 41 = 10% |
+| **R10 c16 (mnbt 32768)** | **11** | **5** | **14 of 66 = 21%** |
+| R10 c4 (mnbt 32768) | 4 | 0 | **13 of 13 = 100%** |
+
+So c16 is **better and still gated**. That is exactly what the round's own
+arithmetic said before it ran — 32768 admits two 16384-token prefills per step,
+and sixteen would need 262144 — and the round then wrote a prediction band that
+ignored its own arithmetic. **The mechanism section was right and the prediction
+table was wrong, in the same document.** Worth remembering: the numeric bands
+were set by scaling R7's numbers, when the model that generated them was sitting
+one paragraph above.
+
+c4, by contrast, is a clean `(4,0)` in **100%** of loaded samples — the gate is
+genuinely gone there, and that is why c4 gets the big number and c16 does not.
+
+`tg_throughput` at c16 also missed low: **53.45** against a predicted 60-160.
+Given the units result, that band was built on a misunderstanding of the metric
+and should not be credited as a near-miss.
+
+### ttfr: the counter-intuitive prediction HELD
+
+Predicted **28000-40000** at c16 against the naive expectation of a large fall,
+on the strength of R9's c4 observation that raising the budget made ttfr *worse*.
+Measured **39389** against R7's 29751 — **+32.4%**, at the top of the band and
+in the predicted direction. Raising the budget batches more prefill work
+together, so each request's first token comes later even though the batch as a
+whole finishes sooner. **c16 is now a 39-second time-to-first-response cell:
+excellent for aggregate work, useless for latency, and any row it produces
+should say so.**
+
+### MTP acceptance is FLAT, which localises the gain (R8b rode along again)
+
+Captured live from the engine log through the grid. Heavy-load samples
+(>200 drafted tokens):
+
+| arm | acceptance length | draft acceptance |
+|---|---:|---:|
+| R7 c16 (mnbt 8192) | 3.10 | 70.0% |
+| **R10 c16 (mnbt 32768)** | **3.07** | **69.1%** |
+| R9 A1 c4 (mnbt 32768) | 2.95 | 65.1% |
+| **R10 c4 (mnbt 32768)** | **3.02** | **67.3%** |
+
+Prediction 2.7-3.2 / 58-72%: **HELD**. Acceptance does not move when the token
+budget moves, at either concurrency. **The entire effect is scheduling.** R9
+established the same thing for the c4-vs-c5 deficit; between them, MTP
+acceptance is now ruled out as an explanation for anything the scheduler does.
+
+### Open question 4 gets a new and awkward data point
+
+The ctx-vs-cold sign **flips at c4 when only the token budget changes**: +4.4%
+at mnbt 8192 (R9 A0), **-14.2%** at mnbt 32768. And R7's tidy finding that the
+ctx margin grows monotonically with concurrency (+6.6 / +6.5 / +9.7 / +12.7% at
+c4/c5/c8/c16) does not survive either — at mnbt 32768 it reads -14.2% at c4 and
+**+2.0%** at c16.
+
+The span story accounts for it without new machinery: the `ctx_` phase does no
+prefill, so it never staggers much and has little to gain; the cold phase is the
+one carrying the stagger, so removing the stagger lets cold overtake ctx. But it
+means the driver of this sign is now known to be moved by depth, by concurrency,
+by generation length **and by a pure scheduler knob** — so the sign is not a
+property of prefix caching at all. It is a property of how staggered the cold
+arm happens to be. That is the most economical account anyone has offered here
+in eight rounds and it should be attacked rather than adopted.
+
+### Side-predictions
+
+- **c4 reproduction: HELD on both estimators.** tg 147.25 in a 129-157 band,
+  `peak_throughput` 284 in a 270-325 band.
+- **pp2048 @ c16 640-700: HELD** at 667.00, +6.1% on R7's 628.74 at identical
+  concurrency and scheduler width, so the lift is the budget alone. pp2048 @ c4
+  reads 672.59, matching R9's A1 669.28 to 0.5%.
+- **σ on tg at c16 0.5-5%: HELD** at 0.52%.
+- **`tg x c` invalid again: HELD**, pre-declared and therefore not a finding —
+  855.2 against a peak of 515. It is invalid for the arithmetic reason above.
+- **Telemetry: HELD.** 1489 samples, SM clock **2398 MHz** median (2353-2411),
+  78 °C peak, 96.72 W peak — the **eighth consecutive session** agreeing with
+  R4's 2392. Open question 5 stays closed. No clock, power-policy, driver or
+  kernel setting was touched, and no `apt` was run.
+- **Grid time 1050-1500 s: MISSED LOW** at **923.4 s** (c4 219.6 s, c16 703.8 s).
+  One engine start, ~19 minutes wall, ~75k harness tokens.
+
+### The mutation is NOT folded into recipe.yaml, and here is the argument
+
+Verified wins normally get folded. This one is held back deliberately, and the
+reason is not caution about the number:
+
+**Folding it would break the campaign's own baseline mid-series.** At d16384 a
+16384-token prefill is two chunks at mnbt 8192 and one chunk at 32768, so the
+change is not inert at c1 either — it can move `pp2048` and `ttfr` there. The c1
+series (R6's 111.11, R8's 113.06, pooled 112.62) is the anchor every depth and
+concurrency comparison in this campaign hangs from, and it was measured at
+mnbt 8192. Folding without re-measuring that anchor would silently create a new
+epoch and invalidate cross-round comparability, which is precisely the failure
+the skill's epoch rule exists to prevent.
+
+So: **recipe.yaml is untouched**, every R10 row in RESULTS.md names its
+configuration, and the fold decision is queued as **R11** — re-measure the c1
+anchor under mnbt 32768, and fold only if c1 is unchanged. That is one cheap
+invocation and it is now the highest-value round in the queue, because a verified
+2.8x on the campaign's most contested cell is waiting behind it.
+
+### The round's value, in one line
+
+**It closed the two units questions from the source rather than by inference,
+withdrew a 4.53x claim the campaign nearly kept, turned its thinnest win from
+1.13x into a verified 3.15x, recorded two honest losses that had been hiding
+behind a "disputed" label, and showed at c16 that its own intervention only
+half-works — which its own pre-run arithmetic had already said.**
