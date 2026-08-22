@@ -9904,3 +9904,195 @@ samples; and the campaign's noisiest-cell record shown to be a sampling draw.
 **The ratio is the best since R8c, and for the same reason: the round was
 designed so that its cheapest control — reversing the arm order, which cost
 nothing — could return more than its headline.** It did.
+
+## Round 23 hypothesis — the A-B-B-A position-bias round: `tg128 @ d16384 c1`, four arms, one session, runs=7 each
+
+Written BEFORE the run, 2026-08-22, on `feature/thin-cell-r23`. This is *what to
+run next* item 10, the highest-value item in the queue after R22.
+
+### WHY THIS ROUND EXISTS
+
+R22's free order-reversal control found that **in 4 arm-to-arm comparisons of 4,
+across two rounds and four engine starts, the arm that ran SECOND read higher**
+(+6.36, +0.37, +12.24, +6.89%, mean **+6.5%**). The budgets were swapped between
+the two rounds, so no budget effect produces that pattern; a position effect
+produces exactly it. ⚠ **It is NOT established** — 4 comparisons from 2 sessions
+is **p = 0.25** on a sign test. It is **not a clock effect** (2395.7 vs 2395.4
+MHz) and **not thermal drift in the obvious direction** (the second arm ran on a
+warmer box and was *faster*).
+
+Until it is tested, **every arm-to-arm comparison in this campaign at or below
+~7% is unresolved**, including R13c's six-point `max_num_batched_tokens` curve —
+and including the +0.27% anchor reading that licensed R11 to fold
+`max_num_batched_tokens: 65536` into `recipe.yaml`. **This round decides whether
+that fold rests on a real measurement or on an ordering artefact.**
+
+### THE DESIGN, AND WHY A-B-B-A
+
+Cell: **`tg128 @ d16384 c1`** — R11's fold anchor, the one cell where the fold
+question actually lives. `max_num_seqs 4` (the recipe's own value) throughout; at
+c1 scheduler width does nothing. `runs=7` per arm. **Four invocations in ONE
+sitting, four engine starts, run strictly in this order:**
+
+| arm | position | budget | override |
+|---|---:|---|---|
+| **arm1 A** | 1 | `mnbt 8192` | `-o max_num_batched_tokens=8192` |
+| **arm2 B** | 2 | `mnbt 65536` | `-o max_num_batched_tokens=65536` (= the shipped default) |
+| **arm3 B** | 3 | `mnbt 65536` | same |
+| **arm4 A** | 4 | `mnbt 8192` | `-o max_num_batched_tokens=8192` |
+
+A-B-B-A cancels **linear** position drift: A occupies positions 1 and 4 (mean
+2.5), B occupies 2 and 3 (mean 2.5). Therefore:
+
+- **The CONFIGURATION effect is drift-free:** `C` = (pooled 14-run median of
+  arms 2+3) vs (pooled 14-run median of arms 1+4). Any linear drift term cancels
+  exactly; a step ("first arm is cold") term cancels only partially and is
+  measured separately below.
+- **The POSITION effect is measured directly and independently**, by two
+  same-configuration pairs: `P3` = arm4 − arm1 (separation **3** positions) and
+  `P1` = arm3 − arm2 (separation **1** position). Neither contains a budget term
+  by construction.
+
+The two readings are orthogonal. That is the whole point of the design and it is
+why this round can answer both questions from four invocations.
+
+**The two rival position models make different predictions, and the design
+separates them too:**
+
+- **Linear drift**, `d` per position: `P3 ≈ 3d`, `P1 ≈ 1d`. R22/R8c's four
+  comparisons were all **adjacent** (separation 1), so `d ≈ +6.5%` → predicts
+  `P3 ≈ +19.5%`, `P1 ≈ +6.5%`.
+- **Step / warm-up**, only the first arm of a session is cold: `P3 ≈ +6.5%`,
+  `P1 ≈ 0`.
+- **No position effect:** `P3 ≈ 0`, `P1 ≈ 0`, both inside noise.
+
+### THE ERROR BAR, PRICED BEFORE THE THRESHOLDS ARE SET
+
+`tg128 @ d16384 c1` has read σ/med **2.6% / 5.5% / 8.01%** across three engine
+starts (R6, R8, R11 — and R11 explicitly retired R6's "runs=3 is adequate here"
+rule). Take σ/med ≈ **5.5%**. SE of a 7-run median ≈ `1.253σ/√7` = **2.6%**. The
+SE of a *difference* of two independent 7-run medians is ≈ `√2 × 2.6%` =
+**≈ 3.7%**. So ±2 SE on `P3` or `P1` is **≈ ±7.4%**, and a 6% reading is ~1.6 SE.
+**I am stating in advance that a single 7-run-per-arm round cannot establish a
+6.5% effect at 2 SE.** What it can do is distinguish "≈ +6.5% or bigger" from
+"≈ 0", which is the question that actually matters, and it is the same
+resolution R22 had when it found the thing.
+
+### THRESHOLDS, DECLARED BEFORE THE RUN SO THEY CANNOT BE MOVED AFTERWARDS
+
+**POSITION — read `P3` = arm4 − arm1 as PRIMARY** (3 positions of separation, so
+it carries the largest signal under either position model).
+
+| reading of `P3` | verdict |
+|---|---|
+| **`P3` ≥ +6.0%** | **POSITION EFFECT CONFIRMED.** ≈1.6 SE, and it is the minimum either position model predicts at separation 3. The ~7% suspicion band on every small cross-invocation delta in this campaign becomes a standing caveat |
+| **+2.0% < `P3` < +6.0%** | **DEAD ZONE — not resolved.** Explicitly declared as a dead zone: this round does not have the power to call it. The caveat stays attached and stays labelled unestablished |
+| **`P3` ≤ +2.0%** (including any negative value) | **POSITION EFFECT REFUTED at this cell.** R22's pattern does not reproduce under a design built to catch it; the campaign's small-delta arithmetic is restored to R9c's ±2.5% reproduction floor. A value ≤ −2.0% is reported additionally as **sign-flipped** |
+
+**`P1` = arm3 − arm2 is the SECONDARY reading and the model discriminator**, on
+the same three bands (≥ +6.0% confirmed / +2.0–6.0% dead zone / ≤ +2.0%
+refuted). Its job is to say *which* position model, not *whether*:
+
+- `P3` confirmed **and** `P1` confirmed → **linear drift**, and `P3 ≈ 3 × P1`
+  is the check.
+- `P3` confirmed **and** `P1` refuted → **step / warm-up**: only the first arm
+  of a session is cold. This is the cheaper thing to defend against in future
+  rounds (throw away or duplicate the first arm) and I flag now that it is the
+  outcome I consider most likely.
+- `P3` refuted **and** `P1` confirmed → incoherent; the round is reported as
+  **inconclusive with an internal contradiction**, not as a confirmation.
+
+**CONFIGURATION — the drift-free budget effect, and what R11's fold needs.**
+`C` = pooled-14 median(arms 2,3) ÷ pooled-14 median(arms 1,4) − 1. R11 declared
+a **±5%** fold band at this exact cell and measured **+0.27%**; I keep R11's own
+band so the two are directly comparable.
+
+| reading of `C` | verdict on R11's fold |
+|---|---|
+| **\|`C`\| < 5%** | **R11's fold STANDS.** "Budget is inert at c1" survives a design that cannot be fooled by ordering, and `recipe.yaml` is untouched |
+| **`C` ≥ +5%** | **R11's fold FALLS as reasoned** — the budget is *not* inert at c1, it is a genuine c1 lever. The recipe keeps 65536 (the right value for the wrong reason) but every `c1` figure in `RESULTS.md` is re-anchored and the fold's licence is withdrawn |
+| **`C` ≤ −5%** | **R11's fold FALLS and the value is wrong.** The folded budget costs throughput at c1; recommend reverting `recipe.yaml` to 8192 and re-measuring. This is the outcome that would cost the most, which is why it is written down first |
+
+⚠ **This round does not change `recipe.yaml` under any outcome.** A fold and an
+unfold are both single-mutation decisions that deserve their own round; R23
+reports, it does not tune.
+
+### NUMERIC PREDICTIONS
+
+- **Every arm 100 – 125**, centre ≈ **112** (the cell's anchor is 112.62 pre-fold
+  / 112.92 folded; the pooled 14-run pre-fold row is 112.62).
+- **`C` = +0.3%, band −4% to +4%.** I predict R11's fold **STANDS**. The reason
+  is mechanism, not deference: the two routes by which
+  `max_num_batched_tokens` has ever moved a number in this campaign are
+  **occupancy** and **batch span**, and both are switched off at c1 — residency
+  is 1 of 1 at every budget, and `tg == tg_req` by assignment so the span is
+  1.0000. There is no third route on offer.
+- **`P3` = +5%, band −2% to +14%.** I predict the **dead zone or a confirmation,
+  leaning confirmation**, and I record now that predicting a dead zone is not a
+  hedge — it is what a 3.7% SE buys against a 6.5% effect.
+- **`P1` = +1%, band −6% to +8%** — i.e. I predict the **step model**, on R22's
+  own evidence: its largest gaps (+12.24%, +6.89%) were both *first*-arm-to-
+  second-arm, and R8c's within-round second comparison was +0.37%, near zero.
+
+### THE SECOND DELIVERABLE — the row nobody has measured
+
+`tg128 @ d16384 c4` at **`mnbt 65536 + mns 4`**, runs=7, ONE extra invocation,
+run after the four A-B-B-A arms.
+
+**Why it is worth an engine start.** R11 folded `mnbt 65536` into `recipe.yaml`,
+but **every `c4` headline row in `RESULTS.md` was measured at `mns 5`**, which
+the recipe does not ship. The synthesis says so in as many words: *"`mnbt 65536 +
+mns 4` has never been measured and no row should be quoted as what the recipe
+produces until it is."* So no row in the file states what the shipped recipe
+actually produces at the campaign's only contested win. This closes that gap.
+
+Verified against `recipe.yaml` rather than assumed: its `defaults` read
+`max_num_batched_tokens: 65536` and `max_num_seqs: 4`, so **this arm needs no
+`-o` override at all** — it is `./recipe.yaml` exactly as shipped.
+
+- **Predicted 150 – 180, centre 165.** The neighbours are `mnbt 65536 + mns 5` =
+  **173.34** (the knee) and `mnbt 32768 + mns 16` = 147.25; width 4→5 was worth
+  ≤2.9% on three prior measurements, so I expect it just below the knee row.
+- ⚠ **`c4` metric discipline: `tg_throughput` is a BATCH AGGREGATE**
+  (`sum(decode tokens) / (max_last_token − min_first_token)`). It is NEVER
+  multiplied by concurrency. `peak_throughput` is quoted beside it, never
+  without it, and `tg_req_throughput` is the separate per-request figure.
+- This arm is **position 5** in the session. Its own figure is therefore exposed
+  to whatever `P3`/`P1` find, and that caveat travels with the row.
+
+### WHAT WOULD MAKE THIS ROUND VOID
+
+- `crash_count > 0` or `session_count > 1` in **any** arm — each arm is one
+  engine start and the position count depends on it.
+- The `Benchmark args:` echo not reading `pp: [2048]`, `depth: [16384]`,
+  `tg: [128]`, `concurrency: [1]`, `runs: 7`, and `concurrency: [4]` on the
+  fifth arm. **`sparkrun` silently defaults an omitted `-b depth` to 0 and does
+  not error** — R5 lost a start to it. Read the echo in every arm.
+- `tg_throughput != tg_req_throughput` at c1 (assignment, not measurement).
+- A container image other than `dgx-vllm-eugr-nightly:2026082102` in any
+  `state.yaml` — read `container_image_longterm_ref`, not the `:latest` line.
+- **Any arm run out of order, or any arm re-run.** The order IS the experiment.
+  A crashed arm cannot be retried in place; the round would restart.
+
+### INSTRUMENT PLAN — the thermal check, recorded not assumed
+
+⚠ **`nvidia-smi --query-gpu=clocks.sm,clocks.mem,temperature.gpu,power.draw`
+is sampled immediately BEFORE each arm and immediately AFTER it**, and both are
+written into the outcome block per arm. R22 could rule out a clock explanation
+only because it had the numbers; this round must be able to rule out or in a
+**thermal** explanation the same way, and the box starts cold (39 °C, 10.47 W,
+2398 MHz idle, verified before arm1). Telemetry alongside via
+`sample-telemetry.sh`. Engine log per R13d's recipe: `docker exec <container>
+tail -f /tmp/sparkrun_serve.log`, container matched on **`^sparkrun_`** — it is
+named `sparkrun_<hash>_<hash>_solo`, **not** `vllm-*`, and `docker logs -f` does
+not work on this image.
+
+### COST
+
+Five invocations, five engine starts, ~130 s grid each at c1 plus ~180 s starts;
+the c4 arm is the expensive grid. **~30 min wall estimated.**
+
+### ABSOLUTELY NO ARENA SUBMISSION
+
+No `--arena` flag in any arm, no `sparkrun arena` subcommand of any kind. There
+is no login, nothing has ever been submitted, and nothing will be.
