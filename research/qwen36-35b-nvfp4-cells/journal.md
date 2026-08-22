@@ -10358,3 +10358,60 @@ control across five starts; a new power bound; and the retirement of R6's
 ⚠ **What it did NOT buy, and the round is worse for it:** no engine-log capture,
 so no residency, acceptance or prefix-cache samples. That was an execution miss
 against this round's own instrument plan, not a design choice.
+
+## Desk correction — the prefill re-scoring (2026-08-22, zero box time)
+
+Source: `ANALYSIS-board-rescrape.md`, a per-entry read of the public Firebase
+endpoint the leaderboard SPA itself reads (`/leaderboard/byTest/<cell>.json`,
+snapshot `2026-08-22T19:00:32Z`, single-node only). No arena login, no
+submission, no ssh, no GPU. The scrape was verified against the 2026-08-21
+record before use: it reproduces `docs/arena-recipe.md`'s single-node entry
+counts (129/131/125 at d8192/d16384/d32768) and every board top `RESULTS.md`
+quotes, to the cent.
+
+**What was wrong.** `RESULTS.md` carried the claim that the board's prefill
+figures come through the same llama-benchy CSV and carry the identical
+`(depth+2048)/2048` understatement, "so the artefact cancels". Refuted per
+entry. The re-scrape joined the `pp2048` and `ctx_pp` records of one submission
+by `benchmarkId` and used `estPpt(pp2048)/estPpt(ctx_pp)` as a warm/cold
+discriminator — cold expects `(depth+2048)/depth` (~1.06–1.25), warm expects
+`2048/depth` (~0.06–0.25) — and the distribution is cleanly bimodal at d16384
+and d32768. The board is mostly WARM (d32768: 106 warm / 19 cold of 125). We are
+in the cold minority at every depth. **Every opponent on every scored prefill row
+is warm**, because ranking by cell top selects a warm entry by construction — a
+cold entry's `pp2048` is depressed ~17x and ranks near the bottom.
+
+**What was also wrong.** Every prefill board top except `ctx_pp @ d65536` is an
+Atlas `ttfr` artefact, now measured rather than inferred: the d32768 top's own
+published `e2eTtft` of 24064.87 ms implies 1361.7 tok/s against a published
+945271.31, a 694x inflation. `|ttfr − e2eTtft|` is 5.1–24.0 s for Atlas entries
+and ≤ 0.40 s for ~115 vLLM entries per depth. Atlas's real prefill is
+1362–2976 tok/s — **below ours** (4014–6149).
+
+**What changed in the standings.** Six margins restated, no cell changed side,
+counts stay 8 won / 12 lost. `ctx_pp` c1 goes from "LOST by ~126x/~151x/~186x"
+to 0.844x/0.845x/0.856x against the best same-model vLLM NVFP4 entry and
+0.574x/0.551x/0.537x against the best vLLM NVFP4 entry — like-for-like entries
+that exist on the board and that the 2026-08-21 scrape simply missed.
+`pp2048` c1 goes from 0.006x/0.006x/0.005x to 0.752x/0.757x/0.913x against
+Laguna-XS-2.1-NVFP4, scored on our **marginal** warm-equivalent `2048/(T2−T1)`.
+`ctx_pp @ d65536 c1` 2.88x is unchanged and is the only prefill row that ever
+needed no correction — that incumbent is honest (`ttfr == e2eTtft`).
+
+⚠ **`ANALYSIS-prefill-metric.md`'s "5027 tok/s = 1.082x WIN" at
+`pp2048 @ d32768 c1` is wrong and did not reach `RESULTS.md`.** 5027 is the
+average rate over the whole cold pass; the like-for-like figure is the marginal
+rate 4238.4, giving **0.913x — a narrow loss**. That file is kept unedited under
+a superseded banner.
+
+**Rule adopted.** Score prefill on `ctx_pp` only. It is the one prefill column
+whose numerator matches what the engine did for every entry, warm or cold, and
+it needs no correction, no opponent classification and no marginal-rate
+reconstruction. Our `pp2048` figures are not published as comparisons until
+prefix caching works here.
+
+**Free consequence.** Prefix caching works for ~84% of the d32768 field on this
+hardware, so our 0.0% hit rate is a property of *our* configuration, not an
+architectural limit of hybrid-mamba models on GB10. That raises the prior on the
+open experiment A (which flag breaks our cache — 13 minutes of box time for a
+binary readout) and it is now the only open item from that analysis.
