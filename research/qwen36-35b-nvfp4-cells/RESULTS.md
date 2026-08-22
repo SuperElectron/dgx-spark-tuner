@@ -1,6 +1,6 @@
 # Results — qwen36-35b-nvfp4-cells
 
-## READ THIS FIRST — the standings in ten lines (2026-08-22, after R11)
+## READ THIS FIRST — the standings in ten lines (2026-08-22, after R8c)
 
 > ### ⚠️ `recipe.yaml` CHANGED TODAY — THIS IS A CONFIG EPOCH BOUNDARY
 >
@@ -26,7 +26,32 @@
 - **WON 8 board cells, LOST 12**, and a long tail the board publishes no figure
   for and which therefore cannot be scored either way. **R11 moved no cell** —
   it measured a crowded cell that was never a campaign target, and its product is
-  the fold, not a standing.
+  the fold, not a standing. **R8c moved no cell either, but it moved a
+  number — see the next bullet, which is the newest thing in this file.**
+- ⚠️ **A RECORDED LOSS WAS WRONG BY 28%, AND IT WAS WRONG IN OUR FAVOUR.**
+  `ctx_tg @ d32768 c1` has been carried as a **0.72x** loss since R1. R8c
+  re-measured R1's own condition at runs=7 and read **110.61 against R1's
+  84.03 — +31.64%**, far outside the ±10% protection band. **The cell is
+  0.92x, not 0.72x**, and on the folded recipe (`mnbt 65536`) it reads
+  **117.65 against a 117.37 incumbent — 1.002x, a dead heat.** ⚠ **That dead
+  heat is NOT claimed as a win** (+0.24% is 0.06 SE, and it is the only
+  measurement of the cell at that budget), so the counts stay **8 won / 12
+  lost** — but a **125-entry crowded cell** the campaign had written off is now
+  the closest unclaimed cell it has, and it is queued for a protection round at
+  both budgets. **This is the single most likely place for the standings to
+  change.**
+- **R8c also retired the campaign's last deep `ctx_` inversion.** R1's −27.3%
+  Phase-1 deficit at d32768 read **+0.9%** at runs=7 on the identical config and
+  **+6.9%** on the folded recipe. All three deep inversions the campaign ever
+  published are now gone, and no mechanism was needed for any of them.
+- ⚠️ **AND THE SAMPLING RULE THIS FILE PUBLISHED IS REVISED: 3-run medians are
+  unreliable in BOTH directions.** The campaign carried a warning that every
+  3-run median it re-measured came in too high — four for four. That pattern was
+  an artefact of **which** figures got re-measured: flattering ones become claims
+  and claims get audited, while a disappointing figure sits in the standings
+  unexamined, which is exactly what 84.03 did for eleven rounds. **Audit the
+  unflattering rows too.** The four rows still standing on 3-run medians are
+  listed under *the rows still on three runs* below, in priority order.
 - **Widest margin: `ctx_tg @ d16384 c4` at 6.21x** (171.77 vs 27.68), on a
   **mutation** — `max_num_batched_tokens 131072 + max_num_seqs 5`, pooled over 14
   runs from two engine starts (R13c + **R13d**). It took the title from the
@@ -193,6 +218,31 @@ budget other than 65536.
 | ctx_tg @ d32768 c1 | **mnbt 65536 — the FOLDED recipe** (`mns 4`), runs=7 | **117.65** | 117.37 (Qwen3.6-35B-A3B-NVFP4 on **Atlas**) | 116.65 (Nemotron-3.5-Lightning-30B-A3B-NVFP4, vLLM) | ⚠ **1.002x — A DEAD HEAT, AND EXPLICITLY NOT CLAIMED AS A WIN.** +0.24% on a cell with σ/med 9.44% is **0.06 standard errors**, and this is the FIRST and ONLY measurement of the cell at this budget. The campaign's rule (R13c) is that a single 7-run median at a configuration measured once is not a claim, and promoting the best first measurement is exactly what retired R1's and R3's figures. **The cell is scored a LOSS and queued for a protection round** — it is a 125-entry crowded cell and now the closest unclaimed cell in the campaign. ⚠ The +6.36% over arm E is 1.0 SE, so whether the folded budget genuinely helps Phase 1 here is NOT established; the protection round must measure BOTH budgets |
 | pp2048 @ d8192, d16384, d32768 c1 (3 cells) | mnbt 8192 — PRE-FOLD recipe | 1187.51 / 637.09 / 295.71 | 215894 / 99229 / 63080 (all Atlas) | 4644.54 at d32768 | **LOST, ~0.006x of top and 0.064x of best vLLM** — the size of that gap is itself a warning, see the prefill section |
 | ctx_pp @ d8192, d16384, d32768 c1 (3 cells) | mnbt 8192 — PRE-FOLD recipe | 6148.56 / 5856.93 / 5086.51 | 775123 / 884765 / 945271 (all Atlas) | not in scrape | **LOST by ~150x** — same warning |
+
+### ⚠️ THE ROWS STILL ON THREE RUNS — and the one-sided auditing that hid an error for eleven rounds
+
+**Why this note exists.** R8c re-measured `ctx_tg32 @ d32768 c1` and found R1's
+3-run 84.03 was **28.5% below** what seven runs at its own condition say. It is
+the campaign's largest single-figure retraction and **it went upward**, which
+breaks the rule this file used to publish — that a 3-run median always comes in
+high. It never was a property of sampling. A high draw becomes a claimed win and
+gets defended, and defended figures get re-measured; **a low draw becomes a
+recorded loss and nobody looks at it again.** The four figures the campaign had
+audited were all figures somebody had a motive to check. **Sampling error is
+symmetric; the error that survives in a results file is whichever direction
+nobody was auditing.**
+
+**The practical rule: treat any unrepeated figure as wrong by ~1 standard error
+in an unknown direction, and re-measure the unflattering rows first.**
+
+Four standings rows are still 3-run medians, in priority order:
+
+| # | row | recorded | why it matters |
+|---:|---|---|---|
+| 1 | `ctx_tg @ d8192 c1` | 126.52 — 0.61x vs top, **1.07x** vs best vLLM+NVFP4 | **Direct sibling of the row R8c corrected**: same phase, same `c1`, one depth shallower, **same three-run invocation** (`bench_25a0e7f36ab0`). That invocation's rows have now moved **+11%, +5.4% and −28.5%** on re-measurement — both signs, large. σ/med at `tg32` d8192 is 21.4%. runs=7, one arm |
+| 2 | `tg128 @ d131072 c1` | 77.13 — **0.95x, LOST by 5.5%** | σ/med 9.3% on three runs is a standard error near 5.4%, so **the deficit is one SE and the loss is not established.** The only recorded loss a re-measure could plausibly flip. ⚠ Against it: d131072 is ~8x a shallow round and the journal's standing advice is not to return there — a deliberate cost call, not an inherited one |
+| 3 | `tg32 @ d8192 c1` | 106.24 — uncontested win | The board publishes no figure, so no margin can move whichever way it lands. Re-measure only if a round is at that depth anyway |
+| 4 | `tg128 @ d16384` c2 (84.00) and c5 (48.12), R4 pre-fold | losses by >2x | No sampling error of this size closes a 2x gap. Not worth box time; their tuned successors at raised budgets are already 7-run rows |
 
 ### CANNOT BE SCORED — the board has no figure for these cells
 
@@ -525,9 +575,12 @@ cells and the prefill cells back on 2026-08-21 (`docs/arena-recipe.md`), but no
 round ever moved them into this table — rows kept saying "not scraped" while the
 numbers sat in the scrape. They are now scored above. Nothing about a win
 changed; what changed is that `ctx_tg @ d8192/d16384/d32768 c1` are losses
-(0.61x / 0.64x / 0.72x, to a 350M BF16 model or to our own model on Atlas), the
+(0.61x / 0.64x / ⚠ **0.92x — REVISED BY R8c from the 0.72x this paragraph used
+to carry**, to a 350M BF16 model or to our own model on Atlas), the
 six prefill c1 cells are heavy losses, and `ctx_pp @ d65536 c1` is a win at
-2.88x. Two of those figures are still 3-run medians, flagged as such.
+2.88x. ⚠ The d8192 figure is still a 3-run median from the same invocation whose
+d32768 figure R8c found 28.5% low — see *the rows still on three runs* above; it
+is the campaign's first priority re-measure.
 A scrape is not a standings update, and this one waited a day for one.
 
 Eight cells taken, twelve lost, and **round 5 was the campaign's first LOSS**: tg128 @ d131072 c1
