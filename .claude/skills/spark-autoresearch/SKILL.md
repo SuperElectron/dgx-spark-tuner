@@ -59,19 +59,70 @@ research/<name>/
    .claude/skills/spark-autoresearch/scripts/parse-round.py <experiments-dir-or-cwd>/round-tmp.json
    ```
    Compare MEDIANS, not means — prompt draws are bimodal (occasional
-   high-ngram-acceptance runs). Verify any apparent win with a repeat run
-   before keeping. Keep → fold the mutation into recipe.yaml. Revert →
+   high-ngram-acceptance runs). At `concurrency > 1`, read the metrics
+   section below BEFORE quoting any throughput. Verify any apparent win
+   with a repeat run before keeping. Keep → fold the mutation into recipe.yaml. Revert →
    recipe.yaml untouched. Crash → journal the lesson; run dir stays.
-5. Append one row to RESULTS.md:
+5. Append one row to RESULTS.md. Per-run table (the default — the recipe
+   moves, the probe is fixed):
    `| bench_<id> | <date> | <mutation> | <tg mean> | <tg σ> | <pp mean> | <pp σ> | <ttfr mean> | keep/revert/crash — note |`
-6. Journal the outcome. Write the verdict to memory (best-effort, never
-   blocking — see the mem0 skill's guardrail: on failure spawn a background
-   agent to run `memory-doctor.sh`, never gate the round on it):
+
+   A campaign that varies the PROBE instead of the recipe (depth,
+   concurrency, tg length) may use a per-cell table instead — one row per
+   measured cell, carrying the configuration it was measured under:
+   `| bench_<id> | <date> | <cell> | <configuration> | <ours> | <runs> | <board top> | <margin> | <note> |`
+
+   EITHER schema MUST carry `benchId` and `date` columns. Without them a
+   row cannot be traced back to its archive under `experiments/`, and
+   `memory-backfill.sh` cannot produce a provenanced memory from it.
+6. Journal the outcome, then derive the round's verdict memories from the
+   canonical table (best-effort, never blocking — see the mem0 skill's
+   guardrail: on failure spawn a background agent to run
+   `memory-doctor.sh`, never gate the round on it):
    ```
-   .claude/skills/mem0/scripts/remember.sh "[VERDICT] <one-liner>" experiment:<name>
+   .claude/skills/mem0/scripts/memory-backfill.sh --reconcile research/<name>
    ```
-   Also write `[ENV]`, `[CRASH]`, or `[LESSON]` lines the same way when the
-   round surfaced one. Commit per repo workflow rules.
+   `--reconcile` adds the new rows AND drops `[VERDICT]`/`[CRASH]`
+   entries the table no longer produces, so the index converges on
+   RESULTS.md instead of accreting retired figures. Never hand-write a
+   `[VERDICT]` with `remember.sh` — a hand-written one has no row to
+   reconcile against, and that is precisely how the index diverged from
+   the table.
+
+   Hand-written `remember.sh` calls stay correct for `[LESSON]`, `[ENV]`
+   and `[IDEA]` findings that are NOT derivable from the results table. A
+   crash belongs in RESULTS.md as a row — backfill tags it `[CRASH]` — with
+   the takeaway written as a `[LESSON]`; a hand-written `[CRASH]` under the
+   experiment entity is a reconcile deletion candidate. Commit per repo
+   workflow rules.
+
+## Reading benchy metrics at concurrency > 1
+
+`llama-benchy`'s `t_s` IS `tg_throughput`, and `tg_throughput` is a BATCH
+AGGREGATE — `results.py:352` defines it as `sum(decode tokens) /
+(max_last_token - min_first_token)`, i.e. every request's decode tokens over
+the whole batch span. It is the same field the arena board's `c>1` figures come
+from; sparkrun uploads that CSV. The per-request figure is the separate
+`tg_req_throughput`.
+
+- Report `tg_throughput` and `peak_throughput` side by side for any `c>1` row.
+  Never quote one without the other — `tg` includes admission stagger,
+  `peak_throughput` is the sustained ceiling.
+- NEVER multiply a per-request figure by concurrency. `per-request x c`
+  double-counts and breaks from c4 up.
+- The stagger proxy `stagger ≈ c / (tg / tg_req)` is valid ONLY at full
+  residency. At c5 against `max_num_seqs 4` it reads 3.85-4.08 where
+  timestamps measure ~2.39.
+- Read the scheduler's `Running/Waiting` lines at every new operating point.
+  Residency is the precondition the proxy depends on; confirm it, don't assume
+  it from the `-b concurrency` argument.
+
+Evidence: `research/qwen36-35b-nvfp4-cells` (R10 from the source, R5c re-tested
+on the archives). Across all 34 archived `c>1` records: `tg > tg_req` in 34/34
+(ratios 1.13x-4.02x), `tg <= peak_throughput` 34/34, `tg / tg_req <= c` 34/34.
+The per-request convention survived nine rounds because `c x tg` exceeds
+`peak_throughput` in only 14 of 34 rows — all low-stagger arms — so the error
+hides exactly where a new reader looks first.
 
 ## Observation sweep (mandatory at every synthesis, ~5 rounds)
 
