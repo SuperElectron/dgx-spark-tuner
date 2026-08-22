@@ -48,6 +48,9 @@ Every memory is a single line of text, prefixed with one marker:
 - `[ENV]` — an environment fact (image version, driver, clock policy, ...)
 - `[CRASH]` — a run that crashed, and why
 - `[LESSON]` — a general takeaway not tied to one benchmark row
+- `[IDEA]` — a candidate future intervention outside current experiment
+  scope: box system change, fine-tune, prune, quant recalibration, upstream
+  fix. Include expected payoff and what decision/work it needs.
 - `[COST]` — harness-token spend for a round phase (tokens-per-point
   accounting); the memory is a best-effort index entry only — phase totals
   must ALSO be recorded in the journal, which stays canonical

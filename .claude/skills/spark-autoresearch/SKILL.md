@@ -73,6 +73,23 @@ research/<name>/
    Also write `[ENV]`, `[CRASH]`, or `[LESSON]` lines the same way when the
    round surfaced one. Commit per repo workflow rules.
 
+## Observation sweep (mandatory at every synthesis, ~5 rounds)
+
+Verdicts capture what mutations did; observations capture everything else. At
+each synthesis write an "Observations" journal subsection answering: what did
+the runs show about the BOX (clocks, temps, power, memory pressure, page
+cache), the MODEL (acceptance rates, quality quirks, load behavior), or the
+STACK (runtime bugs, version quirks) that is not a mutation verdict? Store
+each as an [ENV]/[LESSON] memory (entity box:<alias> or model:<hf-id>), and
+any candidate future intervention — system setting, fine-tune, prune, quant
+recalibration, kernel fix — as an [IDEA] memory. Empty sweeps are suspicious:
+telemetry always says something.
+
+Telemetry feed: run `scripts/sample-telemetry.sh <seconds> <outfile>` alongside
+at least one benchmark per series (more when investigating), and archive the
+log with that run. Round 11 of qwen35-08b found the SM clock cap exactly this
+way — that class of finding is the sweep's target.
+
 ## Cost ledger
 
 Record harness-token spend for the round in the journal entry (canonical),
