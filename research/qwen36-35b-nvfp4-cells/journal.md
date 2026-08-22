@@ -3659,21 +3659,29 @@ its two measurement phases labelled backwards since Round 1.**
 
 ## CAMPAIGN SYNTHESIS — the whole campaign, R1 through R13d and R11 (which ran last, and folded the recipe)
 
-**Written after R12 on 2026-08-22 and REVISED four times the same day: after
+**Written after R12 on 2026-08-22 and REVISED five times the same day: after
 R13 / the `ctx_` phase-label correction / R5c / R13c; again after **R13d**;
 again after **R11**, which ran last and is the only round that ever changed
-`recipe.yaml`; and a fourth time — **CURRENT AS OF 2026-08-22, post-R11 fold** —
-and a fifth time — **CURRENT AS OF 2026-08-22, post-R9c** — to fold R9c's three
-corrections into the places they reach: **open question 1** (its premise was
-wrong by two orders of magnitude and its remaining half is not benchmarkable),
-**open question 8** (the ~2% downward systematic is weakened to a noise floor),
-and **"what to run next" item 3** (R9c is done and must not be re-queued). R9c
-moved no standing and changed no config; everything else below stands as
-written. The fourth revision's text follows —
-to carry the config-epoch consequences of that change into the handoff itself:
-the cross-condition rule below the epoch warning, the `c1`-vs-`c>1` asymmetry of
-the budget lever, and the removal of the pre-fold "not folded" language this
-section still carried. This revision replaces every earlier one; there is no
+`recipe.yaml`, to carry the config-epoch consequences of that change into the
+handoff itself — the cross-condition rule below the epoch warning, the
+`c1`-vs-`c>1` asymmetry of the budget lever, and the removal of the pre-fold
+"not folded" language this section carried; and a fifth time —
+**CURRENT AS OF 2026-08-22, post-R9c** — to fold R9c into every place it
+reaches. R9c moved no standing and changed no config, and its reach is still
+wide:**
+
+> **What the R9c revision changes, so a reader who knows the earlier text can
+> find the deltas:** **open question 1** (premise wrong by two orders of
+> magnitude; remaining half not benchmarkable), **open question 8** (the ~2%
+> downward systematic weakened to a noise floor), **"what to run next" item 3**
+> (done, do not re-queue), **the prefix-caching section below** — rewritten
+> around the **83% batch span / 17% decode / 0.7% hardware** decomposition,
+> which is the single most consequential correction of this revision — **the
+> phase-pair audit** (37 of 38 → **41 of 42**), **two more retired claims**
+> (items 20 and 21), **a refusals record** that did not exist before, and an
+> **R9c cost-ledger row**.
+
+**This revision replaces every earlier one; there is no
 second synthesis and there must never be one. It is the ONE authoritative
 handoff — read it instead of the round blocks, and read `RESULTS.md` for the
 standings.**
@@ -3722,7 +3730,10 @@ how the rest of this section reads:**
 - **The `ctx_` phase-label correction** found the two measurement phases labelled
   backwards since R1 and charged different token counts, which makes the ~9x
   `ctx_pp` advantage read for twelve rounds a **denominator artefact**. Prefix
-  caching never engaged at all.
+  caching never engaged at all — ⚠ **and R9c then showed that the flag is worth
+  2.414x anyway, 83% of it batch span. Those two facts are consistent; the
+  reconciliation is in item 2 of the numbered section below and a cold reader
+  should read it before concluding either one is wrong.**
 - **R5c** confirmed from 34 archived records that the board's `c>1` `tg` figure
   is a **batch aggregate**, closing the units question from a second direction.
 - **R13c** put all six `c4` headline rows back on the box — **all six stood**,
@@ -4039,21 +4050,90 @@ warning that each new value costs a full rebuild. It is a throughput-versus-late
 trade and must be written as one.
 
 **2. Prefix caching has never once hit on this benchmark — and the flag is worth
-57% of the headline metric anyway.** vLLM's own counter reads `Prefix cache hit
-rate: 0.0%` in all 22 engine samples of R9's A1 and all 92 of R10, **with the flag
-ON**; total prompt tokens processed differ by 1.7% between caching on and off. No
-prefill work was ever saved. Yet turning the flag off drops `tg` at c4 from 143.08
-to 62.13 (**-56.6%**) while `peak_throughput` is identical to the token (297 vs
-297) and `pp2048` moves 0.8%. The entire effect is the batch span, and **nobody
-knows the mechanism.** The leading suspect is what the source says rides along:
-prefix caching off also moves `mamba_block_size` from 16 to `max_model_len`,
-changing Gated DeltaNet state granularity for 30 of 40 layers by 2048x.
+2.414x of the headline metric anyway, of which 83% is batch span.** ⚠ **REWRITTEN
+BY R9c. The earlier version of this section said "57%", named `mamba_block_size`
+16 → 32768 as the suspect, and said nobody knew the mechanism. All three are
+superseded; read this version.**
+
+**The three readings that have to sit together, because a cold reader will
+otherwise think two of them contradict the third.** They do not, and the
+reconciliation is the point of this section:
+
+- **R9b: prefix caching never engages.** vLLM's own counter reads `Prefix cache
+  hit rate: 0.0%` with the flag **ON** — 22 samples in R9's A1, 92 in R10, 22 in
+  each of R9c's P and G arms, **158 consecutive samples and no hit ever
+  recorded**. Total prompt tokens processed differ 1.7% between on and off. **No
+  prefill work is saved, ever.**
+- **The `ctx_` phase-label correction: there was never a cached pass to look
+  at.** llama-benchy's `ctx_` row is Phase 1, the context load, charged
+  `depth + 2048` tokens against Phase 2's 2048, so the ~9x `ctx_pp` advantage
+  read for twelve rounds is the denominator and not the cache. Two of the
+  archived pairs are prefix-caching-**OFF** arms and they read the same ratio,
+  which is independent proof the cache never hits.
+- **R9c: the flag is nonetheless worth 2.414x**, on 14 runs re-measured in one
+  session (146.32 ON vs 60.60 OFF at `tg128 @ d16384 c4`, `mnbt 32768`,
+  `mns 4`), and the decomposition **closes exactly** on the campaign's own
+  identity `tg = c x tg_req / span`:
+
+      tg ratio 2.415  =  tg_req ratio 1.160  x  span ratio 2.082
+      log-share:  batch span 83%   per-request decode 17%
+      hardware:   peak_throughput 287 vs 289 — 0.7%
+
+**THE RECONCILIATION, IN ONE SENTENCE: the flag is not buying cache hits and is
+not buying hardware throughput; it is buying a shorter measurement window, and
+the window is `tg_throughput`'s denominator.** All three readings are true at
+once because they are about different quantities. R9b measured the *cache* and
+found it idle. The phase correction removed the *column* the campaign had been
+reading cache effects out of. R9c measured the *metric* and found 83% of the
+flag's value sitting in the batch span — which is exactly the term R10 proved
+`tg_throughput` is charged for. **A flag can be worth 2.414x of a scheduling
+measurement while saving zero prefill work, and that is what this one does.**
+
+**The span is not an inference. It was measured directly as ttfr dispersion
+within the batch: 1516 ms with the flag on, 6269 ms with it off — 4.13x.** At
+~59 tok/s/req a 128-token generation lasts ~2.2 s, so the OFF arm's 6.3 s spread
+swamps the decode window entirely while the ON arm's 1.5 s spread sits inside
+it. One request per batch of four returns its first token about 6 s early with
+the flag off, and the aggregate is divided by the whole span.
+
+**What this retires.** Every earlier reading that credited a `c>1` margin to
+"prefix caching working" is retired twice over — once by R9b (it never worked)
+and once by R9c (83% of what it is worth is the denominator, not the engine).
+And the "57% of `tg`" figure is retired as a single-draw understatement: it came
+from two 3-run medians four hours and one engine start apart. **2.414x on 14
+runs measured in one session is the figure.**
+
+**What is NOT explained, stated plainly rather than papered over.** ⚠ The
+mechanism behind the span difference is **still open**, and R9c narrowed it
+without closing it:
+
+- `mamba_block_size` is **not** 16 → 32768. It is **2144 → 32768, 15.3x** —
+  `platforms/interface.py:911-918` overwrites the 16 with the aligned attention
+  block size, and all seven archived engine logs carry the same
+  `Setting attention block size to 2144` line. **The 2048x premise was wrong by
+  two orders of magnitude and no round ever ran under it.**
+- Moved from the only legal side (`--block-size 32768` with caching ON), it
+  explains **at most 42%** of the span gap and arrives with a 2.03x per-request
+  decode penalty the caching-OFF arm does not have — so it is not the whole
+  story and the arm that tested it was confounded (87% of KV capacity lost).
+- ⚠ **And the caching-OFF arm is not at full residency** — `(3,1)` in 7 of 13
+  loaded samples at `c4`/`mns 4` with 3.34M tokens of KV free. Capacity is not
+  the reason and the campaign does not know what is. Its span figure is
+  therefore doing double duty as a queueing figure, and by the lead's own rule
+  the stagger proxy holds only at full residency. **Mechanism UNEXPLAINED, not
+  invented.**
+- **The remaining half is not benchmarkable in this engine.** Prefix caching ON
+  forces `mamba_cache_mode: align`; OFF forces `none`; `mamba_block_size` may be
+  set only with caching ON and is then overwritten by `block_size` under
+  `align`. The four things the flag moves cannot be separated by any flag, in
+  either direction. See open question 1 — it is a source-reading task now.
 
 Two consequences, and both are corrections rather than discoveries:
 
 - **Nothing in this campaign's `c>1` gains should be described as "prefix caching
-  working".** It is not working. Something riding along with the flag is, and
-  R9c separates them in one invocation.
+  working".** It is not working. What rides along with the flag is worth 2.414x
+  at c4 and 83% of that is the batch span; R9c priced it and proved the
+  remainder cannot be isolated by benchmarking.
 - **The `ctx_` and cold labels have been backwards since R1.** llama-benchy's
   `ctx_` row is Phase 1, the **context load** — the uncached pass that establishes
   the cache. The rows this campaign calls "cold" are Phase 2, the cache-eligible
@@ -4063,10 +4143,15 @@ Two consequences, and both are corrections rather than discoveries:
   journal before R9b is mislabelled; the `tg` comparisons survive the token-count
   problem but not the labelling.
   **Since measured, not just asserted, and then extended:** `ctx_pp / pp =
-  (depth+2048)/2048` — a prediction with **no free parameters** — holds in **37 of
-  38** archived phase pairs across five depths, eight token budgets and five
+  (depth+2048)/2048` — a prediction with **no free parameters** — holds in ⚠ **41
+  of 42** archived phase pairs across five depths, eight token budgets and five
   concurrencies, residuals −0.7% to +6.4% (R13d added the 37th pair, R11 the 38th
-  at c1 above the old budget). R13c's
+  at c1 above the old budget, and **R9c's four arms added pairs 39-42, reading
+  9.167 / 9.139 / 9.151 / 9.148 against a predicted 9.00** — the tightest cluster
+  of four in the audit, and the first taken at three different `mamba_block_size`
+  values and both settings of prefix caching. **That the ratio is invariant to
+  the flag is itself further proof the two phases differ by token count and not
+  by caching.**). R13c's
   six budget arms added the one dimension the audit lacked: the ratio reads
   9.21 / 9.11 / 9.12 / 9.23 / 9.58 / 9.20 against a predicted 9.00 while the
   scheduler's token budget moves **16x**, which is what a pure denominator
@@ -4196,6 +4281,62 @@ rounds on for eight rounds:**
     Note the shape: this is the same error as items 1, 2 and 17 — a dispersion or
     a level measured once, generalised, and wrong on re-measurement.
 
+**Added by R9c. Two more, and both were load-bearing for the round that retired
+them:**
+
+20. **"`--enable-prefix-caching` is worth 57% of `tg` at c4"** — R9b, carried by
+    this synthesis and by `RESULTS.md`. **It is 2.414x**, and the 57% was two
+    3-run medians taken four hours and one engine start apart. R9c re-measured
+    both endpoints at runs=7 inside one session: 146.32 vs 60.60. The direction
+    was right; the size was a cross-invocation artefact of exactly the kind this
+    campaign refuted three times elsewhere (items 1, 2, 6).
+21. **"Prefix caching off moves `mamba_block_size` from 16 to 32768, a 2048x
+    change in Gated DeltaNet state granularity"** — R9b's leading suspect,
+    quoted in open question 1 and in the R9c queue entry. **Wrong by two orders
+    of magnitude.** `platforms/interface.py:911-918` overwrites the 16 with the
+    aligned attention block size, so the true contrast is **2144 → 32768,
+    15.3x**, and every archived engine log had been logging the real value all
+    along. **No round ever ran under the 2048x condition; it never reached the
+    engine.** Note the shape: this is the same error as item 4 — a value inferred
+    from one source pass and never checked against the log that prints it.
+
+### Refusals and broken gates — recorded, not dropped
+
+The campaign's rule is that a gate that breaks and an arm that cannot run are
+**results**, and get written down where the next reader will trip over them.
+Three exist:
+
+1. **R9's arm B refused to start.** `--no-enable-chunked-prefill` parses, warns,
+   and then the engine dies: *"Chunked prefill is required for mamba cache mode
+   'align'"*, and `align` is what prefix caching ON selects. One engine start
+   spent for zero numbers, none invented. R9b later ran the arm from the legal
+   side.
+2. **R9b's `ctx_pp2048 < 1200` gate broke and the gate was wrong, not the arm.**
+   It measured ~6100. Under the corrected phase labels the gate was
+   **arithmetically impossible** — Phase 1 is charged 16384 tokens whether a
+   cache exists or not, so its `pp` figure carries an 8x floor in the
+   denominator. Overriding it on the engine's own counters was the correct call,
+   **and recording it as a broken gate rather than dropping it is what made it
+   diagnosable a round later.**
+3. ⚠ **NEW — R9c's queued arm was REFUSED BY A VALIDATOR and could never have
+   run.** The queue specified "prefix caching OFF with an explicit
+   `-o mamba_block_size=16`". `vllm/config/vllm.py:2607-2618` in the pinned
+   image raises at config validation: *"--mamba-block-size can only be set with
+   --enable-prefix-caching"*, and `config/cache.py:145-148` says the same in its
+   docstring. `mamba_block_size 16` + `max_model_len 32768` + caching off is
+   **exactly** the refused combination. **The arm the queue specified would have
+   died before the engine loaded.**
+    **What it cost and what it bought:** nothing and a round. The refusal was
+    found by grepping the validators out of the pinned image with a throwaway
+    `docker run --rm --entrypoint bash` **before any box time was spent** — R9's
+    open-question-11 rule, and the third consecutive round it has paid. R9c was
+    then redesigned around the only legal lever (`--block-size` from the ON
+    side) and ran. **The general lesson, which is the reusable half: an arm that
+    a validator will refuse should be caught at the queue, not at the engine
+    start. Any future round proposing to vary prefix caching and
+    `mamba_cache_mode` independently must be refused at the queue** — the source
+    read in open question 1 proves it is impossible in both directions.
+
 Note what is NOT on this list: **any board margin.** Both sides of every `ctx_`
 comparison are Phase 1 against Phase 1, so the standings are untouched at 8 won
 / 12 lost — and R13c's protection sweep then held all six `c4` rows in place from
@@ -4227,6 +4368,7 @@ round agent's own accounting; R1, R2 and R5b did not record theirs.
 | **R13** | 490.1 s | 1 | ~85k | c4 to a claimed 3.74x and a record 6.16x; c5 to 0.73x and still lost; **the stagger model refuted with the occupancy log** | **yes, and not for the reason it ran** — it failed to take its target cell and its most valuable output is the refutation of the campaign's own mechanism |
 | **ctx-CORRECTION** | **0 s** | **0** | not recorded | every `ctx_` row audited; the token-count error measured at 29 of 30 pairs; six claims withdrawn | **yes, free, and the largest single retraction batch of the campaign** — it reaches every `ctx_` row ever written |
 | **R11** | **73.9 s** | 1 | ~70k | **the fold** — the c1 anchor at the knee value, `recipe.yaml` changed for the first time in the campaign; open question 13 answered free; R6's runs-budget rule refuted free | **the campaign's best ratio after R6** — 74 seconds of grid time to move the largest lever it found from a footnote into the shipped config, plus two by-products that cost nothing |
+| **R9c** | 883.8 s | 4 | ~95k | `--enable-prefix-caching` priced at **2.414x on 14 runs** and decomposed **83% span / 17% decode / 0.7% hardware**; both endpoints re-measured in one session; the 2048x premise corrected to 15.3x; the queued arm shown to be validator-refused; **a proof that the flag's four effects cannot be separated in this engine**; the engine-log capture's third failure mode found and fixed | **yes, and not for the reason it ran** — its declared primary instrument landed inside its own dead zone and its deciding arm was confounded, yet **three of its five results cost no box time at all** and it retired two claims this synthesis was carrying |
 | **R13c** | 1353.5 s | 6 | ~90k | all six `c4` headline rows protected and standing; two tightened to pooled 14-run medians; **the budget curve and its knee at 65536**; the ~2% single-measurement error bar | **the campaign's best round on evidence per second** — it is the only systematic protection sweep, it told R11 which value to fold, and it corrected two of R13's own notes |
 
 **Totals:** ~6,624 s of measurement grid time (≈110 minutes) across 28 engine
@@ -4289,9 +4431,10 @@ regularities; and one campaign `[COST]` total.
 
 ### Open questions that are genuinely still open
 
-1. **Why is `--enable-prefix-caching` worth 57% of the headline metric when it
-   never hits?** ⚠ **NARROWED BY R9c, AND ITS PREMISE CORRECTED — read this
-   version, the one above it was wrong in two ways.** (a) The flag is worth
+1. **Why is `--enable-prefix-caching` worth 2.414x of the headline metric when it
+   never hits?** (Posed as "57%" until R9c re-measured it.) ⚠ **NARROWED BY R9c,
+   AND ITS PREMISE CORRECTED — read this version, the one above it was wrong in
+   two ways.** (a) The flag is worth
    **2.414x**, not 57%, on R9c's 14 re-measured runs (146.32 vs 60.60), and the
    decomposition closes exactly: **83% batch span, 17% per-request decode, 0.7%
    hardware** (`peak_throughput` 287 vs 289). The span is made of **ttfr
@@ -4445,9 +4588,10 @@ is no login.**
 
 ### HANDOFF
 
-**Start here and stop here — this revised synthesis is the whole handoff, and it
-now post-dates every round block including the `ctx_` correction, R13c and
-**R13d**, the last round the campaign ran. You do not need to read them.**
+**Start here and stop here — this revised synthesis is the whole handoff, and as
+of 2026-08-22 (post-R9c) it post-dates every round block in this file: the
+`ctx_` correction, R13c, R13d, **R11** (the fold) and **R9c**, which ran last.
+You do not need to read them.**
 
 **The state.** ⚠ `recipe.yaml` is **NO LONGER the one the campaign opened with**
 — R11 folded `max_num_batched_tokens: 65536` into it on 2026-08-22, the single
@@ -4468,6 +4612,15 @@ budget is inert at c1 (+0.27% on the anchor), so `recipe.yaml` carries
 `max_num_batched_tokens: 65536` and no baseline, depth-curve point or margin
 moved. **Read the epoch warning at the top of this synthesis before comparing any
 new measurement to a row labelled "mnbt 8192 — PRE-FOLD recipe".**
+
+**R9c is DONE and it closed a queue entry rather than a cell.** It moved no
+standing, changed no config and produced twelve NOT SCOREABLE rows. What it
+bought: `--enable-prefix-caching` priced at **2.414x** and decomposed **83% batch
+span / 17% per-request decode / 0.7% hardware**; the "57%" and the "2048x
+`mamba_block_size`" claims retired (items 20 and 21); and a **proof from source
+that the flag's effects cannot be separated in this engine, so open question 1's
+remainder is a reading task and must never be re-queued as a benchmark**. Its
+queued arm was **refused by a validator** and is recorded above under refusals.
 
 **Pick up at `mnbt 65536 + mns 4` at c4** — the config the recipe now actually
 ships, which has been measured at c1 only. It is one invocation and it closes the
@@ -6926,9 +7079,11 @@ the third consecutive round where reading the image beat benchmarking it.
 
 **This is the end of the round log, not the end of the campaign's conclusions.**
 The authoritative handoff is the **`CAMPAIGN SYNTHESIS — the whole campaign, R1
-through R13d and R11`** section above, revised 2026-08-22 to cover everything below it:
-R5c, R13, the `ctx_` phase-label correction, R13c, R13d and **R11 — including
-its fold and the config-epoch rule that follows from it**. It is the only
+through R13d and R11`** section above, revised 2026-08-22 (post-R9c) to cover
+everything below it: R5c, R13, the `ctx_` phase-label correction, R13c, R13d,
+**R11 — including its fold and the config-epoch rule that follows from it** —
+and **R9c**, whose prefix-caching decomposition rewrote the synthesis's numbered
+item 2 and whose refused arm is recorded there. It is the only
 synthesis in this file and it must stay the only one — revise it, never append a
 second.
 
