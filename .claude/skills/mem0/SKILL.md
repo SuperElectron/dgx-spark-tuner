@@ -48,14 +48,25 @@ Every memory is a single line of text, prefixed with one marker:
 - `[ENV]` — an environment fact (image version, driver, clock policy, ...)
 - `[CRASH]` — a run that crashed, and why
 - `[LESSON]` — a general takeaway not tied to one benchmark row
+- `[IDEA]` — a candidate future intervention outside current experiment
+  scope: box system change, fine-tune, prune, quant recalibration, upstream
+  fix. Include expected payoff and what decision/work it needs.
 - `[COST]` — harness-token spend for a round phase (tokens-per-point
   accounting); the memory is a best-effort index entry only — phase totals
   must ALSO be recorded in the journal, which stays canonical
 
 Entity metadata (stored in `metadata.entity`, passed as `filters.entity`
-on recall — never client-side filtered) scopes a memory:
+on recall — never client-side filtered) scopes a memory. Pick the WIDEST
+entity the observation truly generalizes to — that's what makes it findable
+from other experiments:
 
-- `experiment:<name>` — e.g. `experiment:qwen35-08b-tg128-c1`
+- `experiment:<name>` — true only for this series' cell/config
+- `model:<hf-id>` — true for this exact checkpoint
+- `family:<name>` — true across a model family (e.g. family:qwen3.6-35b-a3b
+  spans the NVFP4/FP8/BF16 checkpoints; family:qwen spans generations)
+- `stack:<runtime>` — true for the serving stack regardless of model
+  (e.g. stack:vllm, stack:atlas)
+- `box:<alias>` — true for this hardware regardless of model or stack — e.g. `experiment:qwen35-08b-tg128-c1`
 - `box:<alias>` — e.g. `box:spark-6f0e`
 - `flag:<vllm-flag>` — e.g. `flag:--async-scheduling`
 

@@ -73,6 +73,16 @@ research/<name>/
    Also write `[ENV]`, `[CRASH]`, or `[LESSON]` lines the same way when the
    round surfaced one. Commit per repo workflow rules.
 
+## Observation sweep (mandatory at every synthesis, ~5 rounds)
+
+Run an observation pass per the `observe` skill (.claude/skills/observe/SKILL.md)
+over the series' runs, telemetry, and logs — surprises, headroom at every
+layer, missing instruments — recording [ENV]/[LESSON]/[IDEA] memories and an
+"Observations" journal subsection. Telemetry feed:
+`scripts/sample-telemetry.sh <seconds> <outfile>` alongside at least one
+benchmark per series; archive the log with that run. Empty sweeps are
+suspicious.
+
 ## Cost ledger
 
 Record harness-token spend for the round in the journal entry (canonical),
