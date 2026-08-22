@@ -27,16 +27,18 @@ Procedures live in the skills; see `## Skills`.
 
 ```
 research/<series>/
-├── recipe.yaml                        the tuned config
-├── RESULTS.md                         Mat's lookup table
-├── docs/  scripts/
+├── recipe.yaml                     the tuned config
+├── RESULTS.md                      Mat's lookup table
+├── docs/                           model-card.md, arena-recipe.md
 └── experiments/<hypothesisId>/
-    ├── HYPOTHESIS.md → EXPERIMENT.md  the claim, then its conclusion
-    └── bench_<id>-<label>/            one archive per invocation
+    ├── EXPERIMENT.md               the claim, then its conclusion
+    └── bench_<id>-<label>/         one archive per invocation
 ```
 
-- Write only to `recipe.yaml`, `HYPOTHESIS.md` / `EXPERIMENT.md`, and
-  `RESULTS.md`. Everything else in a series is read-only, archives included.
+- Write only to `recipe.yaml`, `EXPERIMENT.md` and `RESULTS.md`. Everything
+  else in a series is read-only, archives included.
+- `EXPERIMENT.md` states the claim before any run, and gains its conclusion
+  after.
 - Create no other files. Analysis belongs in `EXPERIMENT.md`.
 - `recipe.yaml` changes only when a fold rule declared before the run fires.
 - `RESULTS.md` is Mat's. Nothing derives from it — tooling reads the archives.
