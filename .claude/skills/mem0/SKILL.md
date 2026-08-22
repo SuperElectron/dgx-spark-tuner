@@ -44,16 +44,47 @@ against it exactly:
 
 Every memory is a single line of text, prefixed with one marker:
 
-- `[VERDICT]` — an experiment outcome (keep/revert), from RESULTS.md
+- `[VERDICT]` — a DATED OBSERVATION of what one benchmark measured, with
+  its provenance. Not a standing claim: "bench_X on 2026-08-21 measured
+  129.32 at runs=3" stays true forever, even after a later round measures
+  116.43 at the same cell. What goes stale is a JUDGEMENT welded onto the
+  observation ("WIN 4.60x, settled") — so always state what the ratio is
+  over and where that comparison figure came from. Template:
+
+  `[VERDICT] <date> <benchId>: <cell/mutation> runs=<n> median <figure> (σ <sd>) at <config> — <WIN|LOSS> <ratio> over <basis> (<source + date>)`
+
+  Worked example, and the supersession clause for a re-measured cell:
+
+  ```
+  [VERDICT] 2026-08-21 bench_25a0e7f36ab0: tg32 @ d16384 c1 runs=3 median 129.32 (σ 18.38) at mnbt 8192/mns 4 — WIN 4.60x over board 28.11 (arena scrape 2026-08-21)
+  [VERDICT] 2026-08-22 bench_9c41ab0f7e12: tg32 @ d16384 c1 runs=7 median 116.43 at mnbt 8192/mns 4 — WIN 4.14x over board 28.11 (arena scrape 2026-08-21); revises bench_25a0e7f36ab0 (129.32, runs=3, −9.98%)
+  ```
+
+  Emit only fields the source row carries — omit a clause rather than
+  guess at it.
 - `[ENV]` — an environment fact (image version, driver, clock policy, ...)
 - `[CRASH]` — a run that crashed, and why
 - `[LESSON]` — a general takeaway not tied to one benchmark row
 - `[IDEA]` — a candidate future intervention outside current experiment
   scope: box system change, fine-tune, prune, quant recalibration, upstream
-  fix. Include expected payoff and what decision/work it needs.
+  fix. Include expected payoff and what decision/work it needs — and the
+  DATE plus the evidence it rests on, so a later reader can tell whether
+  it is still live. An undated `[IDEA]` outlives the question it asked:
+  the store currently holds one recommending a round a later round already
+  closed, and nothing in the line says so.
 - `[COST]` — harness-token spend for a round phase (tokens-per-point
   accounting); the memory is a best-effort index entry only — phase totals
   must ALSO be recorded in the journal, which stays canonical
+
+### Why the date and provenance live in the TEXT
+
+`recall.sh` prints only each hit's `.memory` field. `created_at`,
+`metadata.entity` and `metadata.sha256` never reach the caller — the
+server uses them, the reader never sees them. So anything needed to judge
+a memory at recall time must be IN the line: when it was measured, which
+benchId it came from, how many runs, and what the comparison figure was.
+A line that omits them is unfalsifiable at the point of use — the reader
+cannot tell a current figure from one three rounds retired.
 
 Entity metadata (stored in `metadata.entity`, passed as `filters.entity`
 on recall — never client-side filtered) scopes a memory. Pick the WIDEST
@@ -127,7 +158,11 @@ low-frequency guardrail script.
 stalled mid-flight parks its backlog in `.inflight`, and checking only the
 outbox would let the doctor false-green with memories still stuck.
 
-Example: `remember.sh "[VERDICT] bench_4f9da10931e0: ngram spec decode (n=4) — KEEP: +3.9 tg over band" experiment:qwen35-08b-tg128-c1`
+Example: `remember.sh "[LESSON] 2026-08-21: compare medians, not means — ngram acceptance is bimodal (bench_4f9da10931e0, σ 1.94 over 3 runs)" experiment:qwen35-08b-tg128-c1`
+
+Write `[VERDICT]`/`[CRASH]` lines with `memory-backfill.sh`, not by hand:
+a hand-written one has no table row to reconcile against, which is
+exactly how the index diverges from RESULTS.md.
 
 ### `recall.sh "<query>" [entity] [k=10]`
 
@@ -150,28 +185,63 @@ step still runs, since that degrades gracefully on its own. Idempotent —
 safe to run repeatedly. Exits nonzero only if something is still broken
 at the end.
 
-### `memory-backfill.sh [-n] <experiment-dir>`
+### `memory-backfill.sh [-n] [--reconcile] <experiment-dir>`
 
-Rebuilds mem0's index for one experiment from its canonical
-`RESULTS.md` table — every row with a non-empty verdict becomes a
-one-liner, tagged `[CRASH]` when the verdict column starts with "crash"
-and `[VERDICT]` otherwise. Each
-entry is tagged `entity=experiment:<dirname>` and deduped via
+Derives the `[VERDICT]`/`[CRASH]` entries for one experiment from its
+canonical `RESULTS.md` table — one provenanced line per row in the format
+above, tagged `[CRASH]` when the verdict/note starts with "crash" and
+`[VERDICT]` otherwise. Two table schemas are recognised, detected from
+the header row (both MUST carry `benchId` and `date`):
+
+- **per-RUN** — `benchId | date | mutation | tg t/s | tg σ | pp t/s |
+  pp σ | ttfr ms | verdict`.
+- **per-CELL** — `benchId | date | Cell | Configuration | Ours | Runs |
+  Board top | [Like-for-like] | Margin/Verdict/Note`, used by campaigns
+  that vary the probe instead of the recipe. The `WON`/`LOST` section
+  heading the row sits under supplies the WIN/LOSS label; the board
+  figure and the scrape date named in the file's preamble supply the
+  comparison basis.
+
+Each entry is tagged `entity=experiment:<dirname>` and deduped via
 `POST /memories/list` with `filters: {sha256: ...}` — an exact-match
 check, not a similarity search, so it never posts a false-positive
 duplicate. If the dedupe check itself fails (non-2xx), the row is skipped
 and warned about, never added — this script would rather leave a gap
 than risk a duplicate. `-n` prints what would be posted instead of
-posting it, with no network calls at all. Use this any time mem0's data
-looks wrong — it's a derived index, not a source of truth; `journal.md`
-is not parsed (RESULTS.md is the single canonical source for backfill).
+posting it. `journal.md` is never parsed (RESULTS.md is the single
+canonical source for backfill).
+
+**`--reconcile`** regenerates the full expected set and then makes the
+index match it — adding what is missing AND deleting what the table no
+longer produces. Without it the default run is add-only and the index can
+only accrete: a figure a later round retired stays in the store forever,
+ranked against its own replacement. What it will and will not touch:
+
+- Deletes ONLY entries whose entity is `experiment:<dirname>` **and**
+  whose marker is `[VERDICT]` or `[CRASH]`.
+- NEVER deletes `[LESSON]`, `[ENV]`, `[IDEA]` or `[COST]`. Those are
+  hand-written observations RESULTS.md cannot regenerate — deleting them
+  would destroy the campaign's actual findings.
+- If the index listing fails, the whole reconcile aborts with no deletes
+  and no adds (exit 1). A partial reconcile is worse than none.
+- `-n --reconcile` prints the intended adds (`+`) and deletes (`-`) and
+  performs no writes. It still reads the index, so it needs the box.
+
+⚠ A HAND-WRITTEN `[CRASH]` under the same `experiment:<dirname>` entity is
+therefore a deletion candidate like any other. Record the crash as a
+RESULTS.md row (backfill tags it `[CRASH]` on its own) and put the
+takeaway in a `[LESSON]`, which reconcile never touches.
 
 ## GUARDRAIL: memory ops must never block main work
 
-RESULTS.md/journal.md files are canonical; mem0 is a rebuildable index
-(`memory-backfill.sh` reconstructs it from RESULTS.md at any time). Given
-that, memory operations must never gate or delay the actual research
-work:
+RESULTS.md/journal.md files are canonical; mem0's `[VERDICT]`/`[CRASH]`
+entries are a rebuildable index over RESULTS.md — but only via
+`memory-backfill.sh --reconcile`. A plain backfill is add-only and cannot
+converge on its source; it can add what the table gained, never drop what
+the table retired. Everything else in the store (`[LESSON]`, `[ENV]`,
+`[IDEA]`, `[COST]`) is hand-written and NOT rebuildable — the journal is
+its canonical copy. Given that, memory operations must never gate or
+delay the actual research work:
 
 - `remember.sh` and `recall.sh` always exit 0 on service failure or a
   missing box config. Never treat their stderr warnings as reasons to
