@@ -59,8 +59,9 @@ research/<name>/
    .claude/skills/spark-autoresearch/scripts/parse-round.py <experiments-dir-or-cwd>/round-tmp.json
    ```
    Compare MEDIANS, not means — prompt draws are bimodal (occasional
-   high-ngram-acceptance runs). Verify any apparent win with a repeat run
-   before keeping. Keep → fold the mutation into recipe.yaml. Revert →
+   high-ngram-acceptance runs). At `concurrency > 1`, read the metrics
+   section below BEFORE quoting any throughput. Verify any apparent win
+   with a repeat run before keeping. Keep → fold the mutation into recipe.yaml. Revert →
    recipe.yaml untouched. Crash → journal the lesson; run dir stays.
 5. Append one row to RESULTS.md:
    `| bench_<id> | <date> | <mutation> | <tg mean> | <tg σ> | <pp mean> | <pp σ> | <ttfr mean> | keep/revert/crash — note |`
@@ -72,6 +73,34 @@ research/<name>/
    ```
    Also write `[ENV]`, `[CRASH]`, or `[LESSON]` lines the same way when the
    round surfaced one. Commit per repo workflow rules.
+
+## Reading benchy metrics at concurrency > 1
+
+`llama-benchy`'s `t_s` IS `tg_throughput`, and `tg_throughput` is a BATCH
+AGGREGATE — `results.py:352` defines it as `sum(decode tokens) /
+(max_last_token - min_first_token)`, i.e. every request's decode tokens over
+the whole batch span. It is the same field the arena board's `c>1` figures come
+from; sparkrun uploads that CSV. The per-request figure is the separate
+`tg_req_throughput`.
+
+- Report `tg_throughput` and `peak_throughput` side by side for any `c>1` row.
+  Never quote one without the other — `tg` includes admission stagger,
+  `peak_throughput` is the sustained ceiling.
+- NEVER multiply a per-request figure by concurrency. `per-request x c`
+  double-counts and breaks from c4 up.
+- The stagger proxy `stagger ≈ c / (tg / tg_req)` is valid ONLY at full
+  residency. At c5 against `max_num_seqs 4` it reads 3.85-4.08 where
+  timestamps measure ~2.39.
+- Read the scheduler's `Running/Waiting` lines at every new operating point.
+  Residency is the precondition the proxy depends on; confirm it, don't assume
+  it from the `-b concurrency` argument.
+
+Evidence: `research/qwen36-35b-nvfp4-cells` (R10 from the source, R5c re-tested
+on the archives). Across all 34 archived `c>1` records: `tg > tg_req` in 34/34
+(ratios 1.13x-4.02x), `tg <= peak_throughput` 34/34, `tg / tg_req <= c` 34/34.
+The per-request convention survived nine rounds because `c x tg` exceeds
+`peak_throughput` in only 14 of 34 rows — all low-stagger arms — so the error
+hides exactly where a new reader looks first.
 
 ## Observation sweep (mandatory at every synthesis, ~5 rounds)
 
