@@ -1,8 +1,7 @@
 # Project rules
 
 Benchmark-tuning research on a DGX Spark box. The work is hypothesis-driven:
-understand what governs throughput on this hardware and this model, and fold
-what we learn into the series' `recipe.yaml`.
+understand what governs model performance on this hardware.
 
 These are the invariants — they hold before you know which task you are doing.
 Procedures live in the skills; see `## Skills`.
