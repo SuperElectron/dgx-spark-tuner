@@ -3657,13 +3657,14 @@ interfering with it — and, chasing a validity gate that failed, discovered tha
 prefix caching has never once hit on this benchmark and that the campaign has had
 its two measurement phases labelled backwards since Round 1.**
 
-## CAMPAIGN SYNTHESIS — the whole campaign, R1 through R13c
+## CAMPAIGN SYNTHESIS — the whole campaign, R1 through R13d
 
-**Written after R12 on 2026-08-22 and REVISED the same day, after R13, the `ctx_`
-phase-label correction, R5c and R13c all landed. This revision replaces the
-round-12 checkpoint; there is no second synthesis and there must never be one.
-It is the ONE authoritative handoff — read it instead of the round blocks, and
-read `RESULTS.md` for the standings.**
+**Written after R12 on 2026-08-22 and REVISED twice the same day: first after
+R13, the `ctx_` phase-label correction, R5c and R13c landed, and again after
+**R13d**, the campaign's last round. This revision replaces both the round-12
+checkpoint and the R13c-era revision; there is no second synthesis and there must
+never be one. It is the ONE authoritative handoff — read it instead of the round
+blocks, and read `RESULTS.md` for the standings.**
 
 Thirteen rounds plus three no-box-time passes, one model, one box, one image
 epoch. Written to be read by someone who was not here; it assumes none of the
@@ -3671,7 +3672,7 @@ rounds above have been read. Where a round's headline was later retracted, the
 retraction is here rather than the headline — and this campaign retracted a lot,
 including two of its own widest wins and its central mechanism.
 
-**The four things that landed after the round-12 checkpoint, since they change
+**The five things that landed after the round-12 checkpoint, since they change
 how the rest of this section reads:**
 
 - **R13** widened the contested `c4` cell and set a record margin — and
@@ -3686,6 +3687,14 @@ how the rest of this section reads:**
 - **R13c** put all six `c4` headline rows back on the box — **all six stood**,
   all six came in ~2% low, two were tightened to pooled 14-run medians, and the
   token-budget curve was found to **knee at 65536**.
+- **R13d**, the campaign's last round, repeated the one cell R13c measured and
+  deliberately would not promote — `ctx_tg @ d16384 c4` at `mnbt 131072 + mns 5`.
+  The repeat read 170.16 against R13c's 175.40 (−2.99%), and the **pooled 14-run
+  median 171.77 = 6.21x is now the campaign's widest margin**, taking the title
+  from the mnbt 98304 row's 6.15x by 0.83%. R13c's 6.34x is retired as the high
+  draw it looked like, the standings did not move (**still 8 won / 12 lost**),
+  and the downward-reproduction systematic is now **8 of 8 same-sign, mean
+  −1.88%**. It closed the last scoreable cell in the queue.
 
 ### What the campaign set out to do, and whether the thesis held
 
@@ -3729,8 +3738,8 @@ finished state. R13c at least tells R11 which value to test: **65536**.
 
 Eight board cells won, twelve lost, and a long tail that cannot be scored because
 the board publishes no figure for it. **Those counts did not move after the
-round-12 checkpoint** — R13, R13c and the `ctx_` correction changed figures,
-retired claims and added rows, but no cell changed side. The wins occupy
+round-12 checkpoint** — R13, R13c, R13d and the `ctx_` correction changed
+figures, retired claims and added rows, but no cell changed side. The wins occupy
 **eighteen rows** in `RESULTS.md`, because the two `c4` cells each carry a
 campaign-config figure plus five token-budget points from R13c's curve. Full rows
 with configurations in `RESULTS.md`; the shape of it:
@@ -4304,8 +4313,8 @@ is no login.**
 ### HANDOFF
 
 **Start here and stop here — this revised synthesis is the whole handoff, and it
-now post-dates every round block including the `ctx_` correction and R13c. You do
-not need to read them.**
+now post-dates every round block including the `ctx_` correction, R13c and
+**R13d**, the last round the campaign ran. You do not need to read them.**
 
 **The state.** `recipe.yaml` is **untouched** and identical to the one the
 campaign opened with. Thirteen rounds plus three no-box-time passes are archived
@@ -4323,8 +4332,23 @@ token-budget lever — the largest effect the campaign found, worth 1.13x → 3.
 on our best contested cell — becomes the config or stays a footnote. R13c removed
 its only real uncertainty by curving the budget: **65536 is the knee**, 32768 is
 short of it and 98304 buys nothing beyond it, so R11 has one value to test rather
-than three. Run it before any new cell. Then **R13d**, which is one arm and either
-confirms a new widest margin or retires a flattering draw before anyone claims it.
+than three. Run it before any new cell.
+
+**On the token budget above the knee — read this before you queue another
+budget point.** R13d put the campaign's widest margin at `mnbt 131072`, and on
+the `ctx_` arm the three above-knee budgets do rank monotonically: 5.96x at
+65536, 6.15x at 98304, 6.21x at 131072. **That ordering is bookkeeping, not the
+lever still paying.** The whole spread is 4.2% across a 2x budget range, inside
+the ~2–4% cross-invocation error R13c measured, and the Phase-2 arm at the same
+three budgets runs the other way (3.71x at the knee, 3.66x at 131072, −1.4%).
+The knee holds. **Do not spend box time chasing budget values above 65536 at
+c4 — that question is closed.** The live thread the budget lever still has is a
+different one: **the curve was only ever taken at c4.** At c16 even 32768 leaves
+the gate half-closed (`Running` 11 of 16), sixteen d16384 prefills would need
+262144, and nobody has measured where the knee sits at any other concurrency. A
+sweep is cheap — start cost tracks budget SIZE, not novelty, ~110–190 s across
+8192–98304. That is the obvious next budget round, not another point at c4.
+
 Then spend the zero-box-time item — the prefill metric check, open question 4 —
 while the next benchmark runs, because this campaign's record on that is
 unambiguous: **three of its four largest results cost no box time and came from
@@ -4345,7 +4369,9 @@ retired two of its own widest wins (R1's 4.60x, R3's 6.56x), withdrew its centra
 `c>1` mechanism after four rounds of building on it, discovered its two
 measurement phases had been labelled backwards since round one, found that the
 prefix caching it credited for its concurrency gains never once engaged, and
-declined to promote a wider margin it had already measured. None of that is
+declined to promote a wider margin it had already measured — then spent its last
+round repeating that cell rather than claiming it, and the repeat came in 2.99%
+low, exactly as the refusal predicted. None of that is
 tidied away above and none of it should be. **The standings survived all of it at
 8 won and 12 lost, which is the reason to trust them.**
 
@@ -5847,7 +5873,7 @@ fold decision remains R11's, at 65536.
 
 **This is the end of the round log, not the end of the campaign's conclusions.**
 The authoritative handoff is the **`CAMPAIGN SYNTHESIS — the whole campaign, R1
-through R13c`** section above, revised 2026-08-22 to cover everything below it:
+through R13d`** section above, revised 2026-08-22 to cover everything below it:
 R5c, R13, the `ctx_` phase-label correction, R13c and **R13d**. It is the only
 synthesis in this file and it must stay the only one — revise it, never append a
 second.
