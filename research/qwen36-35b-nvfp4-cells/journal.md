@@ -3679,7 +3679,59 @@ found the **position bias** described in the boxed note immediately below. All
 boxed notes are directly below. R9c's
 fifth-revision deltas were:**
 
-> ### ⚠️⚠️ WHAT THE R22 REVISION CHANGES — READ THIS BEFORE QUOTING ANY SMALL DELTA IN THIS DOCUMENT
+> ### ⚠️⚠️⚠️ TENTH REVISION — CURRENT AS OF 2026-08-22, post-R23. READ THIS BEFORE THE R22 BOX BELOW, WHICH IT OVERTURNS.
+>
+> **R23 RAN THE A-B-B-A ROUND R22 ASKED FOR, AND THE POSITION BIAS IS REFUTED.**
+> Four arms at `tg128 @ d16384 c1`, runs=7, budgets **8192 / 65536 / 65536 /
+> 8192** in one sitting of five engine starts. The design makes position and
+> configuration orthogonal: A and B each occupy mean position 2.5, so the
+> configuration effect is drift-free, and the two same-config pairs measure
+> position directly.
+> **Position, measured four ways: `arm4 − arm1` = −4.40% (Phase 2) and +0.71%
+> (Phase 1); `arm3 − arm2` = −0.91% (Phase 2) and +2.84% (Phase 1). Two up, two
+> down, mean −0.44%, p = 1.0.** Pre-declared bands were ≥ +6.0% confirms,
+> ≤ +2.0% refutes, with a stated dead zone between; three of four refute and one
+> lands in the dead zone. ⚠ **The pattern does not reproduce even in the form
+> that produced it** — the six adjacent different-config pairs in this session
+> split **3 up / 3 down, mean −0.56%**, and the session's first adjacent pair is
+> a **−5.02%** counterexample. **Thermal and clock explanations were measured,
+> not assumed:** the box warmed 39 → 53 °C idle and 61 → 63 °C loaded across the
+> session while under-load SM clock medians read **2398 / 2392 / 2398 / 2392 /
+> 2392 MHz** — 0.25% of spread, uncorrelated with throughput, same 2314–2320 MHz
+> floor everywhere, nothing throttled.
+> **What this changes in the box below and everywhere else in this document:**
+> R22's "+6.5%, 4 of 4" is **retired as a directional effect** and is best read
+> as four draws from a cell whose σ/med runs 8–14%. **R13c's six-point budget
+> curve is restored** to a noise-limited reading. **The "check which arm ran
+> first" instruction is withdrawn**; what replaces it is weaker and symmetric —
+> **the arm-to-arm spread on IDENTICAL configurations is about ±5%, in either
+> direction**, so R9c's ±2.5% floor is still an underestimate but it is a floor,
+> not a bias, and no past delta needs re-signing. R8c's "+6.36% budget effect"
+> stays refuted; it was a draw rather than an ordering artefact.
+> **R11's FOLD STANDS on a contrast that ordering cannot fake.** The drift-free
+> configuration effect is **−1.76%** on Phase 2 (pooled 14 runs per budget in
+> one session) against R11's pre-declared ±5% band, and **+4.91%** on Phase 1 —
+> inside the same band by 0.09 points and ~0.9 SE, reported at the edge rather
+> than rounded. Both phases inert, so R11's and R8c's conjunction rule is
+> satisfied. **`recipe.yaml` is untouched.**
+> **R23 also discharged the campaign's last standing "never been measured"
+> caveat.** `tg128 @ d16384 c4` at `mnbt 65536 + mns 4` — the shipped recipe,
+> no `-o` override — reads **179.34 = 3.84x** (`peak_throughput` 317.0) and
+> `ctx_tg` **169.45 = 6.12x** (peak 305.0). It is the **only row in `RESULTS.md`
+> that states what `recipe.yaml` produces at `c>1`.** ⚠ Do not read its +3.46%
+> over R13c's `mns 5` row as `mns 4` winning: that is a cross-session delta
+> inside the ±5% spread this same round measured on identical configs.
+> **Smaller deltas:** the phase-pair audit goes **45 of 46 → 50 of 51** (five new
+> pairs, 9.22–9.30 against a theory of 9.00); the power bound rises to
+> **≤ 100.6 W** (100.54 W); the SM-clock agreement is now confirmed *within* one
+> session across five starts; and **R6's "runs=3 is adequate at d16384 — the
+> quiet regime" is dead at seven engine starts** (2.6 / 5.5 / 8.01 / 8.26 /
+> 10.95 / 12.22 / 10.90%). ⚠ **One instrument miss, recorded:** R23 captured no
+> engine log, so it contributes no residency, acceptance or prefix-cache
+> samples.
+> **Counts stay 8 won / 12 lost.** Full detail in the `Round 23 outcome` block.
+
+> ### ⚠️⚠️ WHAT THE R22 REVISION CHANGES — ⚠ SUPERSEDED IN ITS FIRST ITEM BY R23, ABOVE
 >
 > **1. THE CAMPAIGN HAS A POSITION BIAS AND HAS BEEN READING IT AS PHYSICS.**
 > R22 reversed R8c's arm order as a free control. **In 4 comparisons of 4, across
@@ -5378,8 +5430,22 @@ regularities; and one campaign `[COST]` total.
    sample. The round's larger output became **item 10**. See the `Round 22
    outcome` section.
 
-10. ⚠ **NEW, EARNED BY R22, AND IT IS NOW THE HIGHEST-VALUE ITEM IN THE QUEUE —
-    the A-B-B-A position-bias round.** R22's free order-reversal control found
+10. ~~**the A-B-B-A position-bias round**~~ ✅ **DONE — R23, 2026-08-22, and the
+    answer is NO: the position bias is REFUTED.** Four arms at
+    `tg128 @ d16384 c1` (R11's fold anchor, not the cell this entry suggested —
+    the fold question lives at d16384), runs=7, budgets 8192 / 65536 / 65536 /
+    8192, one sitting, five engine starts, zero crashes. Position read four ways:
+    **−4.40, −0.91, +0.71, +2.84%, mean −0.44%, p = 1.0**; the six adjacent
+    different-config pairs split 3 up / 3 down. Clocks identical across the five
+    starts (2392–2398 MHz loaded), box warmed 16 °C without throttling.
+    **R11's fold STANDS** on a drift-free **−1.76%** (Phase 2) / **+4.91%**
+    (Phase 1, band edge), and `recipe.yaml` is untouched. Free rider: the shipped
+    recipe measured at c4 for the first time (**179.34 = 3.84x**). ⚠ **Do not
+    re-queue this**, and do not re-attach the "check which arm ran first"
+    instruction to any delta — what replaces it is a **symmetric ±5%** arm-to-arm
+    spread on identical configurations. See the `Round 23 outcome` section.
+    The original entry, kept for the record:
+    R22's free order-reversal control found
     that **in 4 comparisons of 4, across two rounds and four engine starts, the
     arm running SECOND read higher** (mean **+6.5%**), with the budgets swapped
     between rounds so no budget effect explains it. ⚠ **It is NOT established**
@@ -10096,3 +10162,199 @@ the c4 arm is the expensive grid. **~30 min wall estimated.**
 
 No `--arena` flag in any arm, no `sparkrun arena` subcommand of any kind. There
 is no login, nothing has ever been submitted, and nothing will be.
+
+## Round 23 outcome — bench_b20062a3c5c5-r23-arm1-A8192 + bench_c9518e3e96a3-r23-arm2-B65536 + bench_c9518e3e96a3-r23-arm3-B65536 + bench_b20062a3c5c5-r23-arm4-A8192 + bench_b56686c32206-r23-arm5-c4-mns4 (2026-08-22)
+
+**A-B-B-A at `tg128 @ d16384 c1`, runs=7 per arm, five invocations in one
+sitting (18:49:12 → 19:14:45 UTC), five engine starts, `crash_count: 0` and
+`session_count: 1` in all five, image `dgx-vllm-eugr-nightly:2026082102`.** No
+`--arena` flag was used and no arena subcommand was run.
+
+### THE HEADLINE, IN ONE LINE
+
+⚠ **THE POSITION BIAS DOES NOT REPRODUCE. R22's pattern is REFUTED at this cell
+under the design built to catch it — and R11's fold survives a drift-free test.**
+
+### PRIMARY — Phase 2, `tg128 @ d16384 c1`, the declared reading
+
+| arm | position | budget | median (7 runs) | σ/med | SE |
+|---|---:|---|---:|---:|---:|
+| **arm1 A** | 1 | `mnbt 8192` | **107.42** | 8.26% | 3.91% |
+| **arm2 B** | 2 | `mnbt 65536` | **102.03** | 10.95% | 5.19% |
+| **arm3 B** | 3 | `mnbt 65536` | **101.10** | 12.22% | 5.79% |
+| **arm4 A** | 4 | `mnbt 8192` | **102.69** | 10.90% | 5.16% |
+
+- **`P3` = arm4 − arm1 = −4.40%** (separation 3 positions, same config).
+  Pre-declared band: ≤ +2.0% → **POSITION EFFECT REFUTED**, and ≤ −2.0% → it is
+  additionally recorded as **sign-flipped**: the later arm read *lower*.
+- **`P1` = arm3 − arm2 = −0.91%** (separation 1, same config). ≤ +2.0% →
+  **REFUTED**, and coherent with `P3` — both same-config contrasts point the
+  same way, so the round has no internal contradiction.
+- **CONFIGURATION EFFECT, drift-free: `C` = −1.76%** — pooled 14-run median at
+  `mnbt 65536` (arms 2+3) **101.89** against pooled 14-run median at `mnbt 8192`
+  (arms 1+4) **103.72**. Pre-declared band |`C`| < 5% → ✅ **R11's FOLD STANDS.**
+
+### SECONDARY — Phase 1, `ctx_tg @ d16384 c1`, the free partner
+
+| arm | position | budget | median (7 runs) | σ/med |
+|---|---:|---|---:|---:|
+| arm1 A | 1 | `mnbt 8192` | 100.93 | 11.00% |
+| arm2 B | 2 | `mnbt 65536` | 104.78 | 13.97% |
+| arm3 B | 3 | `mnbt 65536` | 107.75 | 11.25% |
+| arm4 A | 4 | `mnbt 8192` | 101.66 | 10.07% |
+
+- **`P3` = +0.71%** → REFUTED. **`P1` = +2.84%** → **dead zone**, called as
+  declared and not read as a confirmation.
+- **`C` = +4.91%** — pooled 106.26 against 101.29. **Inside the ±5% band by
+  0.09 points**, so inert by the letter of the rule, and it is ~**0.9 SE** on
+  the pooled difference (SE ≈ 5.3%), i.e. fully consistent with zero. ⚠ It is
+  reported at the band edge rather than rounded away: this is the *only* number
+  in the round that a differently-drawn band would have flipped, and R11's own
+  band is the one that was declared.
+- **R11's and R8c's conjunction rule is satisfied**: Phase 2 and Phase 1 are
+  both inert, so the inertness reading is established rather than split.
+
+### WHAT THIS SAYS ABOUT R22, STATED CAREFULLY
+
+**Four same-configuration position contrasts, which is what R22 never had:**
+−4.40%, −0.91%, +0.71%, +2.84%. **Two up, two down, mean −0.44%.** A sign test
+on four is **p = 1.0**. Against R22/R8c's 4-of-4 up, mean +6.5%.
+
+⚠ **And the pattern does not reproduce even in the exact form that produced
+it.** R22's comparisons were *adjacent arms of different configuration*. This
+session contains six of those, and they read **−5.02%, −0.91%, +1.57%
+(Phase 2), +3.81%, +2.84%, −5.65% (Phase 1)** — **three up, three down, mean
+−0.56%.** The first adjacent pair of the session, arm1 → arm2, is a **−5.02%**
+straight counterexample: the second arm read five percent *lower*.
+
+**A thermal explanation was checked, not assumed.** Idle temperature rose across
+the session (39 °C before arm1 → 53 °C before arm5) and loaded medians rose
+61 → 64 → 63 → 63 °C, so later arms genuinely ran on a warmer box. **Under-load
+SM clock medians were 2398 / 2392 / 2398 / 2392 MHz across arms 1–4 — a 0.25%
+spread, uncorrelated with throughput** (the fastest arm and the slowest arm both
+read 2398), with the same 2314–2320 MHz floor in every arm. **Nothing throttled,
+and the clock cannot carry a 4.4% signal at 0.25% of spread.** The idle clock
+even rose 2398 → 2411 MHz across the session while throughput fell.
+
+⚠ **WHAT IS AND IS NOT SETTLED.** This round refutes the position bias **at this
+cell, at this depth, at c1, in one session of five starts**. It does not prove
+the campaign's cross-invocation deltas are noiseless. What it removes is the
+*directional* claim — there is no evidence for a systematic "later arm reads
+higher" term, so R22's +6.5% is best read as **four draws from a distribution
+whose σ/med at this cell runs 8–12%**, exactly as R22 itself said might be the
+case at p = 0.25. **R9c's ±2.5% reproduction floor is still an underestimate**
+— the arm-to-arm spread here is ±5% on identical configurations — but it is a
+**symmetric** floor, not a bias, and a symmetric floor does not need every past
+delta re-signed.
+
+**Consequences for the file:**
+- **R13c's six-point `max_num_batched_tokens` curve is restored to a
+  noise-limited reading rather than an order-suspect one.** Its knee at 65536
+  rested on +233% and was never at risk; its small inter-point differences
+  (98304 vs 131072 at −1.4%) remain noise, which is what they were already
+  called.
+- **R8c's "+6.36% from the folded budget on Phase 1" stays refuted** — R22
+  refuted it by re-measurement, and R23 confirms the budget is inert at c1 on
+  both phases at d16384 with a drift-free contrast. The *explanation* changes:
+  it was a draw, not an ordering artefact.
+- **The "check which arm ran first" caution in `RESULTS.md` is downgraded, not
+  deleted**, to "cross-invocation deltas at or below ~5% are inside the
+  arm-to-arm spread of identical configurations, in either direction."
+
+### VERIFICATION THAT THE `-o` OVERRIDE PHYSICALLY REACHED THE ENGINE
+
+⚠ This matters more than usual, because the whole configuration reading depends
+on arms 1 and 4 really running at 8192. Three independent confirmations:
+
+1. **Distinct benchIds.** arms 1/4 hashed to `bench_b20062a3c5c5`, arms 2/3 to
+   `bench_c9518e3e96a3`. The only difference between those invocations was the
+   `-o` value, so it is part of the resolved parameter set.
+2. **arm2's benchId is R11's benchId.** `bench_c9518e3e96a3` is exactly the id
+   R11 got at this cell at `mnbt 65536`. Same cell, same budget, same id.
+3. ✅ **A physical signature, and it is the decisive one. Engine start cost
+   tracks budget size** (R13c's finding): **143.3 s and 142.9 s** for the two
+   8192 arms — agreeing to **0.4 s** — against **166.7 s and 190.2 s** for the
+   two 65536 arms, and 178.9 s for the c4 arm at 65536. A dropped override could
+   not produce a 24–47 s bimodal split that lines up with the flag.
+
+⚠ **An instrument-plan miss, recorded rather than buried: the engine log was NOT
+captured this round.** The plan called for `docker exec <container> tail -f
+/tmp/sparkrun_serve.log` per arm and it was not run, so this round contributes
+**no** residency samples, no MTP acceptance points and no prefix-cache samples.
+The override verification above is what replaced it, and it is weaker evidence
+than reading `--max-num-batched-tokens 8192` out of the serve command would have
+been. Telemetry ran on all five arms and is archived.
+
+### THE SECOND DELIVERABLE — `tg128 @ d16384 c4` at `mnbt 65536 + mns 4`, THE SHIPPED RECIPE
+
+**`bench_b56686c32206-r23-arm5-c4-mns4`, runs=7, one invocation, position 5.**
+Verified against `recipe.yaml` rather than assumed: its `defaults` read
+`max_num_batched_tokens: 65536` and `max_num_seqs: 4`, so this arm ran
+`./recipe.yaml` with **no `-o` override of any kind**.
+
+| phase | `tg_throughput` (batch aggregate) | `peak_throughput` | `tg_req_throughput` | σ/med | worst of 7 | board top | margin |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| **Phase 2 `tg128`** | **179.34** | **317.0** | 67.17 | 5.63% | 154.92 | 46.68 | **3.84x** |
+| **Phase 1 `ctx_tg`** | **169.45** | **305.0** | 61.80 | 2.45% | 162.81 | 27.68 | **6.12x** |
+
+**This is the first row in the campaign that states what `recipe.yaml` actually
+produces at `c>1`.** Every prior `c4` headline was measured at `mns 5`, which
+the recipe does not ship. The synthesis' standing caveat — *"`mnbt 65536 + mns
+4` has never been measured and no row should be quoted as what the recipe
+produces until it is"* — **is discharged.**
+
+⚠ **DO NOT READ IT AS "mns 4 BEATS mns 5".** 179.34 against R13c's 173.34 at
+`mns 5` is **+3.46%**, a cross-invocation delta between two different sessions,
+inside the ±5% arm-to-arm spread this very round measured on *identical*
+configurations. The honest statement is that **the two are indistinguishable and
+the shipped recipe loses nothing at c4**, which is the question that was asked.
+The cell was already WON; the standings do not move.
+
+⚠ **Metric discipline, per the skill.** `tg_throughput` at c4 is a **batch
+aggregate** — `sum(decode tokens) / (max_last_token − min_first_token)` — and is
+never multiplied by concurrency. Checks: `tg ≤ peak_throughput` (179.34 ≤ 317.0;
+169.45 ≤ 305.0) ✓, `tg / tg_req ≤ c` (2.67 and 2.74, both ≤ 4) ✓.
+
+### FREE RIDERS
+
+| quantity | predicted | measured | verdict |
+|---|---|---|---|
+| every arm's median | 100 – 125 | 100.93 – 107.75 (c1) | ✅ all four inside |
+| `tg_throughput == tg_req_throughput` at c1 | exact | **exact in 8 of 8 phase-arms** | ✅ assignment holds; round not void |
+| `ctx_pp / pp` (theory `(depth+2048)/2048` = **9.00**) | 8.7 – 9.6 | **9.26 / 9.30 / 9.28 / 9.29** (c1) and **9.22** (c4) | ✅ **five new audit pairs, all inside 4% of theory. The phase-pair audit goes 45 of 46 → 50 of 51** |
+| SM clock median under load | 2392 – 2398 | **2398 / 2392 / 2398 / 2392 / 2392 MHz** | ✅ twenty-first agreeing session, and the first to agree *within* one session across five starts |
+| power max | ≤ 100.5 W | **100.54 W** | ⚠ **new campaign bound, ≤ 100.6 W** (arm1). The third consecutive round to nudge it |
+| grid time | 110 – 150 s (c1) | **73.7 – 75.0 s** per c1 arm | ⚠ **outside, low** — R6's 124 s figure was 14 runs, this is 7. Not a fault; the prediction mis-cited its own basis |
+| engine start | 160 – 200 s | 142.9 – 190.2 s, **and bimodal by budget** | ✅ and it became the round's override control |
+| σ/med, Phase 2 c1 | 2 – 7% | **8.26 / 10.95 / 12.22 / 10.90%** | ⚠ **all four OUTSIDE, high.** R6's "`tg128` at d16384 is the quiet regime" is now dead at **seven** engine starts (2.6 / 5.5 / 8.01 / 8.26 / 10.95 / 12.22 / 10.90%). ⚠ **This cell is NOT quiet and no future round should budget runs as if it were** |
+
+### VOID CHECKS — all passed
+
+`crash_count: 0` and `session_count: 1` in all five `state.yaml`; the
+`Benchmark args:` echo read `pp: [2048]`, `depth: [16384]`, `tg: [128]`,
+`runs: 7` in all five with `concurrency: [1]` in arms 1–4 and `[4]` in arm 5;
+`tg_throughput == tg_req_throughput` at c1 in 8 of 8 phase-arms; every
+`container_image_longterm_ref` is `dgx-vllm-eugr-nightly:2026082102`; the arms
+ran strictly in the declared order and none was re-run.
+
+### COST
+
+Five invocations, five engine starts, **zero crashes, zero wasted starts**.
+Grid 73.9 + 74.0 + 75.0 + 73.7 + 220.3 = **516.9 s**; engine starts 143.3 +
+166.7 + 190.2 + 142.9 + 178.9 = **822.0 s**. **~25.5 minutes of box wall clock**
+(18:49:12 → 19:14:45 UTC), ~120k harness tokens.
+
+Bought: **the highest-value item in the queue closed** — the position bias
+refuted under a drift-free design, which restores every small cross-invocation
+delta in this file to a symmetric noise reading rather than a suspect one;
+**R11's fold re-licensed on a contrast that ordering cannot fake** (−1.76%,
+against the +0.27% single-arm reading it originally rested on); **the shipped
+recipe measured at `c>1` for the first time** (3.84x / 6.12x at `tg128` /
+`ctx_tg` @ d16384 c4), discharging the campaign's last standing "never been
+measured" caveat; five audit pairs (**50 of 51**); a within-session clock
+control across five starts; a new power bound; and the retirement of R6's
+"quiet regime" rule at seven engine starts.
+
+⚠ **What it did NOT buy, and the round is worse for it:** no engine-log capture,
+so no residency, acceptance or prefix-cache samples. That was an execution miss
+against this round's own instrument plan, not a design choice.
