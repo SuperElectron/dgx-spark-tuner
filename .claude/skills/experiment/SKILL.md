@@ -37,41 +37,32 @@ It is not given the hypothesis, the objective, or the expected result.
 
 ## Procedure
 
-1. Confirm the branch: `git branch --show-current` must not be `main` or
-   `staging`. Stop if it is.
+1. Run the experiment with one command:
 
-2. Start the engine log capture before the run, and keep it for the whole
-   invocation. This is not optional — a run without `engine-capture.log` is
-   incomplete and cannot be merged. It is the only artifact that records the
-   serve command actually executed including `-o` overrides, and the only place
-   the engine's prefix-cache hit rate and `Running/Waiting` scheduler lines
-   appear. It is not recoverable afterwards from `~/.cache/sparkrun`.
-
-3. Sample telemetry alongside the run:
-   `.claude/skills/spark-autoresearch/scripts/sample-telemetry.sh <seconds> <outfile>`
-
-4. Run the benchmark. Serve-command flags need a candidate recipe copy; `-o`
-   overrides only templated recipe defaults.
-
-5. Archive it. sparkrun prints `Benchmark ID: bench_<id>`:
    ```
-   .claude/skills/spark-autoresearch/scripts/archive-round.sh \
-       <series-dir> bench_<id> <label>
+   .claude/skills/experiment/scripts/run-experiment.sh \
+       --series research/<series> \
+       --hyp experiments/<hypothesisId> \
+       --label <setting-under-test> \
+       [--recipe <candidate.yaml>] [-o key=value] [-b key=value] [--runs N]
    ```
-   sparkrun reuses a benchId for identical recipe+params, so the label suffix is
-   what keeps a run from overwriting an earlier one. Move the archive into the
-   hypothesis directory you were given, and put the engine log, telemetry log and
-   any candidate recipe inside it.
 
-6. Read the metrics with
-   `.claude/skills/spark-autoresearch/scripts/parse-round.py <archive>/round-tmp.json`.
-   Report medians, never means.
+   Do not assemble the sparkrun invocation by hand. The script keeps the engine
+   alive after the grid, captures the effective recipe and engine log from it,
+   stops it, archives everything, and validates the archive.
 
-7. Add exactly one row to `RESULTS.md`, in the schema that file already uses.
+   It exits non-zero if `state.yaml`, `round-tmp.json`, `effective-recipe.json`
+   or `engine-capture.log` is missing, or if the engine log has no `Running:`
+   lines. That means the run is not reproducible — re-run it, do not open a PR.
+
+2. Add exactly one row to `RESULTS.md`, in the schema that file already uses.
    One row. Do not restructure the file, do not add narrative, do not correct
    other rows — it is a lookup table, not a work log.
 
-8. Commit, push the branch, open a PR into `staging`.
+3. Commit, push the branch, open a PR into `staging`.
+
+Reading the metrics is not your job. `experiment-postrun` parses the archive
+after the PR is open.
 
 ## A crash is a result
 

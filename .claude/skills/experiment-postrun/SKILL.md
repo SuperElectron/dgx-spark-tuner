@@ -7,13 +7,35 @@ description: What happens after one experiment's PR is open and before it merges
 
 Runs once per experiment, on the experiment's own branch, before the merge.
 
-Order matters: the memory is derived first, then the harness merges and deletes
-the branch. Deriving before the merge means a broken archive is caught while its
-branch still exists and can be fixed in place, rather than after it has landed
-in `staging`.
+Order matters: 
+1. create a memory
+2. merge the feature branch into staging.
+3. checkout staging, pull it, and delete the feature branch.
 
-The memory is derived from the archive, never written by hand. Everything it
-needs is already recorded: `state.yaml` holds the probe arguments, the pinned
+# Create a memory
+
+Look at the directory where the experiement was conducted.
+
+```
+.
+├── consolidated.json
+├── round-tmp.csv
+├── round-tmp.json
+├── round-tmp.yaml
+├── runs
+│   ├── 000_d16384_c1.json
+│   ├── 000_d16384_c1.log
+│   ├── 001_d65536_c1.json
+│   └── 001_d65536_c1.log
+├── sparkrun-stdout.log
+├── state.yaml
+└── telemetry.log
+```
+
+The memory is derived from the archive, never written by hand.
+Load all files in this directory into memory.
+
+Everything it needs is already recorded: `state.yaml` holds the probe arguments, the pinned
 image, the crash count and the session timestamps; `round-tmp.json` holds every
 individual run value; `engine-capture.log` holds the serve command actually
 executed and the engine's own counters. A hand-written `[EXPERIMENT]` under an
