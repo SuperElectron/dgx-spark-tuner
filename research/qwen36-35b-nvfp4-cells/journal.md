@@ -4001,3 +4001,106 @@ record is unambiguous that reading the instrument beats measuring around it. And
 carry the one rule that would have saved the most rounds: **put the compared
 quantities under one engine start, declare the thresholds before the run, and
 treat any flattering figure that was never repeated as too high.**
+
+---
+
+## R5c — the board-metric question, closed without new box time (2026-08-22)
+
+**NO BOX TIME. No box was touched, no benchmark was run, no board page was
+re-scraped.** This round is a desk round, run alongside R13's grid exactly as the
+queue specified.
+
+### R5c was already answered before it started, and that is the honest headline
+
+R5c was queued by R7 to settle whether the board's `c>1` tg figure is
+**per-request** or a **batch AGGREGATE**, because the campaign's only marginal
+win — `tg128 @ d16384 c4` — read 1.13x under one reading and 4.53x under the
+other. R7's proposed instruments were the board's own methodology page, or one
+model with entries spanning c1 through c8+.
+
+**R10 reached the answer first and by a better instrument: llama-benchy 0.4.0's
+own source.** `results.py:352` defines `batch_tg_throughput = observed_decode_tokens
+/ (max_last_token - min_first_token)`, and line 194 selects it whenever
+`concurrency > 1`; `llama_benchy.py`'s CSV row builder maps `t_s <- tg_throughput`
+and sparkrun uploads that CSV to the arena. So the board's headline decode number
+**is the same field we already record**, it is a batch aggregate at `c>1`, and
+every `c>1` comparison the campaign made was like-for-like all along. R7's 4.53x
+alternative was withdrawn by R10 and open question 7 was closed there.
+
+Finding a queued round already answered is a legitimate outcome and is recorded
+as one rather than padded into work. But R10's answer rested on **one** instrument
+(a source read), and it overturned nine rounds of interpretation, so R5c spent its
+zero-cost budget on the thing still missing: an **independent test of R10's
+conclusion against data R10 did not use.**
+
+### The independent test — three structural predictions, 34 archived records
+
+The aggregate definition makes predictions that the per-request reading does not.
+All were checked against **every `c>1` benchmark record in `experiments/`** —
+34 records spanning c2, c4, c5 and c16, five configurations, nine benchmark IDs,
+including every arm of R2, R4, R7, R9, R9b, R10 and R12.
+
+| prediction of the AGGREGATE reading | per-request reading predicts | result |
+|---|---|---|
+| `tg_throughput > tg_req_throughput` at every `c>1` point | `tg ≈ tg_req` (same quantity) | **34 / 34 aggregate**, ratios **1.13x to 4.02x**; per-request reading refuted in every row |
+| `tg_throughput <= peak_throughput` always | no constraint | **34 / 34**, zero violations |
+| `tg_throughput / tg_req_throughput <= c` always (the ratio is `c / stagger`, stagger >= 1) | no constraint | **34 / 34**, zero violations |
+
+The first row is decisive on its own. `tg_throughput` and `tg_req_throughput` are
+**never** the same number at `c>1` in any archived run — they differ by up to 4x —
+so `tg_throughput` cannot be the per-request figure. The per-request figure is the
+separate `tg_req_throughput` field, exactly as R10 read it. The second and third
+rows are the consistency checks: an aggregate must sit under the sustained
+ceiling, and its ratio to the per-request rate cannot exceed the concurrency. Both
+hold without a single exception across five configurations, which is what a
+correct metric identity looks like and what a misreading would not survive.
+
+**The double-count is visible in the data too.** `c x tg_throughput` — the
+campaign's retired `aggregate = per-request x c` convention — exceeds
+`peak_throughput` in **14 of 34** rows, which is impossible for a sustained
+figure. All fourteen are low-stagger arms (the raised-budget runs and c16). That
+is why the error stayed hidden for nine rounds: at the campaign's original
+`max_num_batched_tokens 8192` the stagger was 2-2.5x, which happened to keep the
+double-counted product *under* the peak and made a wrong convention look sound.
+**The convention was never right; it was merely not yet caught.**
+
+### One genuinely new methodology note, and it is a caveat on a shortcut
+
+R10 measured admission stagger from per-request timestamps. The archived
+aggregates offer a cheaper proxy: `stagger ≈ c / (tg / tg_req)`. It agrees with
+R10's measured values to a few percent at c2 and c4 — and at c5 **only when
+`max_num_seqs >= c`**. On the c5 arms run at `max_num_seqs 4`
+(`bench_0ef7af8997ce`, `bench_d9fdc68576f2-a1`) the proxy reads **3.85-4.08**
+against R10's measured **~2.39**, because a request excluded from residency
+stretches the batch span without contributing decode to the numerator in the way
+the derivation assumes.
+
+**Use the proxy only at full residency, and confirm residency from the
+scheduler's own `Running: N / Waiting: M` lines first.** This is the same
+standing rule R7 and R10 arrived at from the other direction — `max_num_seqs >= c`
+does not imply full occupancy — now with a second failure mode attached to it.
+
+### What R5c did NOT do
+
+- No board re-scrape. The queue forbade the box and R5c had no need of the board:
+  the question was about the metric's definition, and the definition was settled
+  from the producing source.
+- **No verdict, margin, standing or row value changed.** `tg128 @ d16384 c4`
+  keeps 1.13x on the campaign config and 3.15x on the raised budget. The single
+  RESULTS edit is the removal of a now-false clause on the `bench_5399a85d7aec-a0`
+  c4 row that still said the units dispute was open.
+- No 3-run figure was promoted, and nothing here rests on one. The test is over
+  archived medians whose only role is a ratio between two fields of the *same*
+  record, so per-run sampling error cancels and the campaign's provisional-median
+  rule does not bite.
+- Nothing was attributed to prefix caching. The `ctx_` rows appear in the 34 only
+  as records to test the identity on; no `ctx_` behaviour is explained here.
+
+### Cost
+
+Zero box time, zero benchmark time, one branch, ~25k harness tokens. The queue's
+claim that R5c was "worth more than any remaining cell" was right about the
+question and wrong about who would answer it — the answer came free, from a ride-
+along in a round that was queued for something else entirely. **That is the second
+time this campaign got its biggest result from reading the instrument instead of
+running it.**
