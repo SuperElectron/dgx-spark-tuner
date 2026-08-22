@@ -8971,3 +8971,207 @@ campaign paid ~13 minutes to find out it was not nearly winning d131072 after
 all, which is worth knowing precisely because the old 5.5% figure was the kind
 of near-miss that invites a tuning round. **It has now been priced out properly:
 do not go back.**
+
+## Round 22 hypothesis — R8c-PROTECT: the 125-entry dead heat, `ctx_tg32` / `tg32 @ d32768 c1`, runs=14, BOTH budgets
+
+Written BEFORE the run, 2026-08-22, on `feature/thin-cell-r22`.
+
+### WHAT THIS ROUND IS, AND THE ONE THING IT CANNOT DO
+
+R8c re-measured `ctx_tg32 @ d32768 c1` (Phase 1) and found R1's 84.03 was a
+3-run low draw: seven runs at R1's own condition read **110.61 (+31.64%)**, and
+seven runs on the folded recipe read **117.65** against a **117.37** incumbent —
+**1.002x**, the closest the campaign has ever come to an unclaimed win, on a
+**125-entry crowded cell**. R8c deliberately did not claim it, for the right
+reason: +0.24% is **0.06 SE** on a cell with σ/med 9.44%, and it was the first
+and only measurement of that cell at that budget. Promoting the best first
+measurement of a cell is precisely what retired R1's and R3's figures.
+
+**So this round is the protection round R8c earned, and it is honest about its
+ceiling up front. IT CANNOT RESOLVE +0.24%.** SE of a median is
+≈ `1.2533σ/√n`; at σ/med 9.44% that is **3.2% at n=14** and **2.6% at n=21**
+pooled. A 0.24% margin is ~0.09 SE at either. **No affordable number of runs on
+this box resolves it, and I am not pretending otherwise.** R21 said the same
+thing about `tg128 @ d131072 c1` at 0.11 SE and told the campaign not to go back.
+
+**What the round CAN do, and it is worth the box time:**
+
+1. **Distinguish 117 from 108.** The two candidate readings of this cell differ
+   by ~8%, which is ~2.5 SE at n=14. That is resolvable. Either arm F's 117.65
+   reproduces and the cell genuinely sits at the incumbent, or it was a high
+   draw and the cell sits near the pooled 8192 figure of 107.73 — a 0.92x loss.
+   **Those are different facts about the standings and the campaign currently
+   does not know which one is true.**
+2. **Halve the error bar on the budget effect.** R8c's Phase-1 arm F-vs-E
+   **+6.36%** is **1.0 SE** — equally consistent with zero. R8c's own closing
+   instruction: *"The protection round this cell needs must therefore measure
+   both budgets, not just repeat arm F."* At n=14 per arm the SE on the
+   difference falls from ~6.4% to ~**4.5%**, so +6.36% becomes ~1.4 SE. **Still
+   not decisive, and I say so before running rather than after.**
+3. **Settle whether the budget-inertness-at-c1 result holds on Phase 1**, which
+   R8c reported as NOT ESTABLISHED under its own pre-declared conjunction rule.
+
+**Why it is still the right spend:** it is the last item in the queue where box
+time can change the standings, it protects a figure this file has published, and
+items 2 and 3 come free from the same two invocations.
+
+### THE PRIOR — every measurement this cell has
+
+| condition | runs | Phase 1 `ctx_tg32` | Phase 2 `tg32` | P1 vs P2 | σ/med P1 | source |
+|---|---:|---:|---:|---:|---:|---|
+| mnbt 8192 | 3 | 84.03 | 115.56 | −27.3% | 15.58% | R1 |
+| mnbt 8192 | 7 | 110.61 | 109.62 | +0.9% | 11.78% | R8c arm E |
+| **mnbt 8192 pooled** | **10** | **107.73** | **112.59** | −4.3% | — | R1+R8c |
+| **mnbt 65536** | **7** | **117.65** | **110.03** | **+6.9%** | **9.44%** | **R8c arm F** |
+| all R8c | 14 | 117.06 | 109.82 | +6.6% | — | R8c |
+
+Incumbents for `ctx_tg @ d32768 c1` (cached scrape, `docs/arena-recipe.md`, 125
+entries): **117.37** — Qwen3.6-35B-A3B-NVFP4 on **Atlas**, the cell top and *the
+same model we are running*; **116.65** — Nemotron-3.5-Lightning-30B-A3B-NVFP4,
+the best vLLM entry.
+
+### THE HYPOTHESIS
+
+**H_draw (predicted): 117.65 was a high draw and the cell does not reach the
+incumbent.** Arm H reproduces BELOW 117.65, the pooled 21-run mnbt-65536 median
+lands below the claim threshold, and the cell stays a LOSS with a corrected
+margin somewhere between 0.92x and 1.00x.
+
+**H_real (the alternative that would change the standings): the folded budget
+genuinely helps Phase 1 at this depth.** Arm H reproduces at or above 117.65,
+the budget effect firms up, and the pooled figure clears the claim threshold.
+
+**Why I predict H_draw, and it is R21's own finding turned against this round.**
+R21 established that the sign of a re-measurement tracks **who is defending the
+row**, not sampling: five defended claims corrected DOWN (−10.0, −13.0, −5.14,
+−2.86, −1.30%), five unaudited rows corrected UP (+31.64, +16.54, +5.43, +2.24,
++1.77%). **117.65 has crossed over.** When R8c measured it, it was an unaudited
+row and it came in high. It is now the number this file's header calls "the
+single most likely place for the standings to change" — a defended figure, and
+the class that corrects downward. R13c's independent measurement of the same
+thing (six first-measurements, mean −1.94%, six of six the same sign) points the
+same way.
+
+**Mechanism, or rather the absence of one.** There is no mechanism on offer for
+a budget effect at c1 and that is the point. The two routes by which
+`max_num_batched_tokens` has ever moved a number in this campaign are
+**occupancy** and **batch span**, and both are absent at c1: residency is 1 of 1
+at every budget (R8c arm E, 9 of 9 samples) and `tg == tg_req` exactly, so the
+span is **1.0000 by assignment**. R11 measured the budget inert at c1 at d16384
+(+0.27%) and R8c reproduced that on Phase 2 at d32768 (+0.37%) — two independent
+measurements agreeing to a tenth of a percent. **A +6.36% Phase-1 effect at the
+same concurrency, on the same flag, with both of its known mechanisms switched
+off, is far more likely to be the 1.0-SE draw it is priced at than a real effect
+nothing can explain.** I predict it shrinks.
+
+### THE CONFIGURATION, AND THE ONE THING I CHANGED FROM R8c's DESIGN
+
+`pp 2048`, `depth 32768`, `tg 32`, `concurrency 1`, **`runs 14`**.
+`-o max_model_len=40960` in **both** arms — 32768 + 2048 + 32 = 34848 does not
+fit the recipe's 32768 window. Probe-driven override, exactly as R1/R3/R5/R8/R8c
+treated theirs; **not a tuning mutation**. `max_num_seqs` stays at the recipe's
+4 in both arms: at c1 scheduler width does nothing.
+
+- **Arm G (`-o max_num_batched_tokens=8192`)** — the pre-fold budget.
+- **Arm H (recipe as shipped, `mnbt 65536`)** — the current epoch, and the arm
+  the claim question is read from.
+
+**`runs=14`, not 7, and only at this cell.** QUEUE.md suggested runs=14 at the
+65536 arm; I am taking it at **both**, because the budget comparison is the
+round's second deliverable and its SE is set by the *noisier* arm, so buying
+runs on one side only wastes most of the purchase. The price is ~230 s of extra
+grid, against ~330 s of engine starts I have to pay regardless. **Contingency:
+if the `Benchmark args:` echo does not read `runs: 14`, I abort before the grid
+and fall back to two runs=7 invocations per arm, pooled** — which is what R13c
+and R21 did and is a worse but acceptable design.
+
+**⚠ THE ONE DESIGN CHANGE FROM R8c, AND IT IS DELIBERATE: I RUN THE ARMS IN THE
+REVERSE ORDER.** R8c ran E (8192) then F (65536) and read +6.36%. R22 runs **H
+(65536) first, then G (8192)**. The two arms cannot share an engine start — two
+budgets never can — so the arm-to-arm comparison is unavoidably cross-invocation
+and exposed to R9c's measured **±2.5% reproduction floor**. Reversing the order
+costs nothing and buys one real thing: **if R22 reproduces the same sign with
+the order flipped, thermal drift and start-order cannot be the explanation.** If
+instead the sign flips with the order, that is itself the finding, and a cheap
+one. R8c named this weakness and could not address it; this addresses it.
+
+The primary protection readings are **intra-invocation** — each arm produces its
+own Phase 1 and Phase 2 under one engine start — and are not exposed to the
+floor.
+
+### NUMERIC PREDICTIONS, DECLARED BEFORE THE RUN
+
+**PRIMARY — protection on arm F's figure. Band ±10% (R13c's protection band).**
+
+| row | R8c figure | STANDS if | predicted | why |
+|---|---:|---|---:|---|
+| `ctx_tg32 @ d32768 c1` **mnbt 65536** (arm H) | 117.65 | **105.9 – 129.4** | **112, band 103 – 122** | R21's defended-row rule + R13c's −1.94% first-measurement bias, applied to a figure that is now defended |
+| `tg32 @ d32768 c1` **mnbt 65536** (arm H) | 110.03 | **99.0 – 121.0** | **110, band 96 – 124** | no reason to move; the wide band is σ/med 24.20%, the campaign's noisiest cell |
+| `ctx_tg32 @ d32768 c1` **mnbt 8192** (arm G) | 110.61 (arm E) / 107.73 (pooled 10) | **99.6 – 121.7** | **109, band 100 – 118** | two prior measurements bracket it; predict near the pooled figure |
+| `tg32 @ d32768 c1` **mnbt 8192** (arm G) | 109.62 (arm E) / 112.59 (pooled 10) | **98.7 – 120.6** | **111, band 97 – 125** | same |
+
+**THE CLAIM RULE, DECLARED IN ADVANCE SO IT CANNOT BE MOVED AFTERWARDS.**
+`ctx_tg @ d32768 c1` is claimed as a **WIN** only if the **pooled mnbt-65536
+median over all 21 runs** (R8c arm F's 7 + R22 arm H's 14) exceeds **117.37** by
+**more than 1 SE of that pooled median**. At σ/med ~9.4% that threshold is
+**≈ 120.4**. Anything below it is recorded as a corrected margin on a **LOSS**,
+however close. **Predicted: the threshold is not met.** I would rather pre-commit
+to a bar this round probably fails than write the bar after seeing the number.
+
+**SECONDARY — the budget effect on Phase 1 (arm H vs arm G).**
+Currently +6.36% at 1.0 SE. **Predicted +2%, band −5% to +10%.**
+- |Δ| < 5% → **INERT**, and R11's inertness result extends to Phase 1.
+- |Δ| ≥ 5% with the same sign as R8c's → **the effect firms**; report as
+  established-with-caveat and note it is the third arm-to-arm reading.
+- Sign flips → the +6.36% was order or draw; report as refuted.
+- **I keep R8c's and R11's conjunction rule: if Phase 2 is inert and Phase 1 is
+  not, or vice versa, the inertness reading is NOT ESTABLISHED whatever the band
+  says.** Phase 2 predicted **|Δ| < 2.5%** (it read +0.37% at R8c and +0.27% at
+  R11 at d16384).
+
+**FREE RIDERS — zero box cost, recorded either way:**
+
+| quantity | predicted | why it is worth recording |
+|---|---|---|
+| MTP acceptance @ d32768 c1 | **length 3.55 – 3.75, acceptance 85 – 91%** | third and fourth independent samples at this depth; R8c read 87.0%/3.61 and 88.9%/3.67 at two starts |
+| `ctx_pp / pp` | **16.6 – 18.1** (theory **17.00**) | audit pairs **45 and 46**; stands at 43 of 44 |
+| prefix cache hit rate | **0.0%** | past 180 consecutive samples with no hit ever |
+| scheduler `Running/Waiting` | **`(1,0)` in loaded samples** | ⚠ **R8c's arm F sample was EMPTY** — 11 of 11 lines read `Running: 0`, the sampler catching only gaps between runs. runs=14 doubles the loaded window; if it is empty again, record it as a repeat instrument failure and stop claiming residency at c1 from this instrument |
+| span ratio `tg / tg_req` | **exactly 1.0000, all four phase-arms** | assignment, not measurement. Anything else voids the round |
+| σ/med | **6 – 25%** | this cell holds the campaign record (24.20%, arm F Phase 2); σ is itself a draw |
+| SM clock median | **2392 – 2398 MHz** | twentieth agreeing session |
+| power max | **≤ 99.5 W** | R8c set a new campaign bound at 99.49 W |
+| grid time | **210 – 260 s per arm** | R8c's 7-run arms cost 117.6 s and 110.9 s |
+
+### WHAT WOULD MAKE THIS ROUND VOID
+
+- `crash_count > 0` or `session_count > 1` in either arm — each arm is one start.
+- The `Benchmark args:` echo not reading `pp: [2048]`, `depth: [32768]`,
+  `tg: [32]`, `concurrency: [1]`, `runs: 14`. **`sparkrun` silently defaults an
+  omitted `-b depth` to 0 and does not error** — R5 lost a start to it. **Read
+  the echo in both arms before letting the grid proceed.**
+- `tg_throughput != tg_req_throughput` at c1.
+- `ctx_pp / pp` outside 15 – 19.
+- A container image other than `dgx-vllm-eugr-nightly:2026082102` in either
+  `state.yaml` — read `container_image_longterm_ref`, not the `:latest` console
+  line.
+
+### INSTRUMENT PLAN
+
+Engine log per R13d's recipe: `docker exec <container> tail -f
+/tmp/sparkrun_serve.log`, container matched on **`^sparkrun_`** (it is named
+`sparkrun_<hash>_<hash>_solo`, **not** `vllm-*`), verified non-empty **during**
+the engine start. `docker logs -f` does not work on this image. Telemetry
+alongside each arm.
+
+### COST
+
+Two invocations, two engine starts, ~460 s grid + ~330 s starts, **~14 min wall**
+estimated. Against that: protection on the campaign's closest unclaimed cell, a
+halved error bar on the budget effect, the Phase-1 inertness question R8c left
+open, an order-reversal control R8c could not run, and two more acceptance
+points.
+
+### ABSOLUTELY NO ARENA SUBMISSION
+
+No `--arena` flag, in either arm. There is no login and none will be attempted.
