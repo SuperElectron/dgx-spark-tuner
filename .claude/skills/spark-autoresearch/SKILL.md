@@ -34,7 +34,7 @@ research/<name>/
 1. Read journal.md + prior `experiments/*/`. Before picking a mutation, recall
    prior findings:
    ```
-   .claude/skills/mem0/scripts/recall.sh "prior findings <model> <cell> <lever>" [entity]
+   .claude/skills/mem0/scripts/recall.sh "prior findings <model> <cell> <lever>" experiment:<name>
    ```
    Best-effort — fold the digest into your hypothesis reasoning, but never
    block on it (see the mem0 skill's guardrail). Pick ONE mutation. Journal
@@ -73,10 +73,10 @@ research/<name>/
    Also write `[ENV]`, `[CRASH]`, or `[LESSON]` lines the same way when the
    round surfaced one. Commit per repo workflow rules.
 
-### Cost ledger
+## Cost ledger
 
-Record harness-token spend for the round in the journal entry, and write a
-`[COST]` memory per phase (tokens-per-point accounting):
+Record harness-token spend for the round in the journal entry (canonical),
+and write a `[COST]` memory per phase (tokens-per-point accounting):
 ```
 .claude/skills/mem0/scripts/remember.sh "[COST] <phase>: <tokens> tokens, <result>" experiment:<name>
 ```

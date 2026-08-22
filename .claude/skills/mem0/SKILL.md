@@ -48,6 +48,9 @@ Every memory is a single line of text, prefixed with one marker:
 - `[ENV]` — an environment fact (image version, driver, clock policy, ...)
 - `[CRASH]` — a run that crashed, and why
 - `[LESSON]` — a general takeaway not tied to one benchmark row
+- `[COST]` — harness-token spend for a round phase (tokens-per-point
+  accounting); the memory is a best-effort index entry only — phase totals
+  must ALSO be recorded in the journal, which stays canonical
 
 Entity metadata (stored in `metadata.entity`, passed as `filters.entity`
 on recall — never client-side filtered) scopes a memory:

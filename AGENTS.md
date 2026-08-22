@@ -22,8 +22,10 @@ recall/remember of prior findings. Standing rules:
   failure — never retry in a loop or ask the user what to do.
 - On failure, spawn a background agent to run `memory-doctor.sh`, then
   drain the outbox (`remember.sh --drain`).
-- journal.md/RESULTS.md files are canonical; mem0 is a rebuildable index —
-  rebuild it from RESULTS.md any time with `memory-backfill.sh`.
+- journal.md/RESULTS.md files are canonical; mem0 is a rebuildable index.
+  `[VERDICT]`/`[CRASH]` rebuild from RESULTS.md via `memory-backfill.sh`;
+  `[ENV]`/`[LESSON]`/`[COST]` are best-effort index entries — canonical
+  copies live in the journal.
 - The stack lives on the box, docker compose project `sparkmem`, managed
   via `memory.sh`.
 
