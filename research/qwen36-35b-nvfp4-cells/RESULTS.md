@@ -19,13 +19,22 @@
 > by a factor of ten. **`ctx_tg @ d8192 c1`'s thin 1.07x over best vLLM+NVFP4
 > survived** and firms to 1.08x, so no published claim was withdrawn.
 >
-> ⚠ **One row is still on three runs and is labelled provisional, not hidden:**
-> `tg128 @ d16384` c2 (84.00) and c5 (48.12). Both are losses by **>2x**, which
-> no sampling error closes, and both already have 7-run tuned successors. See
-> *the rows still on three runs* below.
+> ⚠ **Two cells are still on three runs and are labelled provisional, not
+> hidden:** `tg128 @ d16384` c2 (84.00) and c5 (48.12). Both are losses by
+> **>2x**, which no sampling error closes, and both already have 7-run tuned
+> successors. **If they are ever re-measured, expect them to come in HIGH** —
+> they are unaudited, unflattering rows, the class that has moved upward five
+> times out of five. See *the rows still on three runs* below.
 >
 > **Five up, five down — and the sign is predicted by whether anyone was
-> defending the row.** See the same section for what that means.
+> defending the row.** ⚠ **The practical reading, and it reverses what this file
+> spent most of the campaign warning about: THE CAMPAIGN HAS BEEN UNDERSTATING
+> ITS OWN RESULTS.** Recorded losses and thin margins are the rows most likely
+> to be wrong, and most likely to be wrong **in our favour** — `tg128 @ d131072
+> c1` is the worked example. That said, five is a modest sample from two rounds:
+> the established thing is the *mechanism* (audit selection, not a sampling
+> asymmetry), and any individual 3-run row can still go either way. See the same
+> section.
 
 > ### ⚠️ `recipe.yaml` CHANGED TODAY — THIS IS A CONFIG EPOCH BOUNDARY
 >
@@ -297,6 +306,25 @@ whether the row was flattering — not by anything about sampling.** This is
 regression to the mean seen from both ends at once, and it is the cleanest
 vindication the campaign has of the rule it wrote after R8c. **A results file's
 surviving errors point in whichever direction nobody had a motive to look.**
+
+⚠️ **AND HERE IS WHAT THAT MEANS FOR THIS FILE, IN PLAIN WORDS: THE CAMPAIGN HAS
+BEEN UNDERSTATING ITS OWN RESULTS.** For most of its life the campaign warned
+that its numbers were probably too good and that its claims would shrink under
+audit. The systematic audit says the reverse. **The rows most likely to be wrong
+are the recorded losses and the thin margins, and they are most likely to be
+wrong in our favour.** That is the opposite of the risk this campaign spent most
+of the night guarding against. `tg128 @ d131072 c1` is the worked example —
+published as a 5.5% loss for sixteen rounds, actually short by 0.47%.
+
+⚠️ **Do not over-fit in the new direction either — that would be the same
+mistake a third time.** Five upward corrections is a **modest sample** from two
+rounds, on one model, one box, one image epoch. It is clean enough to act on and
+far too small to treat as a law. **What is established is the mechanism — audit
+selection, not an asymmetry in the sampling** — and the mechanism is what
+generalises. The direction is a prior: it tells you which rows to audit first
+and which way to expect them to move, **not** what any individual row will read.
+A 3-run figure remains an unrepeated draw, wrong by ~1 SE, and capable of going
+either way at any single row.
 
 ### CANNOT BE SCORED — the board has no figure for these cells
 
@@ -591,7 +619,9 @@ was a lucky 3-run draw**, the second such figure this campaign has had to retire
 (R1's tg32 was the first), and the `tg128 @ d65536 c1` margin drops from 6.56x to
 **5.71x**. (3) The depth curve is now **monotone and steepening** — 113.06 /
 94.10 / 77.13 — which is what physics required all along; every measured "rise
-with depth" this campaign reported is gone. (4) **R3's -17% ctx inversion at
+with depth" this campaign reported is gone. ⚠ **R21 later corrected the d131072
+point upward to a pooled 81.22, so the last leg reads −13.7% rather than −18.0%;
+the curve stays monotone and steepening.** (4) **R3's -17% ctx inversion at
 d65536 did not reproduce** (-1.2% here), so open question 4's deep half should be
 treated as unmeasured. Controls passed: pp2048 at 628.66 sits inside a series
 held across seven invocations, and the d16384 arm reproduced R6 to 1.8%.
@@ -635,9 +665,11 @@ changed; what changed is that `ctx_tg @ d8192/d16384/d32768 c1` are losses
 (0.61x / 0.64x / ⚠ **0.92x — REVISED BY R8c from the 0.72x this paragraph used
 to carry**, to a 350M BF16 model or to our own model on Atlas), the
 six prefill c1 cells are heavy losses, and `ctx_pp @ d65536 c1` is a win at
-2.88x. ⚠ The d8192 figure is still a 3-run median from the same invocation whose
-d32768 figure R8c found 28.5% low — see *the rows still on three runs* above; it
-is the campaign's first priority re-measure.
+2.88x. ✅ **The d8192 figure is no longer a 3-run median — R21 re-measured it**
+(126.52 → 128.76, **+1.77%**, inside the band, pooled 10-run **127.64**), so the
+1.07x over best vLLM+NVFP4 survived the audit and firms to **1.08x**. It was the
+campaign's first priority re-measure and it is done; see *the rows still on
+three runs* above.
 A scrape is not a standings update, and this one waited a day for one.
 
 Eight cells taken, twelve lost, and **round 5 was the campaign's first LOSS**: tg128 @ d131072 c1
@@ -645,7 +677,12 @@ came in at median 77.13 against Nemotron Lightning NVFP4's 81.60 — short by 5.
 That cell was queued as a probable loss, run once for the depth curve, and was
 deliberately NOT tuned for; the recipe is unchanged. It is recorded here as a
 loss and should be read as one. (One of the three runs, 89.39, did clear 81.60 at
-1.10x, but the median is the verdict and the median lost.)
+1.10x, but the median is the verdict and the median lost.) ⚠ **THE 5.5% IS
+RETIRED. R21 re-measured R5's own invocation at runs=7 (81.32) and the pooled
+10-run median is 81.22 — the deficit is 0.47%, not 5.5%, i.e. the campaign
+overstated its own loss by a factor of ten.** It is still a loss, still not
+claimed, and still should not be re-run: 0.47% is 0.11 SE and this is the
+campaign's most expensive depth. See *the rows still on three runs*.
 
 Round 4's two cells (c2, c5) were scraped afterwards — 325.44 and 428.95, with
 best-vLLM-NVFP4 runners-up at 163.27 and 225.46. They were briefly marked
@@ -660,7 +697,7 @@ The depth curve at tg128 c1 — **rewritten by R8, and it is monotone now:**
 |---:|---:|---:|---:|---:|---|
 | 16384 | **113.06** (R8, 7 runs) | — | — | 116.03 (best vLLM NVFP4) | 0.97x — gap -2.9% |
 | 65536 | **94.10** (R8, 7 runs; was 108.15) | **-16.8%** (4x) | -8.8% | 16.48 | **5.71x** |
-| 131072 | 77.13 (R5, 3 runs) | **-18.0%** (2x) | -18.0% | 81.60 | 0.95x — LOST |
+| 131072 | ⚠ **81.22** (R5 3 + **R21** 7, pooled 10; was 77.13) | **-13.7%** (2x) | -13.7% | 81.60 | ⚠ **0.995x — STILL LOST, by 0.47% (0.11 SE)**, not the 0.95x/5.5% published since R5 |
 
 **Both R8 points come from ONE engine start and one thermal state**
 (`session_count: 1`), which is the whole reason to believe the first leg. The
@@ -668,6 +705,16 @@ campaign read this curve as "flat, flat, then a cliff" for five rounds. It is
 not: it is a **decline that steepens with depth**, and the flatness was an
 artefact of three-run sampling at a cell whose σ is 9.0%. R3's 108.15 sat 13%
 above the 7-run median and has been retired.
+
+⚠ **THE LAST LEG WAS ALSO A 3-RUN ARTEFACT, AND R21 CORRECTED IT UPWARD.** The
+d131072 point stood on R5's three runs until R21 re-measured R5's own invocation
+at runs=7 (**81.32, +5.43%**; pooled 10-run **81.22**). The curve is still
+monotone and still steepening, but **less steeply: −8.8% then −13.7% per
+doubling, not −18.0%.** Both 3-run points on this curve have now been audited
+and **they moved in opposite directions** — R3's down 13%, R5's up 5.4% — which
+is exactly the audit-selection pattern described in *the rows still on three
+runs* above: R3's was a claim somebody was defending, R5's was a recorded loss
+nobody had a motive to check.
 
 Physics required this. Per-step decode work is non-decreasing in context
 length, so the true curve cannot rise, and every "deeper is faster" reading this
@@ -1106,10 +1153,10 @@ row, and they answer different questions:** `tg` is what the board ranks,
 
 | benchId | date | cell / probe | tg med t/s | tg σ | ttfr ms | board top | verdict |
 |---|---|---|---:|---:|---:|---:|---|
-| bench_25a0e7f36ab0 | 2026-08-21 | tg32 @ d8192 c1 | 106.24 | 22.72 | 1737.93 | sole entry | win — no number published to beat |
+| bench_25a0e7f36ab0 | 2026-08-21 | tg32 @ d8192 c1 | 106.24 | 22.72 | 1737.93 | sole entry | ⚠ **RETIRED BY R21 — this figure was 16.54% LOW and is not pooled.** Recorded as a win with no number published to beat; the standings row is now R21's 7-run **123.81** |
 | bench_25a0e7f36ab0 | 2026-08-21 | tg32 @ d16384 c1 | 129.32 | 18.38 | 3230.01 | 28.11 | **RETIRED — SUPERSEDED by R6's 7-run 116.43 (4.14x).** A lucky 3-run draw, 11% high. The standings carry 4.14x, not 4.60x |
 | bench_25a0e7f36ab0 | 2026-08-21 | tg32 @ d32768 c1 | 115.56 | 10.40 | 6937.09 | 23.31 | **RETIRED AS A STANDALONE FIGURE by R8c.** A 3-run draw, 5.4% above the 7-run re-measurement of its own condition (109.62). The cell is still a **WIN**; the standings now carry the **pooled 10-run 112.59 = 4.83x**, not 4.96x |
-| bench_25a0e7f36ab0 | 2026-08-21 | ctx_tg32 @ d8192 c1 | 126.52 | 7.94 | 1345.97 | 207.60 (LFM2.5-350M BF16) | **LOSS — 0.61x** vs the top, but **1.07x** over the best vLLM+NVFP4 entry (118.07, Nemotron-3.5-Lightning-30B-A3B-NVFP4). Board figure came from R5b's scrape and was never carried into the standings until the synthesis pass. ⚠ 3-run figure |
+| bench_25a0e7f36ab0 | 2026-08-21 | ctx_tg32 @ d8192 c1 | 126.52 | 7.94 | 1345.97 | 207.60 (LFM2.5-350M BF16) | **LOSS — 0.61x** vs the top, but **1.07x** over the best vLLM+NVFP4 entry (118.07, Nemotron-3.5-Lightning-30B-A3B-NVFP4). Board figure came from R5b's scrape and was never carried into the standings until the synthesis pass. ✅ **NO LONGER A 3-RUN FIGURE — R21 protected it** (+1.77%, inside band); quote the pooled 10-run **127.64 / 1.08x** row above, not this one |
 | bench_25a0e7f36ab0 | 2026-08-21 | ctx_tg32 @ d16384 c1 | 130.16 | 3.01 | 2787.86 | 193.09 (LFM2.5-350M BF16) | **SUPERSEDED by R6's 7-run 122.97** — same cell, same instrument that retired R1's cold tg32 figure. The cell is a **LOSS at 0.64x**; runners-up 153.86 / 152.14 are our own model on Atlas |
 | bench_25a0e7f36ab0 | 2026-08-21 | ctx_tg32 @ d32768 c1 | 84.03 | 10.69 | 6453.91 | 117.37 (Qwen3.6-35B-A3B-NVFP4 on **Atlas**) | **RETIRED BY R8c, AND IT WAS WRONG BY 28% — the campaign's largest single-figure retraction, and it went UPWARD.** A 3-run LOW draw; the identical condition at runs=7 reads **110.61**. The cell is still a **LOSS** but at **0.92x**, not 0.72x. It was also the campaign's last surviving deep ctx inversion (−27.3%) and **R8c retired that too**: +0.9% at runs=7 |
 | bench_f58c56da6658 | 2026-08-21 | tg128 @ d16384 c4 | 53.56 | 0.43 | 10167.05 | 46.68 | win — 1.15x, verify required at this margin |
@@ -1124,7 +1171,7 @@ row, and they answer different questions:** `tg` is what the board ranks,
 | bench_0ef7af8997ce | 2026-08-22 | ctx_tg128 @ d16384 c5 (max_num_seqs 4) | 48.18 | 0.31 | 9914.85 | not scraped | hold — above cold (+5.7%) |
 | bench_858173ba5753-mns5 | 2026-08-22 | tg128 @ d16384 c5 (MUTATION max_num_seqs 5) | 48.12 | 0.07 | 12088.40 | 225.46 best vLLM NVFP4 (428.95 overall) | **LOSS — 0.21x**, and this is the cell's campaign-config-plus-`mns 5` figure in the standings. +5.5% over the unmutated arm; mutation NOT kept in recipe.yaml. R12 read 128.93 (0.57x) and R13 164.27 (0.73x) at raised budgets — still losses |
 | bench_858173ba5753-mns5 | 2026-08-22 | ctx_tg128 @ d16384 c5 (MUTATION max_num_seqs 5) | 51.25 | 0.26 | 9850.01 | not scraped | hold — above cold (+6.5%) |
-| bench_076db52d341c | 2026-08-22 | tg128 @ d131072 c1 | 77.13 | 7.17 | 48102.89 | 81.60 | **LOSS — 0.95x, short by 5.5%**; runs 72.37 / 89.39 / 77.13, best run alone would have won at 1.10x. Not tuned for, by design |
+| bench_076db52d341c | 2026-08-22 | tg128 @ d131072 c1 | 77.13 | 7.17 | 48102.89 | 81.60 | ⚠ **SUPERSEDED BY R21 — the 0.95x is retired.** Recorded as **LOSS — 0.95x, short by 5.5%**; runs 72.37 / 89.39 / 77.13, best run alone would have won at 1.10x. Not tuned for, by design. **R21 re-ran this exact invocation at runs=7 and read 81.32 (+5.43%); the pooled 10-run median is 81.22 = 0.995x, short by 0.47%.** Still a loss, still not claimed — but quote the pooled row, not this one |
 | bench_076db52d341c | 2026-08-22 | ctx_tg128 @ d131072 c1 | 76.66 | 10.16 | 46770.69 | not scraped | hold — level with cold (-0.6%), and NOISIER than cold (σ 13.3% vs 9.3%): first round where the ctx_ phase is the noisy one |
 | bench_dd3afc9e1c94 | 2026-08-22 | tg32 @ d16384 c1 (**runs=7**) | 116.43 | 11.55 | 3298.58 | 28.11 | **win — 4.14x incumbent**; REVISES R1's 3-run 129.32 down 10.0%; worst of 7 runs 108.96 still 3.88x |
 | bench_dd3afc9e1c94 | 2026-08-22 | tg128 @ d16384 c1 (**runs=7**) | 111.11 | 2.91 | 3237.23 | 116.03 best vLLM NVFP4 (188.47 overall) | **reproduction gap now -4.2%, was -12%** — replaces the inherited 102.2 baseline (+8.7%); 2 of 7 runs (116.58, 116.66) clear 116.03. Crowded cell, never a campaign target, not tuned for. σ 2.6% is the QUIETEST c1 cell in the campaign |
