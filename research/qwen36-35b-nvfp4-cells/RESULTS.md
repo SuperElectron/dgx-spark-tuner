@@ -110,7 +110,10 @@ the engine prefills `depth + 2048`, so a **cold** entry's `pp2048` understates b
 correct. The 2026-08-22 per-entry re-scrape classified the board by
 `estPpt(pp2048)/estPpt(ctx_pp)`: it is mostly warm (106 of 125 at d32768, 107 of
 131 at d16384), we are cold at every depth (0.0% prefix-cache hits in 220+ engine
-samples), and ranking by cell top selects a warm opponent by construction — so
+samples — ⚠ **R24 found the cause: MTP speculative decoding. Removing it restores
+the cache, but `ctx_pp` is Phase 1, the pass that POPULATES the cache, so it moves
++4.8% and NOT ONE OF THESE SIX ROWS CHANGES**), and ranking by cell top selects a
+warm opponent by construction — so
 the artefact never cancels on a scored row. **`ctx_pp`'s numerator is what the
 engine actually did for every entry, warm or cold**, so the `ctx_pp` rows carry
 the verdicts and the `pp2048` rows are kept as recorded losses on our marginal
@@ -136,6 +139,7 @@ except `ctx_pp @ d65536` is an Atlas `ttfr` artefact (fires on a content-free
 | bench_0954971b5dfa / bench_a769c1142e15 / bench_860b43edd154 | 2026-08-22 | ctx_tg @ d16384 c8, c16 | **MUTATION mns 8 / mns 16** at mnbt 8192; c16 also at mnbt 32768 | 47.75 / 45.61 / 54.54 | 3 / 3 / 7 | Same |
 | | | every `pp2048` / `ctx_pp` cell at `c>1` | various | see archives | — | The board's prefill and context cells are c1 only |
 | bench_9379c15468ec-a-chunk, bench_10496035f7fd-b-nochunk (R9b); bench_30d6586cc70a-p-pc-on, bench_76bccce3d8b3-g-block32768, bench_76bccce3d8b3-g-block32768-repeat, bench_107f95223a60-n-pc-off (R9c) | 2026-08-22 | every R9b and R9c row | prefix caching OFF, `--block-size 32768`, chunked prefill OFF, all at `mnbt 32768` | see archives | 3 / 7 | Deliberately diagnostic: they mutate a flag the recipe ships and sit at a budget it does not. **No standings row was ever measured with prefix caching off** |
+| bench_647b25c13d9f-r24-arm1-control, bench_064550e26525-r24-arm2-kvauto, bench_064fc6128314-r24-arm3-specoff, bench_f6e4a4c51f71-r24-arm4-spec1 | 2026-08-22 | every R24 row, `tg128` and `ctx_tg @ d16384 c4` | shipped recipe / `kv-cache-dtype auto` / `--speculative-config` removed / `num_speculative_tokens 1`, all at `mnbt 65536 + mns 4` | 169.89 / 179.15 / 143.24 / 148.12 (Phase 2); 175.59 / 194.14 / 144.62 / 152.81 (`ctx_`) | 3 each | Deliberately diagnostic: three of four mutate a flag the recipe ships, and the round pre-declared it was **not quoting a throughput** — the readout is the engine's `Prefix cache hit rate`, **0.0% / 0.0% / 42.1% / 0.0%**. ⚠ **MTP speculative decoding is what kept the cache at 0.0%**; removing it restores the cache to its 42.14% structural ceiling and costs −15.7% `tg`, −39% `peak_throughput`, buying 4.17x Phase-2 `pp` and 4.19x `ttfr`. The control is **not pooled** into the shipped-recipe win row above (3-run diagnostic; it read −5.27% on R23's 179.34) |
 | r13b-perreq-probe | 2026-08-22 | R13b probe rows | `mnbt 98304 + mns 5` + `--per-request-spec-decode-metrics detailed` | 167.14 / 161.68 | 7 batches | Not measured by llama-benchy and there is no benchId; a reproduction check for a mechanism round. The instrument recipe must never be folded |
 
 ## RETIRED FIGURES — published here once, do not quote
@@ -178,6 +182,7 @@ this table, which is correct — nothing here is quotable.
 | bench_25a0e7f36ab0 | 2026-08-21 | LOST by ~186x (945271.31, "not in scrape") | ctx_pp @ d32768 c1 | same | 0.856x / 0.537x |
 | | | "the board's prefill figures … carry the identical understatement, so the artefact cancels" | every prefill row | same | **REFUTED per entry.** The board is 82–85% warm at d16384/d32768, we are cold at every depth, and cell-top ranking selects a warm opponent by construction. Prefill is scored on `ctx_pp` only |
 | | | every prefill "board top" read as a prefill rate (215894.21, 99229.33, 63079.61, 775122.96, 884764.53, 945271.31) | every prefill row | same | **Atlas `ttfr` artefact, measured not suspected**: `ttfr` fires on a content-free `choices` chunk, inflating by 260x–694x. Atlas's true prefill from its own `e2eTtft` is 1362–2976 tok/s, below ours. Kept in the `Board top` column for the contract only |
+| | 2026-08-22 | `ANALYSIS-prefill-metric.md` §2.7's "fix the prefix cache → **+42% at c4, `tg` ~247**", and the c2/c5 flips built on the same arithmetic | tg128 @ d16384 c4, c2, c5 | R24 | **REFUTED at c4, measured.** The fix is removing MTP, and it reads **143.24 = −15.7%**, not +247. The projection assumed the cache could be restored at no cost; it costs 33.4% of per-request decode and buys 26.6% of batch span. The c2/c5 flips rest on the same refuted arithmetic and are not a live prospect |
 | | | "the `ctx_` phase is prefill-free, so it is ~9x faster at prefill" and the five claims built on it | every `ctx_pp`-vs-`pp` comparison | the `ctx_` phase-label correction | **Withdrawn, not adjusted.** The ratio is `(depth+2048)/2048` to within 4% in 45 of 46 archived phase pairs. Prefix caching **never hit once** in 220+ engine samples |
 
 ## Two cautions that reach every row above
