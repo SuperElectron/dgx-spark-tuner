@@ -1584,3 +1584,376 @@ c16 aggregate would have been reported as 647.6 — a 47% overstatement, and a
 headline of "5.8x the c1 aggregate" — if the round had recorded only the metric
 the queue asked for. The instruction to record BOTH is what made the round
 correct.
+
+## Round 8 hypothesis — the depth-flatness control: tg128 @ d16384 AND d65536, c1, runs=7, one engine start
+
+Earned by R3 and rewritten twice — once by R6, once here. R3 measured 108.15 at
+d65536 against a d16384 baseline and read the difference as noise; R6 then
+re-measured d16384 at runs=7 and got 111.11, which shrank the gap this round is
+chasing from 5.8% to **2.7%**. R6 also closed the half of R8 that was about the
+reproduction gap, so this round is NOT sold on that and does not pretend to buy
+it. What is left is the one thing R6 could not do: **put both depths under ONE
+engine start and one thermal state**, which removes engine-start variation and
+thermal drift as explanations for the depth comparison. Everything the campaign
+knows about depth at tg128 c1 currently rests on three separate invocations
+(R6 for d16384, R3 for d65536, R5 for d131072).
+
+### The two claims this round has to keep apart
+
+"Depth is flat across d16384-d65536" and "deeper is faster" are different
+claims, and only the first is physically available. Per-step decode work is
+non-decreasing in context length — every extra KV token is extra read, never
+less. So the true curve is monotone non-increasing in depth, and any measured
+rise is a sampling artefact by definition, not a finding. The round is set up
+to say "flat", "falling", or "we cannot resolve it", and it will not say
+"deeper is faster" whatever the medians do.
+
+### Mechanism, and why flat is the plausible reading
+
+Three architectural facts make the depth-dependent term small over this range.
+**30 of the 40 layers are Gated DeltaNet** — a fixed-size recurrent state, so
+their per-step work does not grow with context at all. Only **10 layers hold
+KV**, and they hold it in **FP8**. And the KV itself is tiny against the box:
+~2.81 GB at d65536 against ~75 GB reserved for cache, so nothing is evicted,
+nothing is recomputed, and prefix caching is unstressed.
+
+The naive bandwidth arithmetic still says the fall should be visible, and it is
+worth writing down precisely because the campaign has now watched it fail twice.
+Against a fixed ~1.7 GB active-weight read per decode step (R5's figure), KV adds
+~0.70 GB at d16384 and ~2.81 GB at d65536, so total read goes 2.40 -> 4.51 GB, a
+1.88x rise that a pure-bandwidth model turns into a **-47% fall**. R3 measured
++5.8%. That model was wrong by ~2x at d65536 and by 2.2x at d131072, so it is
+not the estimator this round trusts — but it is the reason the round is worth
+running at all: if the true fall is anywhere near even a quarter of the naive
+figure, seven runs at each depth will see it.
+
+### The resolution budget, declared before the run
+
+This is the part that decides what the round is allowed to conclude. R6 priced
+σ at **2.6% of the median** for tg128 @ d16384 and R3 priced it at **9.6%** at
+d65536. At runs=7 the standard error of a median is roughly 1.25σ/√n, i.e. ~1.2%
+at d16384 and ~4.5% at d65536, so the gap between the two medians carries an
+uncertainty of about **±4.7%** at one sigma. **The round therefore cannot
+resolve a 2.7% gap and is not claiming it will.** What it can do is rule out a
+large fall: a -10% or worse depth penalty would be ~2σ and would show.
+
+Thresholds, written down now so the reading is not chosen after the numbers
+arrive:
+
+- **|gap| <= 6%** — depth is FLAT across this range within the round's own
+  resolution. Reported as flat regardless of sign; a positive sign is not
+  reported as "deeper is faster".
+- **d65536 more than 6% BELOW d16384** — the depth term bites earlier than R5
+  placed it, R3's flatness reading was partly a lucky draw, and the depth curve
+  in RESULTS.md needs rewriting.
+- **d65536 more than 6% ABOVE d16384** — monotonicity is violated under one
+  engine start, which cannot be physics. The explanation would have to be the
+  MTP acceptance draw, and the engine log is being captured to check exactly
+  that.
+
+### Numeric predictions
+
+- **tg128 @ d16384 c1: median 106-116, centre ~111.** This reproduces R6's
+  111.11 under a different engine start. It is also this round's session-level
+  control: if it lands outside that band, the two depths in this invocation are
+  still comparable to each other but the round has learned that session-to-session
+  drift is larger than the effect being chased, which is itself worth knowing.
+- **tg128 @ d65536 c1: median 100-112, centre ~107**, i.e. 0% to -6% against the
+  d16384 arm. A 7-run median at this depth replaces R3's 3-run 108.15 as the
+  campaign's claimed figure whichever way it moves.
+- **ctx_tg128 @ d65536 c1: median 84-96, centre ~90**, replacing R3's 89.76.
+- **ctx_tg128 @ d16384 c1: median 98-112**, around R6's 104.85.
+
+### Side-predictions, so the round can be refuted on more than one axis
+
+- **pp2048 @ d16384 lands at 620-645.** The identical-work control R6 and R7
+  both used. It has now read 637.09 / 634.04 / 643.31 / 623.13 / 634.99 /
+  640.21 / 631.25 / 628.74 across six invocations, so a miss here means the
+  session is unusual and everything else in it should be read with that in mind.
+  **pp2048 @ d65536 lands at 112-125**, around R3's 118.59.
+- **ctx_pp2048: 5750-5950 at d16384 and 3900-4100 at d65536**, around the
+  5772-5967 series and R3's 4004.76.
+- **The σ ratio between the depths survives one engine start.** Predict d16384
+  σ 2-5% and d65536 σ 6-13%. This is a real test of R6's variance mechanism
+  rather than a restatement of it: if the deep arm's σ collapses to the shallow
+  arm's inside one engine start, then R3's 9.6% was session noise and not a
+  property of the depth, and R6's "anything at d65536+ needs 7 runs" pricing is
+  wrong. If it survives, the pricing is confirmed on an independent sample.
+- **ctx sits BELOW cold at both depths.** R6 measured -5.63% at d16384 (tg128,
+  c1) and R3 measured -17% at d65536. This round is the first time open question
+  4's sign has been read across two depths **inside one invocation**, which is
+  worth more than either prior observation: every previous cross-depth reading
+  of that sign was confounded by a separate engine start. Predict -3% to -18% at
+  both, with the deeper arm more negative. A sign flip at either depth is the
+  fifth axis on which that sign has moved.
+- **ttfr: 3100-3400 ms at d16384 and 16000-18500 ms at d65536**, around R6's
+  3237 and R3's 17282.
+- **MTP acceptance is captured at both depths from the engine log**, as R5 and
+  R7 did. This is free and it is the cheap half of open question 6: R5 saw
+  acceptance fall from 93.6% at d16384-ish depth to 47.7% under d131072 load,
+  but across invocations. Two depths under one engine start gives the first
+  unconfounded acceptance-vs-depth reading the campaign has, and if the d65536
+  arm's acceptance is materially below the d16384 arm's it becomes the leading
+  candidate for whatever depth term does exist.
+
+### Standings expectation
+
+**No new cell.** Both depths are already measured cells. What the round can do
+is REVISE two claimed figures from 3-run medians to 7-run medians, which is
+exactly what R6 did to tg32 @ d16384 and which cost that cell 10% of its
+claimed margin:
+
+- `tg128 @ d65536 c1` — claimed 108.15 vs incumbent 16.48, **6.56x**.
+- `ctx_tg128 @ d65536 c1` — claimed 89.76 vs incumbent 20.70, **4.34x**, and it
+  is the only `ctx_` cell in the campaign with a scraped board figure.
+
+Both margins are enormous, so neither verdict can plausibly flip; the figures
+themselves can move by ~10% and RESULTS.md will carry whatever the seven runs
+say. `tg128 @ d16384 c1` is the crowded cell and was never a campaign target —
+its row is kept for the reproduction gap only, and R6 already owns that number.
+
+Config: recipe.yaml UNMUTATED apart from the context-length override the deep
+arm requires. **`-o max_model_len=73728`** — d65536 + pp2048 + tg128 needs
+67712, and 73728 is the figure R3 used at this depth, so the deep arm is
+config-identical to R3. No `max_num_seqs` mutation: this is a c1 round and the
+recipe's 4 already satisfies `mns >= c`.
+
+Probe: `-b pp=2048 -b tg=128 -b depth=16384,65536 -b concurrency=1 -b runs=7 -o
+max_model_len=73728`. Per R5's process lesson the `Benchmark args:` echo is read
+before the run is allowed to proceed and must show `depth: [16384, 65536]` —
+sparkrun does not error on a missing `-b depth`, it silently defaults it to 0.
+`state.yaml` will be checked afterwards for `session_count: 1`, which is the
+evidence that both depths really did share one engine start; R1 ran three depths
+in one invocation and one session, so this is expected rather than hoped for.
+
+Cost prediction: one engine start (~3 min), and a grid of 14 runs. R6's 14 runs
+at d16384 cost 124 s and R3's 3 runs at d65536 cost 151 s, so the deep half
+dominates: predict **400-550 s of grid time**, 12-18 minutes of wall clock, and
+roughly 45-55k harness tokens.
+
+## Round 8 outcome — bench_3d8149654d1b (2026-08-22)
+
+One invocation, two depths, `session_count: 1` in `state.yaml` — **both depths
+really did share one engine start and one thermal state**, which is the entire
+thing this round was bought for.
+
+| cell | median | (mean) | σ | σ/median | runs |
+|---|---:|---:|---:|---:|---|
+| tg128 @ d16384 c1 | **113.06** | (110.68) | 6.20 | 5.5% | 113.06 / 113.28 / 112.72 / **95.56** / 114.36 / 112.51 / 113.30 |
+| tg128 @ d65536 c1 | **94.10** | (94.30) | 8.44 | 9.0% | 85.34 / 81.79 / 94.10 / 94.96 / 107.20 / 103.91 / 92.80 |
+| ctx_tg128 @ d16384 c1 | 102.68 | (105.33) | 8.03 | 7.8% | 103.30 / 100.95 / **124.76** / 102.68 / 103.77 / 99.79 / 102.06 |
+| ctx_tg128 @ d65536 c1 | 92.98 | (93.39) | 8.07 | 8.7% | 90.96 / 92.98 / 105.13 / 92.96 / 77.33 / 93.64 / 100.71 |
+
+**THE HYPOTHESIS IS REFUTED AND SO IS R3. Depth is NOT flat across
+d16384-d65536 — it falls 16.8%.** 113.06 -> 94.10 on medians, 110.68 -> 94.30 on
+means, both far outside the ±6% band this round declared in advance as its own
+resolution limit and roughly 3.5σ on the pre-declared error budget. The round
+was set up to be able to say "flat", "falling", or "cannot resolve"; it says
+**falling**, unambiguously, and the pre-declared threshold is what makes that
+statement worth anything.
+
+### What this costs the campaign, stated plainly
+
+R3's 108.15 at d65536 was **a lucky 3-run draw**, exactly as R1's 129.32 turned
+out to be. Seven runs under one engine start put the cell at **94.10 — 13.0%
+below R3's figure**, and R3's three runs would have had to be drawn from the top
+of this round's distribution (107.20, 103.91 and one more) to produce it. This
+is the **second time** a 3-run median in this campaign has been retired by a
+7-run one, and both times the 3-run figure was too high.
+
+So the campaign's headline reading of R3 — "the depth-dependent term is smaller
+than c1 noise across d8192-d65536" — **is wrong and is retired here.** What was
+actually true is narrower and less interesting: three runs at c1 could not
+resolve the depth term, and the campaign mistook that for the term being absent.
+Open question 3 said exactly this about depth curves at runs=3 and was right.
+
+### The depth curve is monotone after all, which is what physics required
+
+| depth | tg128 c1 median | vs previous | per doubling | source |
+|---:|---:|---:|---:|---|
+| 16384 | **113.06** | — | — | R8, 7 runs, this invocation |
+| 65536 | **94.10** | **-16.8%** (4x) | -8.8% | R8, 7 runs, this invocation |
+| 131072 | 77.13 | -18.0% (2x) | -18.0% | R5, 3 runs, separate invocation |
+
+The campaign spent five rounds on a curve that read "flat, flat, then a cliff".
+It is not a cliff — it is a **monotone decline that steepens**, -8.8% per
+doubling over the first stretch and -18.0% over the last. Every measured rise
+this campaign has reported with depth is now gone, which is the outcome the
+hypothesis said was the only physically available one: per-step decode work is
+non-decreasing in context length, so the true curve cannot rise, and a measured
+rise was always going to turn out to be sampling. **The round predicted the sign
+of its own refutation** — it just predicted a smaller effect (0 to -6%) than the
+-16.8% it found, so the numeric prediction MISSED LOW and the reasoning behind
+it held.
+
+The d131072 point is still a 3-run median from a separate invocation and should
+be read with everything above in mind. Its σ was 9.3%, so it carries the same
+weakness R3's did, and the honest statement is that the last leg of the curve is
+the least trustworthy part of it.
+
+### The naive bandwidth model: right sign, still wrong magnitude by 2.7x
+
+The hypothesis wrote the arithmetic down before the run so it could be scored.
+Against a fixed ~1.7 GB active-weight read per decode step, FP8 KV over 10 of 40
+layers is 0.62 GB at d16384 and 2.50 GB at d65536 (sparkrun's own estimate: 2.81
+GB at max_model_len 73728). Total read 2.32 -> 4.20 GB is 1.81x, which a
+pure-bandwidth model turns into **-44.8%**. Measured **-16.8%**.
+
+So the naive model is **wrong by 2.7x in magnitude and right in sign**, where in
+R3's reading it was wrong in sign as well. The architecture argument survives
+and is doing real work — 30 of 40 layers are fixed-state Gated DeltaNet whose
+per-step cost does not grow with context at all, and the 10 KV layers store FP8
+— but it explains why the fall is a THIRD of the naive figure, not why it is
+zero. It was never zero.
+
+### The variance prediction held, and it is the reason to trust this round
+
+Predicted d16384 σ 2-5% and d65536 σ 6-13%. Measured **5.5% and 9.0%** — the
+deep arm is genuinely the noisy one, inside ONE engine start, so R6's pricing
+("anything at d65536+ needs 7 runs") is confirmed on an independent sample and
+is not an artefact of session-to-session drift. That matters here more than
+usual, because it is the same mechanism that explains why R3 went wrong: at
+9.0% σ, three runs at this depth have a median whose standard error is ~6.5%,
+and R3 landed 13% high.
+
+The shallow arm's 5.5% needs one qualification, and it is interesting rather
+than embarrassing: **six of its seven runs span 112.51-114.36 — a 1.6% spread,
+σ 0.65 — and the seventh reads 95.56.** Excluding that one draw the median is
+113.17 and σ is 0.6%, which would be the quietest c1 cell the campaign has
+measured. The outlier is not excluded from anything above; the median is the
+verdict and 113.06 is what is claimed. But the shape is the campaign's clearest
+look yet at the bimodality it has asserted since R2: this is not a spread, it is
+a mode plus one low draw, and it is exactly why medians are the verdict here.
+
+### Open question 4 — R3's deep inversion did NOT reproduce
+
+The first same-invocation, cross-depth reading of the ctx-vs-cold sign the
+campaign has:
+
+| depth | cold | ctx | ctx vs cold | prior reading |
+|---:|---:|---:|---:|---|
+| 16384 | 113.06 | 102.68 | **-9.2%** | R6: -5.63% |
+| 65536 | 94.10 | 92.98 | **-1.2%** | R3: -17% |
+
+The sign held at both depths (ctx below cold, as predicted), but the **magnitude
+ordering is backwards from the prediction** — the round predicted the deeper arm
+would be more negative and it is the shallower one, and the deep arm's -1.2% is
+outside the predicted -3% to -18% band entirely. **R3's -17% at d65536 does not
+reproduce**; under one engine start that cell is level with cold, which is what
+R5 found at d131072 (-0.6%) and what the campaign has now seen twice.
+
+The sequence over five depths is +, +, -27%, -1.2%, -0.6%, with the two figures
+that made the "inversion deepens at depth" story (-27% at d32768, -17% at
+d65536) both being 3-run readings from separate invocations, and the one of them
+that has been re-measured properly having collapsed to nothing. **The deep
+inversion should be treated as unreproduced until d32768 is re-run at runs=7.**
+The shallow-depth sign remains real and unconfounded — R6 flipped it with
+generation length alone in one invocation, and this round reproduces its
+negative tg128 half at -9.2% against R6's -5.63%.
+
+The ctx quietness rule is broken again, for the third time: ctx σ 7.8% against
+cold 5.5% at d16384. It should stay retired, as R6 said.
+
+### Side-predictions
+
+- **pp2048 @ d16384 620-645: HELD at 628.66** (σ 3.25), inside the flat series
+  that now reads 637.09 / 634.04 / 643.31 / 623.13 / 634.99 / 640.21 / 631.25 /
+  628.74 / 628.66 across seven invocations. **The session control passes**, which
+  is what licenses reading the -16.8% as a depth effect rather than a bad night.
+- **pp2048 @ d65536 112-125: HELD at 119.54** (σ 0.32) against R3's 118.59 —
+  a 0.8% reproduction of a figure from a different engine start.
+- **ctx_pp2048: HELD at both.** 5856.93 at d16384 (band 5750-5950) and 4013.59
+  at d65536 (band 3900-4100, R3 read 4004.76 — 0.2% apart).
+- **ttfr: HELD at both.** 3269.39 ms at d16384 (band 3100-3400, R6 read 3237.23)
+  and 17144.32 ms at d65536 (band 16000-18500, R3 read 17281.66). After R7 missed
+  both its ttfr bands low, this round hit both.
+- **tg128 @ d16384 106-116: HELD at 113.06**, and this is the round's second
+  control. It reproduces R6's 111.11 from a different engine start to within
+  1.8%, so the shallow anchor of the depth comparison is solid and the deep arm
+  is where the campaign's number was wrong.
+- **tg128 @ d65536 100-112: MISSED LOW at 94.10**, by 5.9% below the band.
+- **ctx_tg128 @ d65536 84-96: HELD at 92.98.** **ctx_tg128 @ d16384 98-112:
+  HELD at 102.68.**
+
+Eight side-predictions, seven held. The one that missed is the headline.
+
+### PROCESS FAILURE — the acceptance measurement was not taken
+
+The hypothesis promised MTP acceptance at both depths from the engine log, as
+R5 and R7 both captured, and called it "the cheap half of open question 6".
+**It was not captured.** sparkrun tore the container down at Step 3/3 and
+`/tmp/sparkrun_serve.log` went with it; llama-benchy's own per-run logs carry no
+SpecDecoding lines. So the round has no acceptance figures and the one
+unconfounded acceptance-vs-depth reading it was in a position to take is lost.
+Nothing was invented to fill the gap.
+
+This is a real cost, because acceptance is now the leading candidate mechanism
+for a depth term that has just turned out to be three times smaller than
+bandwidth predicts and to steepen with depth. **The fix is procedural and cheap:
+capture the engine log DURING the grid, not after** — R7 did exactly that and it
+produced that round's best finding. Queued as R8b, which needs no new benchmark
+if it rides along with any future deep round.
+
+### Standings
+
+**No new cell, and two claimed figures revised — one down hard.**
+
+- `tg128 @ d65536 c1`: **108.15 -> 94.10**, so the margin over the incumbent
+  16.48 falls from **6.56x to 5.71x**. Still one of the campaign's two widest
+  wins, and the worst of the seven runs (81.79) is still 4.96x, so the verdict
+  is nowhere near flipping. The figure was simply overstated by 13%.
+- `ctx_tg128 @ d65536 c1`: **89.76 -> 92.98**, margin over 20.70 rising from
+  **4.34x to 4.49x**. Worst run 77.33 is still 3.74x. This remains the only
+  `ctx_` cell in the campaign with a scraped board figure.
+- `tg128 @ d16384 c1` (the crowded cell, never a target): two independent 7-run
+  medians now exist, 111.11 and 113.06, 1.8% apart. RESULTS.md carries the
+  **pooled median of all 14 runs, 112.62**, which puts the reproduction gap
+  against the board's best vLLM NVFP4 entry at **-2.9%**, narrower again than
+  R6's -4.2%. Three of the fourteen runs clear 116.03.
+
+The direction of every claim in RESULTS.md is unchanged. One margin got 13%
+smaller and it is now written as it measured.
+
+### Telemetry
+
+900 samples through the round (`experiments/bench_3d8149654d1b/telemetry.log`):
+SM clock **2398 MHz median**, 2366-2411, against the same 3003 MHz ceiling;
+76 °C peak, 95.11 W peak. **Fifth consecutive session** at 2392-2398 (R4 2392,
+R5 2398, R6 2398, R7 2392, R8 2398). Open question 5 stays closed. No clock,
+power-policy, driver or kernel setting was touched, and no `apt` was run.
+
+### Config and epoch
+
+recipe.yaml UNMUTATED. The only override is the context length the deep arm
+requires, **`-o max_model_len=73728`** — config-identical to R3 at this depth,
+which is what makes the 108.15 -> 94.10 revision a like-for-like correction
+rather than a config difference. No `max_num_seqs` mutation; this is c1 and the
+recipe's 4 already satisfies `mns >= c`. sparkrun reported 2.81 GB of KV against
+75.0 GB available and a 26.7x context multiplier, so nothing was memory-bound.
+
+Epoch unchanged: `container_image_longterm_ref:
+ghcr.io/spark-arena/dgx-vllm-eugr-nightly:2026082102`, identical to
+R1/R3/R4/R5/R6/R7. The `Benchmark args:` echo was read before the run was
+allowed to proceed, per R5's process lesson, and confirmed
+`depth: [16384, 65536]`, `tg: [128]`, `concurrency: [1]`, `runs: 7`. Page cache
+again could not be cleared (no passwordless sudo), uniform across rounds.
+`completed_indices` covers both schedule entries, `failed_indices: []`,
+`crash_count: 0`.
+
+### Cost
+
+**322.5 s of grid time** (07:00:20 to 07:05:42 box time) against a predicted
+400-550 s — under the band, and the deep half dominated it as expected (69.6 s
+for 7 runs at d16384, 252.9 s for 7 at d65536). One engine start, no wasted
+invocations, about 11 minutes of wall clock, roughly 50k harness tokens. Four
+cells measured, none new, two claimed figures revised.
+
+**The round's value, in one line: it cost five minutes of box time to find that
+one of the campaign's two widest wins was overstated by 13% and that its
+five-round "depth is flat" reading was an artefact of three-run sampling.** The
+same instrument that produced the error — a 3-run median at a noisy depth —
+had already been flagged by R6, and running seven runs at both depths under one
+engine start is what turned a suspicion into a correction. Controls are what
+made it safe to believe: pp2048 landed inside a series it has now held across
+seven invocations, and the shallow arm reproduced R6 to 1.8%, so the fall
+belongs to the depth and not to the night.

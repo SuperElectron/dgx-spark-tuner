@@ -19,20 +19,40 @@ Cells taken, best figure we have, against the board:
 | tg32 @ d32768 c1 | 115.56 | 23.31 | **4.96x** |
 | tg32 @ d8192 c1 | 106.24 | sole entry, no number | uncontested |
 | tg128 @ d16384 c4 | 52.85 | 46.68 | **1.13x**, verified |
-| tg128 @ d65536 c1 | 108.15 | 16.48 | **6.56x** |
-| ctx_tg128 @ d65536 c1 | 89.76 | 20.70 | **4.34x** |
+| tg128 @ d65536 c1 | 94.10 | 16.48 | **5.71x** (revised down by R8, 7 runs) |
+| ctx_tg128 @ d65536 c1 | 92.98 | 20.70 | **4.49x** (revised by R8, 7 runs) |
 | tg128 @ d16384 c2 | 84.00 per-req / 168.0 agg | 325.44 (163.27 best vLLM NVFP4) | **UNITS DISPUTED — see below** |
 | tg128 @ d16384 c5 | 48.12 per-req / 240.6 agg | 428.95 (225.46 best vLLM NVFP4) | **UNITS DISPUTED — see below** |
 | tg128 @ d16384 c8 | 43.51 per-req / ~350 agg | not scraped | cannot be scored |
 | tg128 @ d16384 c16 | 40.47 per-req / ~440 agg | not scraped | cannot be scored |
 | **tg128 @ d131072 c1** | **77.13** | **81.60** | **0.95x — LOST** |
-| tg128 @ d16384 c1 (the crowded cell) | 111.11 | 116.03 best vLLM NVFP4 (188.47 overall) | 0.96x — not a target, see below |
+| tg128 @ d16384 c1 (the crowded cell) | 112.62 (pooled 14 runs, R6+R8) | 116.03 best vLLM NVFP4 (188.47 overall) | 0.97x — gap now -2.9%; not a target, see below |
+
+⚠️ **Round 8 revised the campaign's second-widest win DOWN by 13%, and killed
+the "depth is flat" reading.** `tg128 @ d65536 c1` was claimed at 108.15 on
+three runs; seven runs under one engine start put it at **94.10**, so the margin
+is **5.71x, not 6.56x**. It is still a large win — the worst of the seven runs,
+81.79, is 4.96x — but the figure was overstated. Same cause as R1's tg32: a
+3-run median at a noisy cell (σ 9.0% here). See the depth curve below.
 
 ⚠️ **The c4 win's MARGIN is now in question — its direction is not.** R7 found
 evidence that the board's c>1 tg figures are AGGREGATE, not per-request. Under
 that reading `tg128 @ d16384 c4` is 211.4 vs 46.68 = **4.53x**, not 1.13x. Either
 way it is a win. The units are queued for a zero-box-time board check (R5c) and
 nothing has been rewritten until that lands.
+
+**Round 8's headline, in four lines.** R8 put d16384 and d65536 under ONE engine
+start at runs=7 — the control R3's flatness claim always needed. (1) **Depth is
+NOT flat: tg128 c1 falls 16.8%** from 113.06 at d16384 to 94.10 at d65536, far
+outside the ±6% resolution the round declared before it ran. (2) **R3's 108.15
+was a lucky 3-run draw**, the second such figure this campaign has had to retire
+(R1's tg32 was the first), and the `tg128 @ d65536 c1` margin drops from 6.56x to
+**5.71x**. (3) The depth curve is now **monotone and steepening** — 113.06 /
+94.10 / 77.13 — which is what physics required all along; every measured "rise
+with depth" this campaign reported is gone. (4) **R3's -17% ctx inversion at
+d65536 did not reproduce** (-1.2% here), so open question 4's deep half should be
+treated as unmeasured. Controls passed: pp2048 at 628.66 sits inside a series
+held across seven invocations, and the d16384 arm reproduced R6 to 1.8%.
 
 **Round 7's headline, in three lines.** (1) The concurrency tail is NOT flat —
 per-request falls only 7.0% from c8 to c16, against 37% across the single c2->c4
@@ -77,20 +97,33 @@ into R7's units dispute above, so they are marked DISPUTED rather than scored.
 Round 7's two cells (c8, c16) have no board figures at all and cannot be scored
 at any units.
 
-The depth curve at tg128 c1, which is what R5 actually bought:
+The depth curve at tg128 c1 — **rewritten by R8, and it is monotone now:**
 
-| depth | ours | board top | margin |
-|---:|---:|---:|---|
-| 16384 | **111.11** (R6, 7 runs; was 102.2) | 116.03 (best vLLM NVFP4) | 0.96x — gap now -4.2%, was -12% |
-| 65536 | 108.15 | 16.48 | **6.56x** |
-| 131072 | 77.13 | 81.60 | 0.95x — LOST |
+| depth | ours | vs previous | per doubling | board top | margin |
+|---:|---:|---:|---:|---:|---|
+| 16384 | **113.06** (R8, 7 runs) | — | — | 116.03 (best vLLM NVFP4) | 0.97x — gap -2.9% |
+| 65536 | **94.10** (R8, 7 runs; was 108.15) | **-16.8%** (4x) | -8.8% | 16.48 | **5.71x** |
+| 131072 | 77.13 (R5, 3 runs) | **-18.0%** (2x) | -18.0% | 81.60 | 0.95x — LOST |
 
-R6 replaced the d16384 point with a 7-run median from this campaign's own engine.
-The curve is now 111.11 / 108.15 / 77.13, so the flatness across the first 4x is
-*tighter* than it looked (2.7% apart rather than 5.8%) and the fall to d131072 is
-31%. Flat from d16384 to d65536, then a 31% fall to d131072. The depth term finally
-bites, and it bites between d65536 and d131072 — the first genuine decline the
-campaign has measured on any axis.
+**Both R8 points come from ONE engine start and one thermal state**
+(`session_count: 1`), which is the whole reason to believe the first leg. The
+campaign read this curve as "flat, flat, then a cliff" for five rounds. It is
+not: it is a **decline that steepens with depth**, and the flatness was an
+artefact of three-run sampling at a cell whose σ is 9.0%. R3's 108.15 sat 13%
+above the 7-run median and has been retired.
+
+Physics required this. Per-step decode work is non-decreasing in context
+length, so the true curve cannot rise, and every "deeper is faster" reading this
+campaign produced was always going to be sampling. What survives is the
+*magnitude* argument: a pure-bandwidth model predicts **-44.8%** across
+d16384->d65536 (weights ~1.7 GB fixed, FP8 KV 0.62 -> 2.50 GB) and the measured
+fall is **-16.8%**, so the architecture — 30 of 40 layers are fixed-state Gated
+DeltaNet, only 10 hold KV, and in FP8 — makes the depth term about a third of
+naive. Not zero. Never was.
+
+The d131072 point is still a 3-run median from a separate invocation with σ
+9.3%, i.e. the same instrument that just failed at d65536. Treat the last leg
+as the least trustworthy part of the curve.
 
 ## Concurrency curve at tg128 @ d16384 — COMPLETE (R4 c1-c5, R7 c8+c16)
 
@@ -100,13 +133,18 @@ comparable — the `mns` column is here so you can check it.
 
 | c | mns | per-request | σ/med | aggregate | peak_thr | vs c1 | round |
 |---:|---:|---:|---:|---:|---:|---:|---|
-| 1 | 4 | 111.11 | 2.6% | 111.1 | 119 | 1.00x | R6 (runs=7) |
+| 1 | 4 | 111.11 | 2.6% | 111.1 | 119 | 1.00x | R6 (runs=7) — see note |
 | 2 | 4 | 84.00 | 1.4% | 168.0 | 182 | 1.51x | R4 |
 | 4 | 4 | 52.85 | 0.8% | 211.4 | 291 | 1.90x | R2 (pooled 6 runs) |
 | 5 | 4 | 45.60 | 0.6% | 228.0 | 282 | 2.05x | R4 — **queued, superseded** |
 | 5 | **5** | 48.12 | 0.15% | 240.6 | 265 | 2.17x | R4 (mutation) |
 | 8 | **8** | **43.51** | 0.51% | **~350** | 355 | ~3.2x | **R7 (mutation)** |
 | 16 | **16** | **40.47** | **0.15%** | **~440** | 440 | ~4.0x | **R7 (mutation)** |
+
+*Note on the c1 anchor.* R8 re-measured this cell at 113.06 (7 more runs), and
+the pooled 14-run median is 112.62. The ratio column above is left as computed
+against R6's 111.11 so the series stays internally consistent; using 112.62
+would move every `vs c1` figure by 1.4% and change nothing about the shape.
 
 **THE TAIL IS NOT FLAT — this is R7's headline and it refutes R7's own
 prediction.** Per-request fell only **-7.0%** across the c8 -> c16 doubling,
@@ -184,6 +222,18 @@ the quietest cells the campaign has measured, because raising c multiplies the
 sequences averaged per verify step — the same lever as lengthening the
 generation. Three runs is generous there.
 
+**R8 confirms this pricing on an independent sample, and shows what ignoring it
+costs.** In ONE engine start, d16384 came in at σ 5.5% and d65536 at σ 9.0%, so
+the deep cell really is the noisy one and not merely the unlucky one — the
+noise belongs to the depth, not to the session. At 9.0%, a 3-run median at
+d65536 has a standard error near 6.5%, and R3's three runs landed **13% high**.
+That single shortcut put a wrong number in this table for five rounds.
+**Anything at d65536 or deeper gets seven runs, and any 3-run figure at those
+depths should be read as provisional until it has been repeated.** R8's shallow
+arm also shows the bimodality directly: six of its seven runs span 112.51-114.36
+(σ 0.65) and the seventh reads 95.56 — a mode plus one low draw, which is
+exactly why the median is the verdict and the mean is not.
+
 **tg t/s is PER-REQUEST, not aggregate — and `per-request x c` is not always the
 aggregate either.** At c1 the two coincide. Through c8, `per-request x c` and
 `peak_throughput` agree within 2-8% and either serves. At c16 they diverge by
@@ -226,6 +276,10 @@ above before comparing any c>1 row against a board figure.**
 | bench_0954971b5dfa | 2026-08-22 | ctx_tg128 @ d16384 c8 (MUTATION max_num_seqs 8) | 47.75 | 0.05 | 13969.54 | not scraped | hold — ABOVE cold (+9.7%), and quieter (σ 0.10%) |
 | bench_a769c1142e15 | 2026-08-22 | tg128 @ d16384 c16 (**MUTATION max_num_seqs 16**) | 40.47 | 0.06 | 29751.25 | not scraped | hold — no incumbent. **Only -7.0% below c8 across a DOUBLING** — the tail is not flat. Aggregate **~440** (peak_throughput); ~~c x tg = 647.6~~ INVALID, it exceeds the peak — only 9 of 16 seqs were resident (max_num_batched_tokens 8192 gated admission). σ **0.15%**, the campaign's tightest tg measurement |
 | bench_a769c1142e15 | 2026-08-22 | ctx_tg128 @ d16384 c16 (MUTATION max_num_seqs 16) | 45.61 | 0.08 | 25310.86 | not scraped | hold — ABOVE cold (+12.7%); the ctx-vs-cold margin now GROWS monotonically with concurrency: +6.6% (c4), +6.5% (c5), +9.7% (c8), +12.7% (c16) |
+| bench_3d8149654d1b | 2026-08-22 | tg128 @ d16384 c1 (**runs=7**, depth control) | 113.06 | 6.20 | 3269.39 | 116.03 best vLLM NVFP4 | hold — reproduces R6's 111.11 to 1.8% from a SEPARATE engine start; pooled 14-run median 112.62, gap now **-2.9%**. Six of seven runs span 112.51-114.36 (σ 0.65); the seventh is 95.56 — a mode plus one low draw. Crowded cell, never a campaign target |
+| bench_3d8149654d1b | 2026-08-22 | tg128 @ d65536 c1 (**runs=7**, SAME engine start as the row above) | **94.10** | 8.44 | 17144.32 | 16.48 | **win — 5.71x incumbent; REVISES R3's 3-run 108.15 DOWN 13.0%**; worst of 7 runs 81.79 still 4.96x. **Depth is NOT flat: -16.8% below d16384 in the same invocation**, against a ±6% pre-declared resolution |
+| bench_3d8149654d1b | 2026-08-22 | ctx_tg128 @ d16384 c1 (runs=7) | 102.68 | 8.03 | 2809.36 | not scraped | hold — BELOW cold (-9.2%), same sign as R6's -5.63% at this depth and generation length; NOISIER than cold (7.8% vs 5.5%), the third break of the ctx-quietness rule |
+| bench_3d8149654d1b | 2026-08-22 | ctx_tg128 @ d65536 c1 (runs=7) | 92.98 | 8.07 | 16340.55 | 20.70 | **win — 4.49x incumbent** (was 4.34x at 89.76); worst of 7 runs 77.33 still 3.74x. **R3's -17% ctx inversion did NOT reproduce: -1.2% vs cold here** — treat the deep inversion as unmeasured |
 
 ## Prefill cells (pp2048)
 
@@ -264,3 +318,7 @@ the cached prefix and sit an order of magnitude higher.
 | bench_0954971b5dfa | 2026-08-22 | ctx_pp2048 @ d16384 c8 (MUTATION max_num_seqs 8) | 5796.89 | 1.72 | 13969.54 | not scraped | hold — in line with the 5772-5967 series at this depth |
 | bench_a769c1142e15 | 2026-08-22 | pp2048 @ d16384 c16 (MUTATION max_num_seqs 16) | 628.74 | 0.70 | 29751.25 | not scraped | hold — CONTROL PASSES at 4x R4's batch size: the c5 depression to 581.44 was a QUEUEING effect, not a batch-size effect. Strengthens R9's premise |
 | bench_a769c1142e15 | 2026-08-22 | ctx_pp2048 @ d16384 c16 (MUTATION max_num_seqs 16) | 5791.30 | 11.10 | 25310.86 | not scraped | hold — flat against the c8 arm (-0.1%) |
+| bench_3d8149654d1b | 2026-08-22 | pp2048 @ d16384 c1 (runs=7) | 628.66 | 3.25 | 3269.39 | not scraped | hold — **R8 SESSION CONTROL PASSES**: inside the flat d16384 series across seven invocations (637.09 / 634.04 / 643.31 / 623.13 / 634.99 / 640.21 / 631.25 / 628.74 / 628.66). This is what licenses reading R8's -16.8% as depth and not as a bad session |
+| bench_3d8149654d1b | 2026-08-22 | pp2048 @ d65536 c1 (runs=7) | 119.54 | 0.32 | 17144.32 | not scraped | hold — reproduces R3's 118.59 to 0.8% from a different engine start |
+| bench_3d8149654d1b | 2026-08-22 | ctx_pp2048 @ d16384 c1 (runs=7) | 5856.93 | 28.45 | 2809.36 | not scraped | hold — in line with the 5772-5967 series at this depth |
+| bench_3d8149654d1b | 2026-08-22 | ctx_pp2048 @ d65536 c1 (runs=7) | 4013.59 | 14.29 | 16340.55 | not scraped | hold — reproduces R3's 4004.76 to 0.2% |
