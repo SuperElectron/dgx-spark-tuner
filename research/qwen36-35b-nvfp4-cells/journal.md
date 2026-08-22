@@ -11031,3 +11031,233 @@ at c1 plus ~180 s starts. **~25–35 min wall estimated.**
 
 No `--arena` flag in any arm, no `sparkrun arena` subcommand of any kind. There
 is no login and nothing has ever been submitted.
+
+## Round 25 outcome — bench_c9518e3e96a3-r25-arm1-spec3 + bench_ddfac4b975ed-r25-arm2-spec4 + bench_93e361742c94-r25-arm3-spec5 (2026-08-22)
+
+**Three invocations, three engine starts, one sitting (20:09:49 → 20:24 UTC), all
+`crash_count: 0` / `session_count: 1`, all on image
+`dgx-vllm-eugr-nightly:2026082102` — the same epoch as every round since R1. The
+engine log was captured on all three arms (213 / 219 / 220 lines); telemetry
+sampled alongside arm 1 (420 samples). No `--arena` flag was used and no arena
+subcommand was run.**
+
+### THE HEADLINE, IN TWO LINES
+
+⚠ **THE CEILING BINDS AND RAISING IT DOES NOT PAY.** Mean acceptance length rises
+monotonically with `num_speculative_tokens` — **3.03 → 3.44 → 3.67** at k = 3 / 4
+/ 5 — so the premise of the round is **CONFIRMED as a mechanism**. But Phase-2
+`tg` **falls** at both raised values, **102.81 → 99.67 (−3.05%) → 98.30
+(−4.39%)**, which fires the pre-declared REFUTE clause (`tg ≤ +2.0%`). ⚠ **The
+fold rule did NOT fire at either value and `recipe.yaml` is untouched.**
+**`num_speculative_tokens: 3` is not merely inherited any more — it is measured,
+and it is at or above the optimum at this cell.**
+
+### PRIMARY — the mechanistic readout, from the engine's own `SpecDecoding metrics` line
+
+Medians of 7 logged samples per arm (bimodal, so medians, never means):
+
+| arm | `num_spec_tokens` | acceptance ceiling | **median acceptance length** | range | % of ceiling | median avg draft acceptance |
+|---|---:|---:|---:|---|---:|---:|
+| **arm1 CONTROL** | **3** (shipped) | 4.0 | **3.03** | 2.78 – 3.81 | **75.8%** | 67.6% |
+| **arm2** | 4 | 5.0 | **3.44** | 3.09 – 3.66 | **68.8%** | 61.0% |
+| **arm3** | 5 | 6.0 | **3.67** | 3.38 – 4.04 | **61.2%** | 53.4% |
+
+**The ceiling was a real constraint: +13.5% of accepted length from k = 3 → 4 and
++21.1% from k = 3 → 5**, monotone, three points, one session. The pre-declared
+refutation clause "accepted length failing to rise with the ceiling" did **not**
+fire. The arithmetic prediction written before the run — 3.64 at k = 4 and 4.05
+at k = 5, from a geometric model at `p ≈ 0.84` — over-predicted both, by 5.5% and
+9.4%, and the reason is in the next section.
+
+⚠ **AND THE PREMISE'S OTHER HALF IS CORRECTED ON THE RECORD.** The campaign
+analysis read acceptance at **89–93% of ceiling** and concluded the ceiling
+binds. Those figures are from **d32768 c1**. At **this** cell the control sits at
+**75.8%**, and every raised arm sits *lower* as a fraction of its own ceiling —
+68.8%, then 61.2%. **Raising the ceiling moves acceptance further from it, not
+closer.**
+
+The evidence lines themselves, one median sample per arm, from
+`experiments/<benchId>/engine-serve.log`:
+
+```
+arm1 (k=3): Mean acceptance length: 3.03, ... Per-position acceptance rate: 0.865, 0.658, 0.505, Avg Draft acceptance rate: 67.6%
+arm2 (k=4): Mean acceptance length: 3.44, ... Per-position acceptance rate: 0.840, 0.667, 0.493, 0.440, Avg Draft acceptance rate: 61.0%
+arm3 (k=5): Mean acceptance length: 3.67, ... Per-position acceptance rate: 0.818, 0.602, 0.443, 0.375, 0.284, Avg Draft acceptance rate: 53.4%
+```
+
+### THE MECHANISM, AND THE ENGINE SAID IT OUT LOUD BEFORE THE FIRST TOKEN
+
+`experiments/bench_ddfac4b975ed-r25-arm2-spec4/engine-serve.log`, at startup:
+
+```
+WARNING 08-22 20:15:18 [speculative.py:980] Enabling num_speculative_tokens > 1 will run multiple
+times of forward on same MTP layer, which may result in lower acceptance rate
+```
+
+**This model has ONE MTP module, run `k` times, not `k` modules.** Two measured
+consequences, both visible in the per-position rows above:
+
+1. **The FIRST position degrades as `k` rises — 0.865 → 0.840 → 0.818.** A
+   position-1 draft should not care how many more drafts follow it; it does,
+   because the same layer is being re-driven and the draft context changes. This
+   is the term the geometric model has no room for, and it is why the prediction
+   over-shot.
+2. **The added positions are nearly worthless.** Position 4 accepts at 0.440 and
+   position 5 at 0.284, against 0.818–0.865 at position 1. Each is still paid for
+   in full with an extra draft forward pass every verify step.
+
+**So the trade at c1 is: more accepted tokens per verify step, bought with a
+verify step that costs more than the extra tokens are worth.** `tg` falling
+while acceptance rises is exactly that statement in the board's own metric.
+
+### SECONDARY — throughput, and the identical-work controls that make it readable
+
+Cell `tg128 @ d16384 c1`, shipped configuration confirmed against `recipe.yaml`:
+`mnbt 65536`, `mns 4`, `kv-cache-dtype fp8`, `--moe-backend marlin`,
+`--attention-backend flashinfer`, prefix caching on. **runs=7, all figures
+MEDIANS.** ⚠ **This round is c1, so `tg_throughput` and `tg_req_throughput`
+COINCIDE — verified exactly equal in all 42 run records, all three arms — and
+nothing here is a batch aggregate. No figure is ever multiplied by concurrency.**
+
+**Phase 2** (a row without `ctx_`: charged 2048 while the engine processes
+`depth + 2048`):
+
+| arm | k | `tg` | σ/med | vs control | `peak_thr` | `pp` | `ttfr` (ms) |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| **arm1 control** | 3 | **102.81** | 7.64% | — | 114.0 | 639.40 | 3216.57 |
+| arm2 | 4 | 99.67 | 11.67% | **−3.05%** | 113.0 | 644.03 | 3193.94 |
+| arm3 | 5 | 98.30 | 10.71% | **−4.39%** | 110.0 | 646.84 | 3221.29 |
+
+**Phase 1, the `ctx_` context load** — the uncached pass, charged `depth` tokens:
+
+| arm | k | `ctx_tg` | σ/med | vs control | `peak_thr` | `ctx_pp` | `ttfr` (ms) |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| **arm1 control** | 3 | **99.41** | 13.68% | — | 108.0 | 5951.55 | 2767.06 |
+| arm2 | 4 | 100.63 | 11.63% | +1.23% | 109.0 | 6026.85 | 2732.78 |
+| arm3 | 5 | 86.81 | 19.14% | −12.67% | 104.0 | 6033.31 | 2771.08 |
+
+**THE IDENTICAL-WORK CONTROLS ARE THE TIGHTEST THIS CAMPAIGN HAS EVER PUT IN A
+MULTI-ARM ROUND, AND THEY EARN THEIR PLACE.** `pp`, `ctx_pp` and both `ttfr`
+figures are prefill quantities, which a speculative-decode lookahead cannot
+touch. Across the three arms they read:
+
+- `pp` **639.40 / 644.03 / 646.84** — spread **1.16%**
+- `ctx_pp` **5951.55 / 6026.85 / 6033.31** — spread **1.37%**
+- Phase-2 `ttfr` **3216.57 / 3193.94 / 3221.29** — spread **0.85%**
+- Phase-1 `ttfr` **2767.06 / 2732.78 / 2771.08** — spread **1.40%**
+
+**So the arm-to-arm systematic in THIS session is ~1%, not R23's ±5%**, and the
+three engines really are the same machine doing the same prefill work. That
+licenses reading the decode deltas as decode deltas — but it does **not** shrink
+`tg`'s own sampling error, which is what governs. ⚠ **Priced honestly: at
+σ/med ≈ 10% and runs=7 the median SE is 4.74% and the SE of a difference is
+6.70%, so −3.05% and −4.39% are 0.46 and 0.66 SE. Neither decline is
+individually significant.** What carries the round is that they are **negative,
+monotone across three points, and accompanied by a monotone `peak_throughput`
+decline (114 → 113 → 110)** while acceptance rose 21% — and above all that
+**neither comes close to the +10.0% the fold rule demanded.** The refutation
+does not need the declines to be real; it needs the gains to be absent, and they
+are absent.
+
+⚠ **arm3's Phase-1 −12.67% is NOT read as an effect.** Its σ/med is **19.14%**,
+the highest of the six phase-arm readings here, its own run list contains a
+132.54 against a 82.25, and its Phase-1 prefill controls moved +1.4% in the
+*opposite* direction. It is a noisy draw at the campaign's noisiest kind of
+reading and it is recorded, not interpreted.
+
+### PREFIX CACHE — R24's finding reproduced at a third and fourth lookahead size
+
+`Prefix cache hit rate: 0.0%` in **7 of 7** loaded samples on **every** arm —
+k = 3, k = 4 and k = 5. R24 established 0.0% at k = 1 and k = 3 and 42.1% with
+`--speculative-config` deleted. **R25 adds k = 4 and k = 5 to the zero side**, so
+the rule "any `--speculative-config` at all sets the hit rate to exactly 0.0%"
+now holds across **four** lookahead sizes and is no longer a two-point claim.
+Twenty-one more zero-hit samples for the campaign's running count.
+
+**A free by-product that matters for R24's ceiling arithmetic:** the attention
+block size read **2144 / 2160 / 2176** across the three arms. It moves with
+`num_speculative_tokens` as well as with the KV dtype — a third input to a
+constant this campaign spent seventeen rounds treating as fixed at 2144. Read it
+from the log, never assume it.
+
+### THE FOLD RULE — CHECKED CLAUSE BY CLAUSE, AND IT DID NOT FIRE
+
+| clause | arm2 (k=4) | arm3 (k=5) |
+|---|---|---|
+| 1. anchor cell, runs=7, same session as control | ✅ | ✅ |
+| 2. **Phase-2 `tg` ≥ +10.0%** | ❌ **−3.05%** | ❌ **−4.39%** |
+| 3. Phase-1 `ctx_tg` not worse than −5.0% | ✅ +1.23% | ❌ −12.67% |
+| 4. acceptance length rises above control's median | ✅ 3.44 | ✅ 3.67 |
+| 5. gates clean | ✅ | ✅ |
+
+**Clause 2 fails at both values, so NOTHING IS FOLDED and `recipe.yaml` is
+untouched.** Recorded plainly because the campaign's rule is that a rule which
+only binds when inconvenient is not a rule — and this time the rule cost nothing,
+which is the easy case.
+
+### WHAT THIS SETTLES, AND WHAT IT DOES NOT
+
+**Settles:** `num_speculative_tokens` is **not** the lever that moves concurrency
+1. It was the last untested one-dimensional knob in the recipe, the campaign
+analysis named it as the only remaining route to c1, and it is now measured in
+both directions — R24 took it down to 1 (at c4) and R25 takes it up to 4 and 5
+(at c1). **The shipped value 3 sits at or above the optimum at this cell.**
+
+**Does NOT settle:**
+
+- **`k = 2` was not measured.** `tg` is monotone decreasing over k = 3, 4, 5 and
+  the mechanism (one MTP layer re-driven, first-position acceptance decaying with
+  k) predicts the peak is at small k, so **k = 2 is the only untested point that
+  could still beat the shipped value** — and R24's k = 1 at c4 was 12.8% below
+  its own c4 control, which brackets it. ⚠ Cheap, one arm, but it is a **new
+  round with its own rule**, not an addendum to this one.
+- **`c > 1`.** This round licenses nothing at c4. At c4 the acceptance gain would
+  arrive with a batch span to amortise it against, which is the term that made
+  the c4 MTP trade read differently from the c1 prediction in R24.
+- **The R24 low anchor is at c4, not c1.** `bench_f6e4a4c51f71-r24-arm4-spec1`
+  read acceptance **1.85** (92.5% of its 2.0 ceiling) and `tg` **148.12** — but
+  at **`tg128 @ d16384 c4`**. Its **acceptance** figure extends this round's
+  curve, because per-request acceptance is a per-request property; its **`tg`**
+  figure does not, because c4's `tg` is a batch aggregate and c1's is not.
+  **Reused for the acceptance curve only, and the distinction is stated rather
+  than glossed.**
+
+**The acceptance curve, assembled from both rounds and labelled with its cell:**
+
+| `num_spec_tokens` | ceiling | median acceptance length | % of ceiling | cell | source |
+|---:|---:|---:|---:|---|---|
+| 1 | 2.0 | 1.85 | 92.5% | ⚠ d16384 **c4** | R24 arm4 |
+| 3 | 4.0 | 3.03 | 75.8% | d16384 c1 | R25 arm1 |
+| 4 | 5.0 | 3.44 | 68.8% | d16384 c1 | R25 arm2 |
+| 5 | 6.0 | 3.67 | 61.2% | d16384 c1 | R25 arm3 |
+
+### GATES — all pass
+
+- `crash_count: 0` and `session_count: 1` in all three `state.yaml`.
+- `Benchmark args:` echoed `pp: [2048]`, `depth: [16384]`, `tg: [128]`,
+  `concurrency: [1]`, `runs: 7` in every arm — checked, not assumed.
+- `tg_throughput == tg_req_throughput` exactly, in all 42 run records.
+- Image `dgx-vllm-eugr-nightly:2026082102`, `container_image_longterm_pinned:
+  true`, in all three — same epoch, no silent version change.
+- Engine log captured on **3 of 3 arms** (213 / 219 / 220 lines). Third
+  consecutive round with the instrument on every arm.
+- **Thermal and clock check, measured rather than assumed.** Arm-start idle
+  readings: 20:09:49Z **2398 MHz / 41 °C / 10.65 W**, 20:14:47Z **2398 / 49 /
+  11.69 W**, 20:20:00Z **2398 / 50 / 11.71 W**. **Identical SM clock at all
+  three starts.** Under load across arm 1's 420-sample telemetry the SM clock
+  sat at 2385–2411 MHz (2398 in 233 of 420 samples), **nothing throttled**. The
+  box warmed 9 °C across the session while `tg` fell 4.4% — but the two raised
+  arms ran on the *warmer* box and R23 measured the same 9 °C warming with no
+  throughput correlation, so **a thermal explanation is not supported**; it is
+  also not excluded to better than the ~1% the prefill controls bound.
+
+### COST LEDGER
+
+Box time: three engine starts and three c1 grids, 20:09:49 → ~20:24 UTC,
+**~15 minutes**, one idle box, no system settings touched, no `apt`, no
+`--arena`. Harness tokens: ~120k for read-in of the synthesis, RESULTS.md and
+the R24 block, three arms, the outcome block and the close-out. **Value: the
+campaign's last untested one-dimensional recipe knob is measured, the "the
+ceiling binds so there is headroom" reading is separated into a true half and a
+false half, and the shipped value is promoted from inherited to defended — for
+fifteen minutes of box time.**
