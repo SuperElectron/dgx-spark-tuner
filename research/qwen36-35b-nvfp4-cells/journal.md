@@ -3779,7 +3779,7 @@ standings.**
 > worked example — it did not assume the flag was inert at c1, it measured the
 > anchor at the new value before touching the file.
 
-Thirteen rounds plus three no-box-time passes, one model, one box, one image
+Seventeen rounds plus three no-box-time passes, one model, one box, one image
 epoch. Written to be read by someone who was not here; it assumes none of the
 rounds above have been read. Where a round's headline was later retracted, the
 retraction is here rather than the headline — and this campaign retracted a lot,
@@ -3839,7 +3839,25 @@ including two of its own widest wins and its central mechanism.
 > did not have, and its one thin claim (`ctx_tg @ d8192 c1`, 1.07x over best
 > vLLM+NVFP4) survived the audit and firms to **1.08x**.
 
-**The eight things that landed after the round-12 checkpoint, since they change
+> **NINTH REVISION — CURRENT AS OF 2026-08-22, post-R22. THIS IS THE ONE THAT
+> FOUND A NUISANCE VARIABLE UNDERNEATH THE CAMPAIGN'S OWN ARM-TO-ARM
+> ARITHMETIC.** R22 was the protection round R8c earned: two arms at
+> `ctx_tg32` / `tg32 @ d32768 c1`, **runs=14**, both budgets, with the arm order
+> **deliberately reversed** from R8c's as a free control. Its deltas are: the
+> **losses** bullet in the standings summary (`ctx_tg @ d32768 c1` closed as a
+> **LOSS**, the 1.002x dead heat retired), a **seventh entry** in *the central
+> methodological result*, the **three-run ledger** (a sixth defended-row
+> correction, −7.00%), the **σ section** (the campaign's noisiest-cell record
+> shown to be a draw), **retired claims 23 and 24**, the **budget-lever table**
+> in the HANDOFF (a fourth leg: inert at c1 on **both** phases at a second
+> depth), **open question 8** (the reproduction floor is an underestimate),
+> *what to run next* item 9 (done) and a **new item 10** (the A-B-B-A round,
+> now the top of the queue), an **R22 cost-ledger row and verdict**, and a
+> rewritten **HANDOFF**. **No standing changes side — still 8 won / 12 lost** —
+> and the round claimed no cell. **Its value is the position bias**, which
+> reaches every small cross-invocation delta in this file.
+
+**The ten things that landed after the round-12 checkpoint, since they change
 how the rest of this section reads:**
 
 - **R13** widened the contested `c4` cell and set a record margin — and
@@ -3896,14 +3914,20 @@ how the rest of this section reads:**
   the pooled 10-run **112.59 = 4.83x**), while `ctx_tg32 @ d32768 c1` **failed
   its band UPWARD by 31.64%** — R1's 84.03 was a 3-run **low** draw, the cell is
   **0.92x rather than the 0.72x carried for the whole campaign**, and on the
-  folded recipe it reads **117.65 against a 117.37 incumbent: a dead heat,
+  folded recipe it read **117.65 against a 117.37 incumbent: a dead heat,
   deliberately not claimed** on one measurement at 0.06 SE. **That is the
   campaign's largest single-figure retraction and it went the direction this
   section said retractions do not go** — see the rewritten three-run warning
-  below. By-products: budget inertness at c1 confirmed at a **second depth** on
-  Phase 2 (+0.37% against R11's +0.27%), the d32768 acceptance point measured at
-  **two** engine starts (87.0% / 88.9%), audit pairs 43–44, 23 more zero-hit
-  prefix-cache samples, and the campaign's **noisiest cell** (σ/med 24.20%).
+  below. ⚠ **SUPERSEDED IN THREE PLACES BY R22, WHICH RAN THE PROTECTION ROUND
+  R8c ASKED FOR: the 1.002x dead heat is RETIRED (117.65 → 109.41) and the cell
+  is a LOSS at 0.987x; R8c's "+6.36% budget effect on Phase 1" is REFUTED as a
+  position artefact; and the noisiest-cell record below is a sampling draw
+  (24.20% re-measures at 11.39%). R8c's refusal to claim the cell was correct
+  and is the reason the file did not carry a ninth win.** By-products that
+  stand: budget inertness at c1 confirmed at a **second depth** on Phase 2
+  (+0.37% against R11's +0.27%), the d32768 acceptance point measured at **two**
+  engine starts (87.0% / 88.9%), audit pairs 43–44, and 23 more zero-hit
+  prefix-cache samples.
 - **R21 ran last, and it is the round that turned R8c's correction into a
   pattern.** It worked the priority re-measure list: two arms at `runs=7`, each
   reproducing its row's original pre-fold configuration with an explicit
@@ -3922,6 +3946,35 @@ how the rest of this section reads:**
   firms to 1.08x, and **the last unaudited extreme in the phase-pair table
   collapsed** (+19.1% → +4.00% at d8192), so every extreme in that table has now
   been shown to be a 3-run artefact and none survived.
+- **R22 ran last, closed the last scoreable cell as a LOSS, and found the thing
+  that matters more than the cell.** Two arms at `ctx_tg32` / `tg32 @ d32768
+  c1`, **runs=14**, both budgets, one engine start each. **The cell is closed:**
+  R8c's 1.002x dead heat is **retired** — 117.65 re-measured at **109.41**
+  (−7.00%, inside its band) — the pooled 21-run median at the folded budget is
+  **113.37 = 0.966x**, the pooled 24-run median at the pre-fold budget is
+  **115.86 = 0.987x**, and the **pre-declared claim rule was not met by 6.1%**.
+  ⚠ **One arm read 122.80 = 1.046x, over the incumbent, and was NOT promoted**,
+  because it is one arm at one position in one session and promoting the best
+  arm of a round is the error the round existed to avoid. **The rule held when
+  it cost us the cell, which is the only time a rule is worth anything.** Counts
+  stay **8 won / 12 lost**, and no remaining cell has a route to a win that box
+  time can open.
+  **Its real output is the POSITION BIAS.** The order reversal was put in to
+  rule out a nuisance variable and instead found it: in **4 comparisons of 4**,
+  across two rounds and four engine starts, **the arm that ran SECOND read
+  higher** (+6.36, +0.37, +12.24, +6.89%, mean **+6.5%**), with the budgets
+  swapped between rounds so no budget effect can produce the pattern. ⚠ **It is
+  not established** — 4 comparisons from 2 sessions, **p = 0.25** on a sign test
+  — and that qualification travels with the finding everywhere it is used. It is
+  **not a clock effect** (2395.7 vs 2395.4 MHz) and **not thermal drift in the
+  obvious direction** (the second arm ran on a warmer box and was *faster*).
+  Consequences: R8c's "+6.36% budget effect" is **refuted**, and
+  position-controlled the budget is **inert at c1 on BOTH phases** (−1.08% /
+  +0.86%), closing that question; **the knee at 65536 is SAFE** (a 6.5% bias
+  cannot manufacture +233%); but **every arm-to-arm reading in this campaign at
+  or below ~7% is now suspect.** Free by-products: audit pairs 45–46, four
+  independent acceptance starts at d32768, the residency instrument recovered at
+  c1, 42 more zero-hit cache samples, and the σ record shown to be a draw.
 
 ### What the campaign set out to do, and whether the thesis held
 
@@ -3995,7 +4048,9 @@ with configurations in `RESULTS.md`; the shape of it:
   draw; seven runs at R5's own invocation read 81.32, the pooled 10-run median
   is **81.22 against 81.60 — short by 0.47%, which is 0.11 SE.** It is a dead
   heat we are on the wrong side of, it **did not flip, and it is NOT claimed** —
-  same discipline as R8c's 1.002x. ⚠ **Do not re-run it:** 0.11 SE is not
+  same discipline as R8c's 1.002x and R22's 1.046x, ⚠ **both of which have since
+  been shown right not to claim** — R22 re-measured that cell at runs=14 and it
+  came in a loss. ⚠ **Do not re-run it:** 0.11 SE is not
   resolvable at any budget this campaign can afford (halving the SE needs 4x the
   runs, at the most expensive depth on the box), and the old 5.5% figure was
   exactly the kind of near-miss that invites a tuning round. It has now been
@@ -4006,12 +4061,20 @@ with configurations in `RESULTS.md`; the shape of it:
   the cell top at 207.60 was never in play, but the row's *other* comparison —
   **1.07x over best vLLM+NVFP4, the campaign's thinnest surviving claim** —
   went into R21 at ~35% risk of withdrawal, **survived, and firms to 1.08x** on
-  the pooled 10-run 127.64)/0.64x/⚠ **0.92x — REVISED BY R8c
-  from 0.72x, which was wrong by 28%.** R1's 84.03 was a 3-run LOW draw; seven
-  runs at the identical condition read 110.61, and **on the folded recipe the
-  cell reads 117.65 against a 117.37 incumbent — a dead heat, deliberately NOT
-  claimed** (one measurement, 0.06 SE). It is now **the closest unclaimed cell in
-  the campaign** and is queued for a protection round at both budgets. All six prefill cells at
+  the pooled 10-run 127.64)/0.64x/⚠ **0.987x — CLOSED BY R22, and it is a LOSS.**
+  This cell has been revised twice in opposite directions and it is now the
+  best-sampled cell in the campaign, at **45 runs across four engine starts.**
+  R8c corrected R1's 3-run 84.03 **upward** to 0.92x; R22 then re-measured at
+  **runs=14 at both budgets** and the dead heat did not survive. **R8c's 117.65
+  reads 109.41 (−7.00%, inside its band), so the 1.002x is RETIRED**; the pooled
+  21-run median at the folded budget is **113.37 = 0.966x** and the pooled 24-run
+  median at the pre-fold budget is **115.86 = 0.987x**. R22's claim rule — pooled
+  must beat the 117.37 incumbent by more than 1 SE, i.e. clear **120.53** — was
+  **declared before the run and missed by 6.1%.** ⚠ **One arm read 122.80 =
+  1.046x and was NOT promoted**, on the same rule: it is a single second-position
+  arm, and **a rule that only binds when it is convenient is not a rule.** ⚠ **Do
+  not go back** — 0.987x is **0.34 SE** on the 24-run figure, the same
+  unresolvable position R21 priced out at d131072. All six prefill cells at
   c1, by 15x-200x. Nine of those twelve losses were scored for the first time by
   the synthesis pass, from a scrape R5b took on 2026-08-21 that no round ever
   carried into the standings.
@@ -4070,15 +4133,27 @@ systematic to a ±2.5% noise floor, and −5.14% on a σ/med 15.82% cell is 0.8
 standard errors. No verdict changes sign at that size, but no decimal should be
 quoted as if it were exact.
 
+⚠ **AND R22 PUT A FLOOR UNDER THAT WHICH IS HIGHER THAN THE ONE THIS SECTION HAS
+BEEN QUOTING.** R9c's **±2.5% reproduction floor** was measured between arms
+whose *positions* nobody was tracking. R22's order-reversal control found the
+arm running **second** reading higher in 4 comparisons of 4, mean **+6.5%**.
+The bias is **not established** (p = 0.25 on a sign test; see the R22 note at
+the top of this section), but if it is real then **±2.5% is an underestimate for
+any first-versus-later comparison**, and the honest working figure for a
+cross-invocation delta is closer to ~7%. **Do not quote a small cross-invocation
+delta in this file without checking which arm ran first.**
+
 ### THE CENTRAL METHODOLOGICAL RESULT — single-invocation controls kept overturning cross-invocation inference
 
 This is what the campaign found out that generalises past this model, this box
-and this board. **Six times**, a conclusion drawn by comparing numbers from
+and this board. **Seven times**, a conclusion drawn by comparing numbers from
 *different benchmark invocations*, or inferred from the instrument instead of
 read out of it, was overturned by a round that put the compared quantities under
-**one engine start** or read the source. Four of those six are below; R13's
+**one engine start** or read the source. Four of those seven are below; R13's
 refutation of the stagger model and R13c's reproduction sweep are the two the
-round-12 checkpoint could not include, and they follow.
+round-12 checkpoint could not include, and R22's position bias is the seventh
+and the one that reaches furthest — it says the *general* move, not one
+instance of it, carries a term nobody was pricing.
 
 - **R6 retired R1's `tg32 @ d16384 c1` figure.** R1 measured 129.32 against an
   inherited tg128 baseline of 102.2 and read a 26.5% generation-length effect.
@@ -4138,6 +4213,24 @@ round-12 checkpoint could not include, and they follow.
   motivated the round. The `pp2048` session control passed at five of six arms,
   so no night-wide slowdown is visible — but `pp` is prefill and `tg` is decode,
   so a decode-only session effect would not show there.
+- ⚠ **R22 found a nuisance term in the cross-invocation comparison itself, and
+  it is the seventh instance because it generalises the other six.** Every
+  entry above is a specific inference overturned; this one says the *method*
+  carries a bias. R22 reversed R8c's arm order purely as a free control and
+  found that **in 4 comparisons of 4, across two rounds and four engine starts,
+  the arm that ran SECOND read higher** — +6.36, +0.37, +12.24, +6.89%, mean
+  **+6.5%** — with the budgets swapped between the rounds, so no budget effect
+  can produce the pattern. **R8c's "+6.36% from the folded budget on Phase 1" is
+  refuted**; comparing first arm against first arm, the budget reads **−1.08%**
+  and **+0.86%**, inert on both phases. ⚠ **This is a suggestion, not a result:
+  4 comparisons from 2 sessions is p = 0.25 on a sign test and establishes
+  nothing.** It is not a clock effect (2395.7 vs 2395.4 MHz) and not thermal
+  drift in the obvious direction (the second arm ran warmer and faster). **The
+  round that settles it is an A-B-B-A within one session, ~25 min, and it is the
+  top of the queue.** What survives regardless: **the knee at 65536** and every
+  other large effect, because a 6.5% bias cannot manufacture +233%. What is put
+  in doubt: **every arm-to-arm reading at or below ~7%**, R13c's six-point
+  budget curve included.
 
 **And here is the part worth carrying forward as a warning — REWRITTEN BY R8c,
 BECAUSE THE VERSION THIS SECTION CARRIED WAS ITSELF A SMALL-SAMPLE ARTEFACT,
@@ -4186,11 +4279,20 @@ made, sorted by why the row was picked:
 
 | why the row was re-measured | rows | corrections |
 |---|---|---|
-| **it was a CLAIM somebody was defending** | R1 `tg32@d16384`, R3 `d65536`, R13 ×2 pooled, R8c arm E `tg32@d32768` | **−10.0%, −13.0%, −5.14%, −2.86%, −1.30%** — five for five DOWN |
+| **it was a CLAIM somebody was defending** | R1 `tg32@d16384`, R3 `d65536`, R13 ×2 pooled, R8c arm E `tg32@d32768`, ⚠ **R22 `ctx_tg32@d32768` mnbt 65536** | **−10.0%, −13.0%, −7.00%, −5.14%, −2.86%, −1.30%** — six for six DOWN |
 | **nobody had audited it** | R8c `ctx_tg32@d32768`, R21 ×4 | **+31.64%, +16.54%, +5.43%, +2.24%, +1.77%** — five for five UP |
 
-**Ten re-measurements, five each way, and the sign is predicted by motive rather
-than by anything about sampling.** This is ordinary regression to the mean seen
+⚠ **R22 ADDED THE SIXTH DEFENDED ROW AND IT BEHAVED EXACTLY AS THE RULE SAID.**
+R8c's 117.65 entered the file as an *unaudited* row and came in high; by the time
+R22 ran, this section's own header was calling it "the single most likely place
+for the standings to change", which made it a **defended** figure. R22 predicted
+**112, band 103–122** on that reasoning alone, before running, and it read
+**109.41**. **The direction was called in advance from the rule, and the rule is
+now the only thing in this file that has predicted a re-measurement's sign
+before the fact.**
+
+**Eleven re-measurements, six down and five up, and the sign is predicted by
+motive rather than by anything about sampling.** This is ordinary regression to the mean seen
 from both ends at once and it needs no mechanism: every extreme 3-run draw moves
 back toward the family value regardless of sign. What is not symmetric is
 **which** errors survive in a results file. A flattering draw becomes a claim, a
@@ -4276,6 +4378,19 @@ lever as lengthening the generation, and it is why c8 and c16 gave σ 0.51% and
   (3-9%). The sampling budget belongs to the number being read.
 - The distribution is a **mode plus low outliers**, not a spread (R8: six runs in
   112.51-114.36, the seventh at 95.56). Medians are the verdict; means are not.
+
+⚠ **AND R22 PUT A NUMBER ON "σ IS ITSELF A DRAW", WHICH THIS SECTION HAD ONLY
+ASSERTED.** This file recorded σ/med **24.20%** at `tg32 @ d32768 c1` as **"the
+noisiest cell the campaign has ever measured"**, from R8c arm F's 7 runs. R22
+re-measured the **identical configuration** at runs=14 and read **11.39%** — a
+factor of **2.1** at the same config, same box, same image. The practical rule:
+**a σ/med quoted from 7 runs carries roughly ±50% of itself as uncertainty**, so
+**this file's habit of naming "the noisiest cell in the campaign" from a single
+arm stops here** and no such record should be quoted again unless it rests on
+pooled runs across engine starts. The consequence for run budgets is unchanged
+and better founded: at ~10–13% σ/med, **runs=14 buys SE ≈ 3.0–4.5% and runs=7
+buys 4.5–7.5%** — which is why R22 said before running that it could not resolve
+a 0.24% margin, and why it did not pretend afterwards that it had.
 
 ### The two findings with the largest practical consequence
 
@@ -4658,7 +4773,11 @@ Kept together so a cold reader does not resurrect one of them from an early roun
    exists anywhere in this campaign's data, and none ever did.** Note the shape:
    every extreme in the campaign's inversion table was a 3-run pair and every
    7-run pair was moderate, and that was visible in the archives before R8c spent
-   a second of box time.
+   a second of box time. ⚠ **R22 confirmed the retirement on twice the sample and
+   at both budgets.** Measured *within* single engine starts, and therefore
+   immune to the position bias, the four well-sampled readings at this cell span
+   **−1.04% to +6.93%** (R8c E +0.90%, R8c F +6.93%, R22 G +3.91%, R22 H
+   −1.04%); R1's −27.28% sits **30 points outside all of them.**
 10. "The -12% reproduction gap" — R0/R1, mostly undersampling. It is **-2.9%** at
     the pooled 14-run figure, and 3 of those 14 runs clear the board entry.
 
@@ -4771,6 +4890,37 @@ anything the scheduler does:**
     dispersion measured across invocations, generalised, and wrong when measured
     inside one.
 
+**Added by R22. Two more, and the first of them is why every small number in this
+file now needs a second look:**
+
+23. **"The folded token budget is worth +6.36% on Phase 1 at `d32768 c1`"** —
+    R8c, which reported it as NOT ESTABLISHED under its own conjunction rule and
+    instructed that the protection round measure both budgets. **R22 did, and
+    REFUTED it: the quantity R8c measured was not the one it named.** R8c ran
+    arm E (8192) first and arm F (65536) second; R22 ran H (65536) first and G
+    (8192) second, and **in 4 comparisons of 4 the arm that ran SECOND read
+    higher** (+6.36, +0.37, +12.24, +6.89%, mean **+6.5%**). The budgets are
+    swapped between the rounds, so a budget effect cannot produce that pattern
+    and a position effect produces exactly it. **Comparing first arm against
+    first arm — the contrast where the warm-up state is matched — the budget
+    reads −1.08% (Phase 1) and +0.86% (Phase 2): inert on both, satisfying the
+    conjunction rule R11 and R8c both declared.** With R11's +0.27% at d16384,
+    **`max_num_batched_tokens` inertness at c1 is CLOSED and Phase 1's exception
+    is withdrawn.** ⚠ **The position effect that replaces it is itself NOT
+    established** — 4 comparisons, 2 sessions, **p = 0.25** — and is stated as a
+    suspicion everywhere this file uses it. Note the shape: this is the same
+    error as items 1, 2, 6 and 20 — a cross-invocation difference given a
+    physical name — but it is the first time the campaign identified the
+    *confound* rather than merely the wrong size.
+24. **"σ/med 24.20% at `tg32 @ d32768 c1` is the noisiest cell the campaign has
+    measured"** — R8c arm F, 7 runs, carried by this synthesis and by
+    `RESULTS.md`. **R22 re-measured the identical configuration at runs=14 and
+    read 11.39%** — a factor of 2.1. **A σ estimate from 7 runs is a draw like
+    any other and carries roughly ±50% of itself.** What is retired is not the
+    idea that this cell is noisy but the *record*: no "noisiest cell" claim
+    should be made from a single arm again. Note the shape: this is item 19 one
+    level up — a dispersion measured once and generalised.
+
 ### Refusals and broken gates — recorded, not dropped
 
 The campaign's rule is that a gate that breaks and an arm that cannot run are
@@ -4844,17 +4994,52 @@ round agent's own accounting; R1, R2 and R5b did not record theirs.
 | **R13c** | 1353.5 s | 6 | ~90k | all six `c4` headline rows protected and standing; two tightened to pooled 14-run medians; **the budget curve and its knee at 65536**; the ~2% single-measurement error bar | **the campaign's best round on evidence per second** — it is the only systematic protection sweep, it told R11 which value to fold, and it corrected two of R13's own notes |
 
 | **R21** | **815.5 s (784.5 + 31)** | 2 | ~95k | the **three-run audit**: four unaudited standings rows re-measured at runs=7, **all four moved UP**; `tg128 @ d131072 c1`'s recorded loss corrected **0.95x → 0.995x, a margin wrong by 10x**; R1's worst-sampled row (`tg32 @ d8192 c1`, σ/med 21.4%) **retired** and replaced; the campaign's thinnest claim (1.07x) **protected** and firmed to 1.08x; the last unaudited extreme in the phase-pair table collapsed (+19.1% → +4.00%); the audit-selection reading **confirmed five for five**; d131072 priced out for good | **yes — and see the verdict below, because the two arms are not the same purchase.** Arm B is arguably the best ratio in the campaign; Arm A is 96% of the bill and bought a correction rather than a cell |
-| **R8c** | 228.5 s (117.6 + 110.9) | 2 | ~85k | the campaign's **last deep inversion retired** (-27.3% -> +0.9%, retired claim 9 fully dead); a **protection sweep on two 3-run rows** — one stands, one **failed upward by 31.6%** and corrected a standings margin from 0.72x to 0.92x; **`ctx_tg @ d32768 c1` found to be a dead heat** at the folded budget; **budget inertness at c1 confirmed at a second depth** (+0.37% vs R11's +0.27%); the **d32768 acceptance point** measured at two engine starts; audit pairs 43-44; the campaign's **noisiest cell** (σ/med 24.20%) | **yes, high — and its most valuable output was the half nobody queued.** It was sold on a mechanism question that was already retired; re-framing it as a protection round before running is what made it worth the box. Four minutes of grid to retire a claim, correct a margin by 28% and surface the campaign's closest unclaimed cell |
+| **R8c** | 228.5 s (117.6 + 110.9) | 2 | ~85k | the campaign's **last deep inversion retired** (-27.3% -> +0.9%, retired claim 9 fully dead); a **protection sweep on two 3-run rows** — one stands, one **failed upward by 31.6%** and corrected a standings margin from 0.72x to 0.92x; **`ctx_tg @ d32768 c1` found to be a dead heat** at the folded budget; **budget inertness at c1 confirmed at a second depth** (+0.37% vs R11's +0.27%); the **d32768 acceptance point** measured at two engine starts; audit pairs 43-44; the campaign's **noisiest cell** (σ/med 24.20% — ⚠ **since retired by R22 as a draw**) | **yes, high — and its most valuable output was the half nobody queued.** It was sold on a mechanism question that was already retired; re-framing it as a protection round before running is what made it worth the box. Four minutes of grid to retire a claim, correct a margin by 28% and surface the campaign's closest unclaimed cell |
+| **R22** | 416.6 s (205.2 + 211.4) | 2 | ~105k | the campaign's **closest unclaimed cell settled as a LOSS** on a 45-run sample, with a **pre-declared claim rule honoured when it cost the cell** (one arm read 1.046x and was not promoted); **a POSITION BIAS found in cross-invocation arm comparisons** — 4 of 4, mean +6.5%, budgets swapped — which **refutes R8c's Phase-1 budget effect** and **closes budget inertness at c1 on both phases**; the deep-inversion retirement confirmed at double the sample and at both budgets; the **residency instrument recovered at c1** (19/19 loaded samples `(1,0)`); the **noisiest-cell record shown to be a sampling draw** (24.20% → 11.39%); audit pairs 45–46; four independent acceptance starts at d32768; 42 more zero-hit cache samples | **yes — and the verdict has to be argued, because it claimed no cell.** See below |
 
-**Totals:** ⚠ **UPDATED FOR R8c AND R21, WHICH WERE NOT IN THE PREVIOUS
-FIGURE.** ~7,668 s of measurement grid time (≈128 minutes) across 32 engine
-starts (R8c's two and R21's two on top of the 28 counted before, which had added
-R13d's one and R11's one to the 26 before that), of which two produced nothing
-(R5's aborted invocation, R9's arm B that refused to start). Roughly 7½ hours of
-box wall clock. ~1,105k harness tokens across the seventeen entries that
-recorded them (R1, R2, R5b and the `ctx_` correction pass did not). Twenty board
-cells scored, eighteen win rows and twelve loss rows carried. **Zero arena
-submissions — there is no login and none was ever attempted.**
+**Totals:** ⚠ **UPDATED FOR R22.** ~8,085 s of measurement grid time (≈135
+minutes) across 34 engine starts (R22's two on top of the 32 counted before,
+which had added R8c's two and R21's two to the 28 before them), of which two
+produced nothing (R5's aborted invocation, R9's arm B that refused to start).
+Roughly 7¾ hours of box wall clock. ~1,210k harness tokens across the eighteen
+entries that recorded them (R1, R2, R5b and the `ctx_` correction pass did not).
+Twenty board cells scored, eighteen win rows and twelve loss rows carried.
+**Zero arena submissions — there is no login and none was ever attempted.**
+
+**⚠ WAS R22 WORTH ITS BOX TIME? IT CLAIMED NO CELL AND INVALIDATED A CLASS OF
+COMPARISONS, AND THE ANSWER IS YES — BUT THE REASON MATTERS MORE THAN THE
+VERDICT.** This is the first round in the campaign whose output is entirely
+negative: it took no cell, moved no standing, changed no config, and its main
+result *subtracts* confidence from figures already published. Stated plainly:
+
+- **What it bought for 12.5 minutes of box wall clock.** The campaign's last
+  live prospect settled on its largest sample (45 runs, four engine starts), so
+  no future round will spend on it again — and R22's own advice is **do not go
+  back**, at 0.34 SE. A budget question R8c left explicitly open, **closed on
+  both phases**. And a **methodology finding that reaches every small
+  cross-invocation delta this file contains**, bought by a control that cost
+  *nothing* — reversing the order of two arms that had to run separately
+  anyway.
+- **The negative result is worth more than the cell would have been.** Had the
+  cell been claimed, the campaign would own a ninth win at 1.002x built on one
+  arm — precisely the figure R13c's and R21's rules exist to prevent. Instead it
+  owns a **pre-declared rule that bound when it hurt**, which is the only
+  evidence anyone has that the campaign's other refusals were principled rather
+  than lucky.
+- **Against that, the honest cost.** R22's finding puts **every arm-to-arm
+  reading at or below ~7% in this file in doubt**, R13c's six-point budget curve
+  included, and it does so on a sample too small to establish (p = 0.25). A
+  round that leaves the file *less* certain than it found it has to be judged on
+  whether it named the next measurement, and it did: **the A-B-B-A round, ~25
+  min, four invocations in one session**, which either establishes the bias or
+  kills it.
+- **The reusable lesson is the cheapest one in the ledger: the free control is
+  the one to add.** R22's headline came from reversing an order, which cost zero
+  seconds of grid and zero engine starts. R8c named this weakness and could not
+  address it; R22 addressed it by changing the sequence of two invocations it
+  was going to run regardless. **Every multi-arm round from here should reverse
+  or randomise arm order, because the price is nothing and the term it controls
+  is larger than most effects this campaign has chased.**
 
 **⚠ DOES THE THREE-RUN AUDIT TAKE THE BEST-VALUE TITLE FROM R6? ARM B DOES;
 THE ROUND AS A WHOLE DOES NOT — AND THE SPLIT IS THE POINT.** The question is
@@ -4923,11 +5108,11 @@ re-stored here. What follows is what was new at campaign level.
 
 **System.** `sparkrun` cannot clear the page cache (no passwordless sudo), so every round in the campaign carries the same uncontrolled cold-read state. Uniform across rounds, so it biases nothing between them, but it is a floor on how quiet any single measurement can be and it is not measured. Image epoch was pinned and identical (`dgx-vllm-eugr-nightly:2026082102`) in all thirteen rounds, R13c's six invocations included — checked per round in `state.yaml`, which is what makes any cross-round comparison legitimate at all. Note the console line saying it is distributing `:latest` is not evidence of an epoch change; `container_image_longterm_ref` is the field to read.
 
-**Serving stack.** The flag space is far more coupled than the campaign assumed: `--enable-prefix-caching` moves **four** things at once (`mamba_cache_mode`, the chunked-prefill requirement, `mamba_block_size`, and caching itself), and R9 spent an engine start discovering one of those the expensive way. R9b's practice — grep the validators out of the pinned image with a throwaway `docker run --rm --entrypoint bash` before writing the hypothesis — cost two minutes and cleared both arms in advance. Make it the default. *Headroom, UPDATED by R13c: `max_num_batched_tokens` was the campaign's largest unexplored axis and it has now been curved at c4 over six values, 8192 to 131072 — **the knee is 65536** and nothing above it buys anything. What remains unexplored is the same curve at OTHER concurrencies: at c16 even 32768 leaves the gate half-closed (`Running` 11 of 16) and sixteen d16384 prefills would need 262144, so the knee must move with `c` and nobody has measured where. A sweep is also cheaper than R13 warned — start cost tracks budget SIZE, not novelty, ~110–190 s across 8192–98304.* *Blindness: the scheduler log is the primary occupancy instrument and it was LOST in two of the four rounds that planned to use it; the working command is now proven (`docker exec <container> tail -f /tmp/sparkrun_serve.log`, verified live with `grep -c 'Running:'`).*
+**Serving stack.** The flag space is far more coupled than the campaign assumed: `--enable-prefix-caching` moves **four** things at once (`mamba_cache_mode`, the chunked-prefill requirement, `mamba_block_size`, and caching itself), and R9 spent an engine start discovering one of those the expensive way. R9b's practice — grep the validators out of the pinned image with a throwaway `docker run --rm --entrypoint bash` before writing the hypothesis — cost two minutes and cleared both arms in advance. Make it the default. *Headroom, UPDATED by R13c: `max_num_batched_tokens` was the campaign's largest unexplored axis and it has now been curved at c4 over six values, 8192 to 131072 — **the knee is 65536** and nothing above it buys anything. What remains unexplored is the same curve at OTHER concurrencies: at c16 even 32768 leaves the gate half-closed (`Running` 11 of 16) and sixteen d16384 prefills would need 262144, so the knee must move with `c` and nobody has measured where. A sweep is also cheaper than R13 warned — start cost tracks budget SIZE, not novelty, ~110–190 s across 8192–98304.* *Blindness: the scheduler log is the primary occupancy instrument and it was LOST in two of the four rounds that planned to use it; the working command is now proven (`docker exec <container> tail -f /tmp/sparkrun_serve.log`, verified live with `grep -c 'Running:'`).* ⚠ **R22 added the sampling half of that: R8c's arm F caught 11 of 11 samples reading `Running: 0` and could not carry its residency claim, which looked like a broken instrument and was cadence luck. At c1 the loaded window is narrow against the log's ~10 s cadence, so doubling to runs=14 recovered it — 19 loaded samples across two arms, 19 of them `(1,0)`, zero `Waiting` ever. Residency claims at c1 need runs=14, not runs=7.**
 
 **Model.** MTP acceptance is now measured against depth (R5), concurrency (R7), the token budget (R10), prefix caching and chunked prefill (R9b). It moves with **depth** and it moves with **concurrency**; it does **not** move with any scheduler knob — flat at 2.85-3.09 acceptance length and 61.7-69.8% across every scheduling change tested, in four consecutive rounds. That is a genuinely useful negative: **MTP acceptance is ruled out as an explanation for anything the scheduler does on this model**, and ⚠ **R13b extended it from the batch mean to the per-request spread** — within one batch, acceptance dispersion accounts for 1.085 of a 1.499 span. The tail of this paragraph used to read "which is why every c>1 result in this campaign resolves to admission behaviour"; **that is withdrawn — admission was refuted by R13. Every `c>1` result resolves to prefill-completion stagger**, per `THE MECHANISM CHAIN` above. *Headroom, and it is the largest un-taken lever in the campaign: acceptance collapses from 93.6% to 47.7% between d16384 and d131072, and with `num_speculative_tokens=3` halving acceptance roughly halves tokens per verify step. The MTP module ships BF16 in every Qwen3.6-35B quant arm, so it is a full-precision draft head being asked to draft over long contexts. Calibrating or fine-tuning it on long-context text is a quality-neutral throughput lever — needs a training-infra decision, and is out of scope for this loop.*
 
-**Workload and measurement.** The benchmark did not measure what the campaign thought, in three separate ways, and each was found by reading rather than by benchmarking: `tg_throughput` is a batch aggregate charged for admission stagger (R10); the `ctx_`/cold phase labels are inverted and the two phases are charged different token counts (R9b); prefix caching never hits (R9b). **A fourth was added after this pass: what the campaign called "admission stagger" is not admission (R13's `Waiting: 0`, confirmed by R13c's curve), so the mechanism behind three rounds of `c>1` interpretation was wrong as well as the units. ⚠ A fifth closed it: R13b supplied the replacement — prefill-completion stagger — and did it by writing a client of its own, because the field it needed goes to the HTTP response body and llama-benchy discards it. That is the fifth distinct way this campaign's chosen instrument turned out not to carry the quantity the round was about.** *Surprise: the headline metric is a **scheduling** measurement wearing a throughput's units — R12 moved it +67.6% at c2 while the sustained hardware ceiling moved -0.5%, and R13c reproduced that shape across a whole curve (`tg` +233%, `peak_thr` +14%).* *Blindness, and this is the sharpest one left: the prefill cells. Our `pp2048 @ d32768 c1` reads 295.71 against 4644.54 for another vLLM NVFP4 entry in the same board cell — a 15x gap — while our decode rate sits within 3% of what a like-for-like incumbent's headline requires. A 15x like-for-like gap in one metric family and a 3% gap in another is the signature of a definition mismatch, not of a slow box, and nobody has read `pp_throughput`'s definition or the board's prefill test-type mapping.*
+**Workload and measurement.** The benchmark did not measure what the campaign thought, in three separate ways, and each was found by reading rather than by benchmarking: `tg_throughput` is a batch aggregate charged for admission stagger (R10); the `ctx_`/cold phase labels are inverted and the two phases are charged different token counts (R9b); prefix caching never hits (R9b). **A fourth was added after this pass: what the campaign called "admission stagger" is not admission (R13's `Waiting: 0`, confirmed by R13c's curve), so the mechanism behind three rounds of `c>1` interpretation was wrong as well as the units. ⚠ A fifth closed it: R13b supplied the replacement — prefill-completion stagger — and did it by writing a client of its own, because the field it needed goes to the HTTP response body and llama-benchy discards it. That is the fifth distinct way this campaign's chosen instrument turned out not to carry the quantity the round was about.** ⚠ **AND R22 ADDED A SIXTH THAT IS ABOUT THE PROCEDURE RATHER THAN THE INSTRUMENT: comparing two arms across two engine starts carries a position term the campaign never priced — in 4 comparisons of 4 the second arm read higher, mean +6.5%, with budgets swapped so no budget effect explains it.** Not established (p = 0.25) and not a clock effect (2395.7 vs 2395.4 MHz), but if real it means the campaign's `±2.5% reproduction floor` was measured without controlling the one variable that moves it. *Headroom: the fix is free — reverse or randomise arm order in every multi-arm round, which is exactly how R22 found this.* *Blindness: no round before R22 recorded which arm ran first, so the position term cannot be retro-fitted to the archives — it can only be measured forward, by the A-B-B-A round.* *Surprise: the headline metric is a **scheduling** measurement wearing a throughput's units — R12 moved it +67.6% at c2 while the sustained hardware ceiling moved -0.5%, and R13c reproduced that shape across a whole curve (`tg` +233%, `peak_thr` +14%).* *Blindness, and this is the sharpest one left: the prefill cells. Our `pp2048 @ d32768 c1` reads 295.71 against 4644.54 for another vLLM NVFP4 entry in the same board cell — a 15x gap — while our decode rate sits within 3% of what a like-for-like incumbent's headline requires. A 15x like-for-like gap in one metric family and a 3% gap in another is the signature of a definition mismatch, not of a slow box, and nobody has read `pp_throughput`'s definition or the board's prefill test-type mapping.*
 
 **Process and cost.** Covered in the ledger above. One addition: the campaign's own predictions got sharply better once they were built by **decomposing the metric** rather than by scaling the previous round's percentages — R12 was the first round where both headline bands held, and it built them from `tg = c x tg_req / stagger`. R10 and R12 both wrote the same post-mortem: *the mechanism section was right and the numeric band was wrong, in the same document*, because the band was set by scaling while the generating model sat one paragraph above. That is a repeatable failure and it has a repeatable fix.
 
@@ -5003,7 +5188,13 @@ regularities; and one campaign `[COST]` total.
    endpoints are still R5's, from other invocations at other conditions, so only
    the middle point is controlled.** The measurement that closes this is
    unchanged: **R8b's two-depths-under-one-engine-start design** (item 6). Do not
-   treat the three-point table as the answer.
+   treat the three-point table as the answer. ⚠ **R22 doubled the middle point's
+   support without closing anything**: four independent engine starts at
+   `d32768 c1` now span **3.56–3.71 acceptance length and 85.4–90.2%**, the
+   campaign's best-reproduced quantity at this depth, and **the budget does not
+   move it** (the spread within a budget is as large as between budgets). The
+   endpoints are still R5's, still taken at other conditions. **Four points at
+   one depth do not fix two endpoints at others; open question 3 stays open.**
 4. **Is our `pp_throughput` the same quantity the board ranks?** A 15x
    like-for-like gap says probably not. Zero box time to check.
 5. **Does the c16 aggregate keep climbing past 16?** Still climbing at +24% (c8
@@ -5062,6 +5253,23 @@ regularities; and one campaign `[COST]` total.
    what a systematic looks like.** The run is now 8 low / 1 high / 1 low and the
    coin argument is materially weaker. Do not treat the −1.9% as a correction to
    apply.
+   ⚠ **RE-POSED BY R22, AND THIS IS NOW THE MOST CONSEQUENTIAL OPEN QUESTION IN
+   THE FILE.** The question was always "is there a systematic, and what sets its
+   sign". R22 supplies a candidate the earlier readings could not see because
+   nobody recorded it: **arm position**. In 4 comparisons of 4, the arm running
+   **second** read higher, mean **+6.5%** — larger than the ±2.5% floor this
+   question has been working with, and it would mean R9c's own arms (P first, N
+   later) were confounded in exactly the direction they read. ⚠ **Not
+   established: p = 0.25 on a sign test, and it is not a clock effect (2395.7 vs
+   2395.4 MHz) nor thermal drift in the obvious direction (the second arm ran
+   warmer and faster).** The cheap test this item asked for — "re-run one arm at
+   a different time of day and see whether the sign follows the clock or the
+   ordinal" — has been superseded by a better one that also answers it:
+   **the A-B-B-A round**, four invocations in one session at budgets
+   8192 / 65536 / 65536 / 8192, ~25 min. If position is real, arms 3 and 4 read
+   above arms 1 and 2 regardless of budget; if the budget matters, arms 2 and 3
+   separate from 1 and 4. **Until it runs, treat every cross-invocation delta at
+   or below ~7% in this file as unresolved.**
 
 ### What to run next, in priority order
 
@@ -5119,12 +5327,14 @@ regularities; and one campaign `[COST]` total.
    result was the protection half: `tg32 @ d32768 c1` **STANDS** (115.56 ->
    109.62, -5.14%; pooled 10-run **112.59 = 4.83x**), while
    `ctx_tg32 @ d32768 c1` **FAILED its band upward by 31.6%** — R1's 84.03 was a
-   3-run LOW draw, so that cell is **0.92x, not the 0.72x carried all campaign**,
-   and **1.002x on the folded recipe: a dead heat, deliberately not claimed.**
-   By-products: budget inertness at c1 confirmed at a **second depth** on Phase 2
-   (+0.37%, against R11's +0.27%), the d32768 acceptance point measured twice,
-   audit pairs 43-44, and the campaign's noisiest cell found (σ/med **24.20%**).
-   **A NEW ITEM IS EARNED — see item 9.** See the `Round 8c outcome` section.
+   3-run LOW draw, so that cell was **0.92x, not the 0.72x carried all
+   campaign**, and read **1.002x on the folded recipe: a dead heat, deliberately
+   not claimed.** ⚠ **BOTH TAILS SUPERSEDED BY R22 (item 9): the 1.002x is
+   RETIRED and the cell is a LOSS at 0.987x, and the σ/med 24.20% "noisiest
+   cell" record re-measures at 11.39%.** By-products that stand: budget
+   inertness at c1 confirmed at a **second depth** on Phase 2 (+0.37%, against
+   R11's +0.27%), the d32768 acceptance point measured twice, and audit pairs
+   43-44. See the `Round 8c outcome` section.
 6. **R8b's acceptance-vs-depth measurement**, riding along with any deep round —
    d16384 and d65536 under one engine start with the engine log captured. It is
    the missing half of open question 3 and it costs nothing extra now that the
@@ -5153,20 +5363,46 @@ regularities; and one campaign `[COST]` total.
    only — `recipe-r13b-perreq.yaml` must never be folded, and no row it produces
    is scoreable.
 
-9. **NEW, EARNED BY R8c, AND IT IS THE BEST SCOREABLE PROSPECT LEFT — protect
-   `ctx_tg @ d32768 c1` at BOTH budgets.** R8c found this cell reads **1.002x**
-   against its 117.37 incumbent on the folded recipe, having been carried as a
-   **0.72x** loss for the whole campaign on a 3-run low draw. **It is not
-   claimed and must not be** — one measurement, +0.24%, 0.06 SE — but it is a
-   **125-entry crowded cell** and the closest the campaign has come to an
-   unclaimed win. Two things make it a genuine prospect rather than a rounding
-   error: the cell's Phase-2 partner is a comfortable win at the same depth, and
-   the +6.36% arm F showed over arm E is **1.0 SE**, so it is live that the
-   folded budget really does help Phase 1 here. **Design: both budgets (8192 and
-   65536), runs=7 each — and given σ/med 9.4%, consider runs=14 at the 65536 arm,
-   because a 7-run median at this cell still carries ~3.8% and the margin to
-   resolve is 0.2%.** Two engine starts, ~10 min. This is the one place left
-   where box time can change the standings.
+9. ~~**Protect `ctx_tg @ d32768 c1` at BOTH budgets.**~~ ✅ **DONE — R22, and it
+   closed the cell as a LOSS.** Two arms at runs=14, both budgets, one engine
+   start each, with the arm order **reversed** from R8c's as a free control.
+   R8c's 117.65 read **109.41 (−7.00%, inside its band)**, so the **1.002x dead
+   heat is RETIRED**; the pooled 21-run median at the folded budget is
+   **113.37 = 0.966x** and the pooled 24-run median at the pre-fold budget is
+   **115.86 = 0.987x**. The pre-declared claim rule (clear **120.53**) was
+   **missed by 6.1%**, and ⚠ **the arm that read 1.046x was NOT promoted.**
+   **Counts stay 8 won / 12 lost and there is no cell left that box time can
+   flip.** ⚠ **Do not re-run it** — 0.987x is 0.34 SE on the campaign's largest
+   sample. The round's larger output became **item 10**. See the `Round 22
+   outcome` section.
+
+10. ⚠ **NEW, EARNED BY R22, AND IT IS NOW THE HIGHEST-VALUE ITEM IN THE QUEUE —
+    the A-B-B-A position-bias round.** R22's free order-reversal control found
+    that **in 4 comparisons of 4, across two rounds and four engine starts, the
+    arm running SECOND read higher** (mean **+6.5%**), with the budgets swapped
+    between rounds so no budget effect explains it. ⚠ **It is NOT established**
+    — 4 comparisons from 2 sessions, **p = 0.25** on a sign test — and that is
+    exactly why it must be settled rather than assumed: **it decides how much of
+    this campaign's small-delta arithmetic is real.**
+    **Design: four invocations in ONE session, same probe, budgets
+    8192 / 65536 / 65536 / 8192.** If position is real, arms 3 and 4 read above
+    arms 1 and 2 **regardless of budget**; if the budget matters, arms 2 and 3
+    separate from 1 and 4. The two readings are orthogonal, which is the point of
+    the design. Run it at the cell R22 measured (`ctx_tg32` / `tg32 @ d32768
+    c1`) so the four new arms pool with the 45 runs already there, and take the
+    per-arm run budget at **runs=7** — the contrast is a ~6.5% effect, not a
+    0.24% one, and four arms at runs=14 does not fit the estimate. **~25 min,
+    four engine starts.** ⚠ **Declare the reading thresholds before the run**, as
+    R22 did, and record which arm ran first in every row — no round before R22
+    did, which is why the bias cannot be retro-fitted to the archives.
+    **What rides on it:** if position is real, **R9c's ±2.5% reproduction floor
+    is an underestimate** and every arm-to-arm reading at or below ~7% in this
+    file — R13c's six-point budget curve included — needs a caveat attached
+    permanently. If it is not, the campaign's small deltas are restored and the
+    finding costs 25 minutes. **Either answer is worth the box time; that is
+    rare enough to put it first.** ⚠ **What does NOT ride on it: the knee at
+    65536.** A 6.5% bias cannot manufacture a +233% effect, and no large result
+    in this campaign is at risk.
 
 **R13 as originally queued — "c5 at `max_num_batched_tokens 81920`" — is DONE
 and it did not take the cell.** It ran at 98304, reached 0.73x, and its premise
@@ -5178,21 +5414,25 @@ was never tunable within the campaign's rules); any further budget increase at c
 `ctx_` rows being the cached pass; any round premised on admission stagger
 being the `c>1` mechanism; and ⚠ **any round premised on MTP acceptance
 dispersion explaining the span — refuted by R13b at 1.085 against 1.499, retired
-claim 22, and more acceptance telemetry will not change it.** **And nothing is ever submitted to the arena — there
-is no login.**
+claim 22, and more acceptance telemetry will not change it.** ⚠ **And, added by
+R22: any further repeat of `ctx_tg @ d32768 c1` — the cell is closed at 45 runs
+across four engine starts, the margin is 0.34 SE, and no affordable run budget
+resolves it. It joins `tg128 @ d131072 c1` in the priced-out category.**
+**And nothing is ever submitted to the arena — there is no login.**
 
 ### HANDOFF
 
 **Start here and stop here — this revised synthesis is the whole handoff, and as
-of 2026-08-22 (post-R21) it post-dates every round block in this file: the
-`ctx_` correction, R13c, R13d, **R11** (the fold), **R9c**, **R13b** (which
-closed the mechanism), **R8c**, and **R21**, the three-run audit, which ran
-last. You do not need to read them.**
+of 2026-08-22 (post-R22, its ninth revision) it post-dates every round block in
+this file: the `ctx_` correction, R13c, R13d, **R11** (the fold), **R9c**,
+**R13b** (which closed the mechanism), **R8c**, **R21** (the three-run audit),
+and **R22**, which ran last, closed the campaign's final scoreable cell and
+found the position bias. You do not need to read them.**
 
 **The state.** ⚠ `recipe.yaml` is **NO LONGER the one the campaign opened with**
 — R11 folded `max_num_batched_tokens: 65536` into it on 2026-08-22, the single
 change in the campaign's history, with the reasoning written into the file
-itself. Sixteen rounds plus three no-box-time passes are archived under
+itself. Seventeen rounds plus three no-box-time passes are archived under
 `experiments/`. `RESULTS.md` carries **8 won cells over 18 rows, 12 lost,
 and the unscoreable remainder**, every row naming its configuration and every
 retired figure marked as retired. **Eight of the eighteen win rows are now the config the
@@ -5246,10 +5486,13 @@ an effect nothing in this campaign could explain). Its **protection half is the
 part that matters**: `tg32 @ d32768 c1` **stands** and now carries a pooled
 10-run **4.83x**, while `ctx_tg32 @ d32768 c1` **failed its band upward by
 31.64%** — R1's 84.03 was a 3-run **low** draw, the cell is **0.92x, not the
-0.72x this file published for eleven rounds**, and on the folded recipe it reads
-**117.65 against a 117.37 incumbent**. That last figure is **a dead heat and is
-NOT claimed** (one measurement, +0.24%, 0.06 SE) — but it makes a 125-entry
-crowded cell the closest unclaimed cell in the campaign. **The reusable lesson
+0.72x this file published for eleven rounds**, and on the folded recipe it read
+**117.65 against a 117.37 incumbent**. That last figure was **a dead heat and
+was NOT claimed** (one measurement, +0.24%, 0.06 SE), which made a 125-entry
+crowded cell the closest unclaimed cell in the campaign. ⚠ **R22 then ran the
+protection round it earned and the dead heat did not survive: 117.65 → 109.41,
+the 1.002x is RETIRED, and the cell is a LOSS at 0.987x on 45 runs. R8c's
+refusal to claim it on one measurement was correct.** **The reusable lesson
 is in the rewritten three-run warning above: this section's own "every 3-run
 median came in high" rule was a small-sample artefact of which figures anyone
 bothered to re-measure, and the campaign made exactly the error it was
@@ -5274,6 +5517,76 @@ campaign's thinnest claim (`ctx_tg @ d8192 c1`, 1.07x over best vLLM+NVFP4)
 phase-pair table collapsed (+19.1% → +4.00%), so every extreme in that table is
 now known to have been a 3-run artefact.
 
+**⚠⚠ R22 IS DONE, IT RAN LAST, AND IT DID TWO THINGS — THE SECOND OF WHICH IS
+WHY A COLD READER SHOULD NOT QUOTE A SMALL NUMBER OUT OF THIS FILE WITHOUT
+READING THIS PARAGRAPH.**
+
+**(1) The last scoreable cell is closed, as a LOSS, and the rule held when it
+cost us the cell.** `ctx_tg @ d32768 c1` — the 125-entry cell R8c left at a
+**1.002x dead heat** — was re-measured at **runs=14 at both budgets**, one
+engine start each. R8c's 117.65 read **109.41 (−7.00%, inside its band)**, so
+**the 1.002x is RETIRED**; the pooled 21-run median at the folded budget is
+**113.37 = 0.966x**, the pooled 24-run median at the pre-fold budget is
+**115.86 = 0.987x**, and R22's **pre-declared claim rule** — pooled must beat
+117.37 by more than 1 SE, i.e. clear **120.53** — was **missed by 6.1%.**
+⚠ **One arm read 122.80 = 1.046x, comfortably over the incumbent and on the
+largest sample ever taken at that cell, and it was NOT promoted**, because it is
+one arm at one position in one session. **That refusal is the point of the
+round. The rule was written before the run precisely so it could not be moved
+afterwards, and a rule that only binds when it is convenient is not a rule.**
+**Counts stay 8 won / 12 lost**, the cell is closed at 45 runs across four
+engine starts, and ⚠ **there is no cell left that box time can flip.**
+
+**(2) The wider result, and it is the one that matters: THE CAMPAIGN'S
+ARM-TO-ARM COMPARISONS CARRY A POSITION BIAS.** R22 reversed R8c's arm order as
+a free control — the two budgets cannot share an engine start, so the comparison
+is unavoidably cross-invocation, and reversing the sequence cost nothing.
+**In 4 comparisons of 4, across two rounds and four engine starts, the arm that
+ran SECOND read higher** — +6.36, +0.37 (R8c, E→F) and +12.24, +6.89% (R22,
+H→G), **mean +6.5%**. The budgets were **swapped** between the two rounds, so no
+budget effect can produce that pattern; a position effect produces exactly it.
+⚠ **THIS IS NOT ESTABLISHED, AND THE QUALIFICATION TRAVELS WITH THE FINDING
+EVERYWHERE IT IS USED: four comparisons from two sessions, the two phases within
+a session are not independent, and treated as two independent sessions it is
+p = 0.25 on a sign test — which establishes nothing.** What it is not: **not a
+clock effect** (mean SM clock 2395.7 MHz vs 2395.4 MHz, identical to 0.01%) and
+**not thermal drift in the obvious direction** (the second arm ran ~1 minute
+later on a *warmer* box and was *faster*, the opposite of throttling).
+
+**What it settles.** R8c's **"+6.36% from the folded budget on Phase 1" is
+refuted** — the quantity R8c measured was not the one it named. Comparing first
+arm against first arm, where the warm-up state is matched, the budget reads
+**−1.08% (Phase 1)** and **+0.86% (Phase 2)**: **inert on both**, satisfying the
+conjunction rule R11 and R8c both declared. With R11's +0.27% at d16384,
+**`max_num_batched_tokens` inertness at c1 is CLOSED and Phase 1's exception is
+withdrawn.**
+
+**What survives and what does not — read both halves, not just the second.**
+✅ **The knee at 65536 is SAFE.** It rests on a **+233%** effect and a 6.5% bias
+cannot manufacture that; no large result in this campaign is at risk, and
+neither is any margin the standings rest on (the widest is 6.21x). ✅ So are the
+intra-invocation readings — anything measured with both quantities under one
+engine start, which is most of the mechanism story. ⚠ **What is in doubt is
+every arm-to-arm reading in this campaign at or below ~7%**, and that includes
+**R13c's six-point budget curve**, whose six invocations ran in sequence with
+nobody recording the order. ⚠ **R9c's ±2.5% "reproduction floor" is an
+underestimate for first-versus-later position.** **Never quote a small
+cross-invocation delta from this file without checking which arm ran first — and
+before R22, no round recorded it.**
+
+**The round that settles it is cheap and it is now the top of the queue: an
+A-B-B-A within one session**, four invocations, budgets
+8192 / 65536 / 65536 / 8192, **~25 min**. If position is real, arms 3 and 4 read
+above arms 1 and 2 regardless of budget; if the budget matters, arms 2 and 3
+separate from 1 and 4. See *what to run next* item 10.
+
+**One more thing R22 changed, and it is a housekeeping rule with teeth: σ
+figures from 7 runs are themselves draws.** This file recorded σ/med **24.20%**
+at `tg32 @ d32768 c1` as **"the noisiest cell in the campaign"**, from a single
+7-run arm. R22 re-measured the identical configuration at **11.39%** — a factor
+of 2.1. **A σ/med quoted from 7 runs carries roughly ±50% of itself, and this
+file's habit of naming noise records from a single arm stops here.**
+
 **⚠ AND HERE IS THE THING A COLD READER MOST NEEDS TO KNOW, BECAUSE IT REVERSES
 THE FILE'S OWN LONG-STANDING WARNING. THIS CAMPAIGN HAS BEEN UNDERSTATING ITS
 OWN RESULTS.** Five re-measurements of rows nobody was defending have now moved
@@ -5287,13 +5600,20 @@ modest sample from two rounds, the established thing is the *mechanism* (audit
 selection, not a sampling asymmetry), and any individual 3-run row can still go
 either way. See the three-run warning above for the full ledger.
 
-**Pick up at one of two places, and they are close in value.** (a)
-**`mnbt 65536 + mns 4` at c4** — the config the recipe now actually ships, which
-has been measured at c1 only. It is one invocation and it closes the last gap
-between what this file claims and what the recipe does. (b) ⚠ **the protection
-round on `ctx_tg @ d32768 c1` at BOTH budgets** (*what to run next* item 9) —
-**the one place left where box time can change the standings**, since the cell
-already reads 1.002x once. Then the zero-box-time prefill metric check. ✅ **The
+**Pick up at the A-B-B-A position-bias round, and it is not a close call any
+more.** ⚠ **(a) THE A-B-B-A ROUND** (*what to run next* item 10) — four
+invocations in one session at budgets 8192 / 65536 / 65536 / 8192, **~25 min**.
+It is first because **it decides how much of this campaign's small-delta
+arithmetic is real**, and because either answer is worth having: it establishes
+the bias, or it restores the file's sub-7% readings for 25 minutes of box time.
+(b) **`mnbt 65536 + mns 4` at c4** — the config the recipe now actually ships,
+which has been measured at c1 only. One invocation, and it closes the last gap
+between what this file claims and what the recipe does. ⚠ **Note that (b) is
+itself a cross-invocation comparison against rows measured at `mns 5`, so run it
+after (a) or reverse its arm order and record which ran first.** Then the
+zero-box-time prefill metric check. ✅ **The protection round on
+`ctx_tg @ d32768 c1` is DONE — R22 closed it as a LOSS and it must not be
+re-run.** ✅ **The
 priority re-measure list is worked and closed** — R21 cleared three of its four
 rows; the fourth (`tg128 @ d16384` c2 and c5) is declined on the record and
 labelled provisional, because both lose by more than 2x and no correction this
@@ -5309,14 +5629,20 @@ thing to carry out of this campaign:
 | **Inert at c1** | **R11** | `tg128 @ d16384 c1`, 8192 → 65536 (an **8x** budget rise): 112.62 → **112.92**, **+0.27%**, 0.07 SE | the flag does **nothing** at c1 |
 | **Knees at 65536 at c4** | **R13c** | `tg128 @ d16384 c4`, six budgets one invocation each: 52.07 → **173.34**, **+233%** to the knee | the flag is the **largest lever in the campaign** at c4 |
 | **Flat above the knee at c4** | **R13d** | 65536 → 131072 at c4: **−1.4%** on Phase 2; on the `ctx_` arm 5.96x → 6.15x → 6.21x | the ordering is **bookkeeping**, not the lever still paying |
+| ⚠ **Inert at c1 on BOTH phases, at a second depth** | **R22** | `ctx_tg32` / `tg32 @ d32768 c1`, 8192 vs 65536 with **arm position controlled** (first arm vs first arm): **−1.08%** and **+0.86%** | the c1 leg is **CLOSED**, and R8c's Phase-1 exception is **withdrawn** — it was a position artefact, not a budget effect |
 
 **Why the asymmetry, and it is mechanical rather than empirical.** The budget
 has only ever moved this metric by two routes, and R11 measured **both absent at
 c1**: residency read `(1,0)` in 4 of 4 loaded scheduler samples — one request
 cannot fail to be resident — and `tg == tg_req` exactly, so the span ratio is
 **1.000 by assignment** and there is no admission stagger for a bigger budget to
-remove. At `c>1` both routes are live, which is why the same flag is worth +233%
-at c4. **The corollary is the one that generalises: the +15.5% per-request rise
+remove. ⚠ **R22 measured both absent again at a second depth and at runs=14** —
+residency `(1,0)` in **19 of 19** loaded samples across both budgets, `tg ==
+tg_req` exactly in all four phase-arms — which is why its position-controlled
+reading of **−1.08% / +0.86%** is the expected one and R8c's +6.36% was not.
+**The structural argument predicted the result before the run, and that is the
+strongest form this campaign has for any of its conclusions.** At `c>1` both
+routes are live, which is why the same flag is worth +233% at c4. **The corollary is the one that generalises: the +15.5% per-request rise
 R13 read at `c>1` is a sharing artefact** (open question 13, closed by R11) —
 at c1, where `tg` *is* `tg_req`, the same change moves it +0.27%.
 
@@ -5347,7 +5673,7 @@ unambiguous: **three of its four largest results cost no box time and came from
 reading the instrument.** The fourth is still sitting unread in
 `pp_throughput`'s definition.
 
-**Carry these four rules, in this order.** (1) Put the compared quantities under
+**Carry these five rules, in this order.** (1) Put the compared quantities under
 one engine start; declare the resolution budget and reading thresholds before the
 run. (2) Read the instrument's source before spending the box. (3) ⚠ **REVISED
 BY R8c AND CONFIRMED BY R21 — treat any figure that was never repeated as wrong
@@ -5368,7 +5694,18 @@ over-generalised from ten-ish re-measurements. R13c's residual ~2% downward bias
 on figures that stand is a separate and much smaller effect. (4)
 Schedule a protection round: re-measure your
 published figures from a separate engine start against a pre-declared band, and
-pool same-config repeats instead of picking the better draw.
+pool same-config repeats instead of picking the better draw. (5) ⚠ **NEW, EARNED
+BY R22 — when two arms cannot share an engine start, REVERSE OR RANDOMISE THEIR
+ORDER, and record which ran first in every row.** R22's headline came from
+changing the sequence of two invocations it was going to run regardless: it cost
+**zero seconds of grid and zero engine starts**, and it found that the arm
+running second read higher in 4 comparisons of 4, mean **+6.5%** — larger than
+most effects this campaign chased. **It is not established** (p = 0.25) and it
+may yet be nothing, but the control that would have caught it earlier was free,
+and no round before R22 even recorded the order, which is why the bias cannot be
+retro-fitted to the archives. **A free control that can return more than the
+round's headline is the cheapest thing in experimental design; add it by
+default.**
 
 **And carry the campaign's honesty, because it is the point.** This campaign
 retired two of its own widest wins (R1's 4.60x, R3's 6.56x), withdrew its central
@@ -5397,8 +5734,30 @@ that four more unaudited rows all came in high — which means the file a reader
 is holding had been publishing losses it did not have.** A campaign that
 discovers it has been understating itself has to say so as plainly as it said
 the opposite, and it is said above. None of that is tidied away and none of it
-should be. **The standings survived all of it at 8 won and 12 lost, which is the
-reason to trust them.**
+should be.
+
+**And R22, which actually ran last, did the two hardest things on the list.**
+First it **honoured a rule that cost it the cell**: the claim threshold was
+written before the run, one arm came in at **1.046x over the incumbent on the
+largest sample ever taken at that cell**, and it was not promoted, because a
+rule that only binds when it is convenient is not a rule. The campaign ends with
+**8 won / 12 lost** rather than 9 / 11 for that reason alone, and that is the
+entry in this file that makes the other refusals credible. Second, and harder,
+it **published a finding that subtracts confidence from work already in this
+document**: its free order-reversal control suggests the campaign has been
+reading a **~6.5% position term as physics** in every arm-to-arm comparison it
+ever made, R13c's budget curve included. ⚠ **It said in the same breath that the
+finding is not established — 4 comparisons, p = 0.25 — rather than either
+burying it or overselling it**, named the one round that would settle it, and
+recorded the single place where it departed from a pre-declared procedure
+instead of quietly applying the convention. **A round whose main output is
+"several of our small numbers may not mean what we said" is the least
+comfortable thing a results file can contain, and it is at the top of the
+handoff rather than in a footnote.**
+
+**The standings survived all of it at 8 won and 12 lost, which is the
+reason to trust them — and the small deltas did not all survive, which is the
+reason to read the caveats attached to them.**
 
 ---
 
@@ -7781,7 +8140,7 @@ the third consecutive round where reading the image beat benchmarking it.
 
 **This is the end of the round log, not the end of the campaign's conclusions.**
 The authoritative handoff is the **`CAMPAIGN SYNTHESIS`** section above, revised
-2026-08-22 (**post-R21**, its eighth revision) to cover everything below it:
+2026-08-22 (**post-R22**, its ninth revision) to cover everything below it:
 R5c, R13, the `ctx_` phase-label correction, R13c, R13d, **R11 — including its
 fold and the config-epoch rule that follows from it** — **R9c**, whose
 prefix-caching decomposition rewrote the synthesis's numbered item 2 and whose
@@ -7789,10 +8148,12 @@ refused arm is recorded there, **R13b**, whose span-floor result produced the
 synthesis's `THE MECHANISM CHAIN` section, **R8c**, which retired the last deep
 inversion and **corrected a published loss upward from 0.72x to 0.92x**,
 rewriting the synthesis's three-run sampling warning in the process, and
-**R21**, which ran last and is the **three-run audit**: four more unaudited rows
-re-measured at runs=7, **all four moved UP**, and a recorded loss corrected from
-0.95x to **0.995x**. It is the only synthesis in this file and it must stay the
-only one — revise it, never append a second.
+**R21**, the **three-run audit**: four more unaudited rows re-measured at
+runs=7, **all four moved UP**, and a recorded loss corrected from 0.95x to
+**0.995x** — and **R22**, which ran last, closed `ctx_tg @ d32768 c1` as a
+**LOSS** on 45 runs and found the **position bias** in the campaign's
+arm-to-arm comparisons. It is the only synthesis in this file and it must stay
+the only one — revise it, never append a second.
 
 Short version for anyone who reads nothing else: **8 board cells won, 12 lost,
 nothing submitted to the arena and nothing ever will be. Widest margin **6.21x**
