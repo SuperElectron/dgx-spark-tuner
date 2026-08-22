@@ -10,7 +10,10 @@ with open(path) as fh:
 
 for bench in benchmarks:
     if len(benchmarks) > 1:
-        cell = {k: bench[k] for k in ("prompt_size", "generation_size", "concurrency", "depth") if k in bench}
+        keys = ("prompt_size", "response_size", "generation_size", "concurrency", "context_size", "depth")
+        cell = {k: bench[k] for k in keys if k in bench}
+        if bench.get("is_context_prefill_phase"):
+            cell["phase"] = "ctx_prefill"
         print(f"-- {cell}")
     for key in ("tg_throughput", "pp_throughput", "ttfr"):
         if key not in bench:

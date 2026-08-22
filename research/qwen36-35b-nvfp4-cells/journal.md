@@ -51,3 +51,90 @@ tg 32 to fit in one sequence.
 Probe: -b tg=32 -b depth=8192,16384,32768 -b concurrency=1 -b runs=3
 (pp=2048 rides along by default, so pp2048 @ dN and the ctx_ prefix-caching
 phases are measured in the same run).
+
+## Round 1 outcome — bench_25a0e7f36ab0 (2026-08-21)
+
+Medians, three runs per cell (means in parentheses — recorded only to show how
+far apart the two live here):
+
+| Cell | tg median | (mean) | σ | runs |
+|---|---:|---:|---:|---|
+| tg32 @ d8192 c1 | 106.24 | (102.55) | 22.72 | 128.35 / 106.24 / 73.07 |
+| tg32 @ d16384 c1 | 129.32 | (135.19) | 18.38 | 160.05 / 116.19 / 129.32 |
+| tg32 @ d32768 c1 | 115.56 | (119.14) | 10.40 | 133.29 / 108.57 / 115.56 |
+| ctx_tg32 @ d8192 c1 | 126.52 | (130.76) | 7.94 | 126.52 / 123.88 / 141.88 |
+| ctx_tg32 @ d16384 c1 | 130.16 | (128.94) | 3.01 | 130.16 / 124.81 / 131.86 |
+| ctx_tg32 @ d32768 c1 | 84.03 | (90.26) | 10.69 | 84.03 / 105.31 / 81.45 |
+
+Verdict: the two published tg32 cells fall by a wide margin. d16384 129.32 vs
+28.11 is 4.60x; d32768 115.56 vs 23.31 is 4.96x. d8192 has a sole entry with no
+published number, so we take the cell without a figure to beat. Margins that
+size do not need the verify repeat the discipline requires at ~2x — the worst
+single run of any cell (73.07) still clears every incumbent by 2.6x or more.
+
+Hypothesis refuted, in the direction that matters. The prediction was 85-100 at
+d16384, "somewhat below" the tg128 @ d16384 c1 figure of 102.2, on the argument
+that fixed per-request overhead amortizes over 4x fewer tokens. It came in
+ABOVE that figure at every depth. Whatever tg32 costs in amortization, it is
+smaller than the effect running the other way. Two candidate mechanisms, neither
+settled by this round: a 32-token generation is short enough that a good MTP
+acceptance streak carries the whole measurement instead of regressing to the
+mean, or the tg128 @ d16384 c1 baseline of 102.2 is itself depressed and the
+-12% reproduction gap is the same phenomenon seen from the other side. Open
+question 1 in QUEUE.md stands, unresolved and now better posed.
+
+Depth curve, open question 3: medians did NOT restore monotonicity. 106.24 <
+129.32 > 115.56 keeps the same shape the means had, with d8192 — the shallowest,
+cheapest point — the slowest of the three. The KV-depth argument in the
+hypothesis predicts a gentle monotonic decline, and no reading of it produces a
+dip at the shallow end. The honest reading is that three runs cannot rank these
+depths: d8192 spans 73.07 to 128.35 within one cell, a 1.76x spread, and its
+σ of 22.72 is larger than the entire spread between the three cell medians. The
+curve shape is not measured yet. It needs runs=7+ at fixed depth, not more
+depths.
+
+Means and medians disagree in direction here, which is the whole reason for the
+rule: d8192 mean 102.55 sits BELOW its median 106.24 while d16384 mean 135.19
+sits ABOVE its median 129.32. Ranking the depths by mean spreads them further
+apart than they are and flatters d16384 specifically.
+
+The ctx_ prefix-caching phases are separate board cells and we measured three of
+them, so they are recorded. Their numbers behave unlike the main phase: at d8192
+and d16384 the cached-prefix decode is level with or above the cold one (126.52
+and 130.16), and its σ is far lower (7.94, 3.01) — with the prefill work removed,
+the measurement is much quieter. At d32768 it inverts: 84.03, well below the
+cold 115.56 and the noisiest of the three ctx points. Board figures for ctx_tg
+at these depths were not scraped, so no verdict is claimed; only ctx_tg @ d65536
+was captured (20.70) and that cell is round 3.
+
+Instrument fixed mid-round: parse-round.py labelled all six benchmarks with an
+identical header, printing only prompt_size and concurrency — neither of which
+varies in this probe. The six cells were indistinguishable in its output and had
+to be matched up by hand against the raw JSON. It now prints response_size,
+context_size, and a `phase: ctx_prefill` marker. Any earlier round parsed with
+the old script and read as a single cell should be re-parsed.
+
+## Round 2 hypothesis — tg128 @ d16384 c4
+
+Cell: tg128 @ d16384, concurrency 4, runs=3. Incumbent 46.68 (Gemma-4-26B-A4B-
+NVFP4) with 8 entries — the most contested cell in the campaign, and the only
+one where the board's number comes from a field rather than a lone straggler.
+
+The recipe already carries --max-num-seqs 4, so four concurrent requests fit the
+scheduler exactly with no queueing and no config change; this is the incumbent
+recipe under a wider probe, not a mutation. A 35B-A3B MoE at c1 leaves the GPU
+badly underfed — 3B active parameters per token means the decode step is
+memory-bound on weight reads that four sequences share for free. Expect the
+aggregate to scale well but not linearly: 180-260 against our c1 median of
+102.2, i.e. roughly 2-2.5x, with batching gains offset by MTP acceptance
+dropping as the speculative draft has to satisfy four divergent sequences.
+
+Against 46.68 that is a 4-5x margin, wide enough that the verify repeat should
+not be needed. If it lands under ~93 (2x incumbent) it gets the identical-config
+repeat before any win is claimed.
+
+One thing to watch that round 1 makes likely: c4 should be QUIETER than c1.
+Averaging over four sequences per step means a single lucky or unlucky
+speculative streak moves the aggregate much less than it does at c1, where σ ran
+to 22% of the median. If σ stays as wide at c4 as it was at c1, the noise is not
+MTP acceptance and the bimodality story needs rewriting.
