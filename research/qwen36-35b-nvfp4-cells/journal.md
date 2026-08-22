@@ -10591,3 +10591,286 @@ single-module lookahead.**
   finding is a latency/prefill trade, not an upgrade.
 - **Still no fold this round, whatever arm4 reads.** A fold needs its own round
   and a c1 anchor.
+
+## Round 24 outcome — bench_647b25c13d9f-r24-arm1-control + bench_064550e26525-r24-arm2-kvauto + bench_064fc6128314-r24-arm3-specoff + bench_f6e4a4c51f71-r24-arm4-spec1 (2026-08-22)
+
+**Four invocations, four engine starts, one sitting (19:33:37 → 19:58 UTC), all
+`crash_count: 0` / `session_count: 1`, all on image
+`dgx-vllm-eugr-nightly:2026082102` — the same epoch as every round since R1. The
+engine log was captured on all four arms (242 / 254 / 195 / 248 lines). No
+`--arena` flag was used and no arena subcommand was run.**
+
+### THE HEADLINE, IN ONE LINE
+
+⚠ **THE CULPRIT IS MTP SPECULATIVE DECODING, AND IT IS ALL-OR-NOTHING. Deleting
+`--speculative-config` takes the prefix-cache hit rate from 0.0% to 42.1% — which
+is the structural ceiling, exactly — and it is the ONLY thing that does.
+`kv_cache_dtype auto` does not. `num_speculative_tokens: 1` does not. The
+campaign's oldest open defect is closed after seventeen rounds and 220+ zero-hit
+samples.**
+
+### PRIMARY — the engine's own hit-rate line, per arm
+
+| arm | mutation | `Prefix cache hit rate` samples | verdict |
+|---|---|---|---|
+| **arm1 CONTROL** | shipped `recipe.yaml` | `0.0%` × 11 of 11 | cache dead |
+| **arm2 KV DTYPE** | `--kv-cache-dtype auto` | `0.0%` × 11 of 11 | **not the culprit** |
+| **arm3 SPEC OFF** | `--speculative-config` removed | **`42.1%` × 5, `36.4%` × 1**, `0.0%` × 2 (pre-load) | **THE CULPRIT** |
+| **arm4 SPEC 1** | `num_speculative_tokens: 1` | `0.0%` × 12 of 12 | **not a cheaper fix** |
+
+The evidence lines themselves, from
+`experiments/bench_064fc6128314-r24-arm3-specoff/engine-serve.log`:
+
+```
+19:49:25 ... Avg prompt throughput: 6553.2 tokens/s, Running: 4 reqs, Waiting: 0 reqs, GPU KV cache usage: 1.4%, Prefix cache hit rate: 0.0%
+19:49:35 ... Avg prompt throughput: 1504.1 tokens/s, Running: 0 reqs, Waiting: 0 reqs, GPU KV cache usage: 0.0%, Prefix cache hit rate: 42.1%
+19:49:45 ... Avg prompt throughput: 6554.3 tokens/s, Running: 4 reqs, Waiting: 0 reqs, GPU KV cache usage: 1.9%, Prefix cache hit rate: 42.1%
+19:50:15 ... Avg prompt throughput: 1504.2 tokens/s, Running: 4 reqs, Waiting: 0 reqs, GPU KV cache usage: 1.4%, Prefix cache hit rate: 36.4%
+19:50:25 ... Avg prompt throughput: 8058.5 tokens/s, Running: 4 reqs, Waiting: 0 reqs, GPU KV cache usage: 1.5%, Prefix cache hit rate: 42.1%
+```
+
+and the control's, from `bench_647b25c13d9f-r24-arm1-control/engine-serve.log` —
+the same line, same cell, same session, eleven times: `Prefix cache hit rate: 0.0%`.
+
+### ⚠ THE PRE-DECLARED CONFIRM THRESHOLD WAS MIS-SET, AND IT IS RECORDED AS AN ERROR RATHER THAN REINTERPRETED
+
+The hypothesis block declared **CONFIRM at > 50%** and arm 3 read **42.1%**, so
+**by the letter of the rule this round landed in its own DEAD ZONE.** That is
+stated first, because the campaign's rule is that a rule which only binds when
+inconvenient is not a rule.
+
+**But the 50% was unreachable by construction, and the arithmetic says so with no
+free parameters.** vLLM's counter is cumulative over **both** benchy phases, and
+Phase 1 is the *uncached* context load by design — it is the pass that populates
+the cache and can never hit it. Per request, with arm 3's attention block size of
+**2096** (`Setting attention block size to 2096`, in its own log):
+
+```
+eligible hit  = floor(16384 / 2096) x 2096 = 7 x 2096 = 14672 tokens
+queried       = Phase 1 (16384) + Phase 2 (16384 + 2048) = 34816 tokens
+ceiling       = 14672 / 34816 = 42.14%
+observed      = 42.1%
+```
+
+**The arm hit its structural maximum to within the log's one printed decimal.**
+The cache is not partially working in arm 3; it is working perfectly, on 100% of
+the tokens that a 2096-aligned prefix makes eligible. The declared threshold was
+carried over from §2.7's "~81% alignment ceiling", which is the ceiling for the
+**Phase-2 pass alone** and not for the counter the round actually read. **The
+error was in the declaration, not in the arm.**
+
+So the round's answer is recorded in two parts, and both belong in the record:
+**by the declared numeric rule, DEAD ZONE; by the question the round was built to
+answer — which flag breaks the cache — CONFIRMED, MTP, unambiguously**, on a
+0.0%-vs-42.1% contrast corroborated by three independent secondary readings that
+were declared in advance and all three held.
+
+### SECONDARY — and the pre-declared discriminator held exactly
+
+Cell `tg128 @ d16384 c4`, `mnbt 65536`, `mns 4`, runs=3, medians. `span` is the
+campaign's `c x tg_req / tg` identity.
+
+**Phase 2** (charged 2048 while the engine processes `depth + 2048`):
+
+| arm | hit rate | `tg` | σ/med | `tg_req` | `peak_thr` | `pp` | `ttfr` | span |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| **arm1 control** | 0.0% | **169.89** | 3.16% | 63.93 | 309 | **677.37** | **12080.79** | 1.5053 |
+| **arm2 kv auto** | 0.0% | 179.15 | 7.15% | 54.30 | 265 | 719.56 | 11374.55 | 1.2124 |
+| **arm3 spec off** | **42.1%** | 143.24 | 2.19% | 42.57 | 189 | **2823.72** | **2885.83** | 1.1888 |
+| **arm4 spec 1** | 0.0% | 148.12 | 1.22% | 53.26 | 236 | 681.94 | 12003.69 | 1.4383 |
+
+**Phase 1, the `ctx_` context load** — the uncached pass, charged `depth` tokens:
+
+| arm | `ctx_tg` | σ/med | `tg_req` | `peak_thr` | `ctx_pp` | `ttfr` | span |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| arm1 control | **175.59** | 1.42% | 64.05 | 304 | 6249.38 | 10462.58 | 1.4590 |
+| arm2 kv auto | 194.14 | 2.09% | 57.87 | 264 | 6614.32 | 9885.16 | 1.1924 |
+| arm3 spec off | 144.62 | 1.39% | 42.72 | 193 | 6547.64 | 9979.72 | 1.1815 |
+| arm4 spec 1 | 152.81 | 0.59% | 55.25 | 253 | 6256.57 | 10457.96 | 1.4462 |
+
+**THE DECLARED DISCRIMINATOR WAS "Phase 2 MOVES AND PHASE 1 DOES NOT", AND THAT
+IS EXACTLY WHAT ARM 3 DID:**
+
+- **`pp`: Phase 2 677.37 → 2823.72 = 4.17x. Phase 1 6249.38 → 6547.64 = +4.8%,
+  i.e. flat.** Prefill work collapses on the pass that can hit the cache and is
+  untouched on the pass that populates it.
+- **`ttfr`: Phase 2 12080.79 → 2885.83 ms = 4.19x faster. Phase 1 10462.58 →
+  9979.72 ms = −4.6%, i.e. flat.**
+- Two independent quantities, the same 4.2x, on the same pass, in the same
+  direction the phase labels predict. **Nothing but a working prefix cache
+  produces that signature**, and arm 4 — same engine, same recipe, one
+  speculative token instead of three — reproduces the control's 681.94 / 12003.69
+  to within 0.7% and 0.6%, which is the cleanest possible negative control.
+
+### ⚠ AND THE PRICE, WHICH IS THE PART THAT MATTERS FOR THE RECIPE: THE §2.7 PROJECTION IS REFUTED
+
+`ANALYSIS-prefill-metric.md` §2.7 projected **`tg` → ~247 at this cell, +42%**,
+and the hypothesis block declared **`tg` ≥ 210** as the band in which "the
+projection held". **Arm 3 read 143.24. The band failed by 32%, and the projection
+is REFUTED — measured, not doubted.**
+
+The reason is the one the projection could not have known: **it assumed the cache
+could be fixed at no cost, and the fix costs MTP.** Decomposed on the campaign's
+own identity, arm3 against arm1 on Phase 2:
+
+```
+tg ratio 0.8432  =  tg_req ratio 0.6659  x  span ratio 1.2662  =  0.8431  ✓
+```
+
+**Turning MTP off buys a 26.6% shorter batch span — the cache doing exactly what
+R9c said a shorter measurement window is worth — and pays 33.4% of per-request
+decode for it. Net −15.7% on the board metric at c4.** `peak_throughput` falls
+309 → 189 (−39%), which is the hardware term and is all MTP.
+
+**So the trade is real, it is binary, and it goes the other way from what the
+analysis expected:**
+
+| what you get | shipped (MTP on) | MTP off |
+|---|---:|---:|
+| prefix cache | dead | **works, at ceiling** |
+| `tg` @ c4 (the board metric) | **169.89** | 143.24 (**−15.7%**) |
+| `peak_throughput` | **309** | 189 (−39%) |
+| Phase-2 `pp` | 677.37 | **2823.72 (4.17x)** |
+| Phase-2 `ttfr` | 12080.79 ms | **2885.83 ms (4.19x faster)** |
+
+### WHAT THIS RETIRES IN `ANALYSIS-prefill-metric.md` §2.7
+
+1. **"Projected +42% at c4"** — REFUTED, measured at **−15.7%**.
+2. **"The same mechanism projects c5 from 164.27 to ~230 and c2 from 140.77 to
+   ~176, flipping both like-for-like comparisons"** — **the arithmetic those two
+   projections were built on is the arithmetic just refuted at c4**, so neither
+   flip is supported. Not measured at c2/c5 and therefore not refuted *there* —
+   but it must not be quoted as a live prospect any more.
+3. **"This single defect is the common cause of the c2 loss, the c5 loss, and all
+   six prefill losses"** — the prefill half is **wrong on the phase labels**.
+   Prefill is scored on **`ctx_pp` ONLY** (RESULTS.md), `ctx_pp` is **Phase 1**,
+   and Phase 1 is the uncached pass that populates the cache. Arm 3 confirms it
+   directly: `ctx_pp` moves +4.8% while `pp` moves 4.17x. **Fixing the cache
+   moves none of the six scored prefill rows.** What it would move is the
+   `pp2048` rows, which this file already records as not quotable as board
+   comparisons.
+4. **"It would make `pp2048` a valid metric for us for the first time"** — true,
+   and now known to cost 15.7% of `tg` and 39% of `peak_throughput` to buy.
+
+### THE MECHANISM — narrowed to a flag, NOT closed to a cause
+
+**arm4 is the round's second result and it is worth as much as arm3.** The source
+read that motivated it (`scheduler.py:265-281`, `kv_cache_coordinator.py:105-134`)
+said multi-module MTP demands a prefix-cache tail exclusion of
+`num_speculative_tokens`, and `num_speculative_tokens: 1` takes the single-module
+path. **It made no difference at all: 0.0% in 12 of 12 samples.** So the defect is
+not the size of the MTP lookahead, and there is **no cheap version of the fix** —
+speculation and prefix caching cannot coexist on this model in this build.
+
+What is established: **any `--speculative-config` at all sets the hit rate to
+exactly 0.0%; removing it sets it to the structural ceiling.** What is *not*
+established is why. The candidate, and it is inferred from source rather than
+measured, is the EAGLE/MTP last-block drop in
+`v1/core/kv_cache_coordinator.py:100-134` combined with
+`_annotate_eagle_groups_deepseek_v4` (`kv_cache_utils.py:1765-1788`), which flags
+eagle groups **only for `deepseek_v4`** — so for this Qwen hybrid the coordinator
+falls into its own conservative branch, `if use_eagle and not self.eagle_group_ids:
+self.eagle_group_ids = set(range(len(kv_cache_groups)))`, and **every** KV group,
+mamba groups included, is treated as an eagle group and has its tail dropped.
+⚠ **Stated as a candidate, not a finding.** The last-block drop alone should cost
+one block, not all seven, so something in the hybrid `align` path is turning a
+one-block exclusion into a total miss, and this round did not read far enough to
+say what. **The next probe is a source read, not box time.**
+
+### GATES — all pass
+
+- `crash_count: 0` and `session_count: 1` in all four `state.yaml`.
+- Engine log captured on **4 of 4 arms** (242 / 254 / 195 / 248 lines) with
+  R9c's two-wait recipe. Second consecutive round with the instrument on every
+  arm; R23's capture miss is not repeated.
+- Image `dgx-vllm-eugr-nightly:2026082102`, `container_image_longterm_pinned:
+  true`, in all four — **same epoch, no silent version change.**
+- **Thermal and clock check, measured rather than assumed** (arm-start idle
+  readings): 19:33:37Z **2398 MHz / 39 °C**, 19:38:46Z **2411 / 54**, 19:45:12Z
+  **2411 / 53**, 19:54:33Z **2398 / 43**. Spread **0.54%**, uncorrelated with any
+  arm's reading, nothing throttled. ⚠ Recorded honestly: these are *idle* samples
+  taken at each arm's start, not under-load medians as R23 captured — the round
+  did not run `sample-telemetry.sh`. A thermal explanation is not supported, and
+  it is also not excluded as tightly as R23 excluded it.
+- **`ttfr` spread within the batch was declared as a third secondary reading and
+  it is NOT usable, also recorded as a mis-set threshold.** The declaration
+  ("below R9c's 1516 ms") was carried over from `mnbt 32768`; at the shipped
+  `mnbt 65536` the *control* already reads **991 ms**, so the test had no room.
+  Arm 3 reads 643 ms. Directionally right, quantitatively meaningless.
+
+### FREE BY-PRODUCTS
+
+- **arm2 is a real finding even though it refuted its own hypothesis.**
+  `--kv-cache-dtype auto` stores KV at bfloat16 (`kv_cache_dtype=torch.bfloat16`
+  in its log), which cuts the KV pool **3,071,735 → 1,892,708 tokens** and moves
+  the attention block size **2144 → 1072**. It costs `peak_throughput` 309 → 265
+  (−14%) and `tg_req` −15%, and yet reads `tg` **+5.5%** because its span
+  tightens 1.5053 → 1.2124 **with the cache still stone dead at 0.0%.** ⚠ That
+  is a warning worth carrying: **a span can tighten by 24% for reasons that have
+  nothing to do with prefix caching**, so span alone is not evidence of a cache
+  hit. The hit-rate line is.
+- **Capacity is re-confirmed as irrelevant from a fourth direction.** The four
+  arms ran with KV pools of 3.07M / 1.89M / 4.79M / 3.56M tokens against a
+  65,536-token working set — a 2.5x spread in capacity, and the hit rate is
+  determined entirely by one flag that is not capacity.
+- **The attention block size is not fixed at 2144.** It read **2144 / 1072 /
+  2096 / 2112** across the four arms. Every earlier statement in this campaign
+  that "all seven archived engine logs carry `Setting attention block size to
+  2144`" is true of *those* logs and is **not a constant of the model** — it
+  moves with the KV dtype and with the speculative config. The 42.1% ceiling
+  arithmetic above depends on the per-arm value, so read it from the log rather
+  than assuming.
+- **The shipped-recipe control reproduced R23's row at the edge of the band.**
+  169.89 against R23's 179.34 = **−5.27%**, just outside the ±5% arm-to-arm
+  spread R23 measured on identical configs, on a 3-run median against a 7-run
+  one. ⚠ **Not pooled into the standings row** — this is a deliberately
+  under-sampled diagnostic control and the round pre-declared that it was not
+  quoting a throughput. Recorded as a reproduction, not as a correction.
+- **Six `enable_prefix_caching = False` sites in the pinned image were located
+  and read, and NONE fires on our configuration** (see the hypothesis block).
+  The cache manager is live and simply never matches. That is why an arm-by-arm
+  probe was the right instrument and more source reading was not.
+
+### ⚠ NO FOLD. THIS IS A CANDIDATE, AND ON THIS CELL IT IS A CANDIDATE TO REJECT
+
+The hypothesis block declared no fold in advance and that stands. What the round
+produces is a **named candidate `recipe.yaml` change — remove
+`--speculative-config` — together with the first measurement of what it costs**,
+and at `tg128 @ d16384 c4` it costs **−15.7% of the board metric and −39% of
+`peak_throughput`** to buy 4.2x prefill and 4.2x time-to-first-response.
+
+**On the campaign's own scoring, that is a change to reject**: eight of the twenty
+scored cells are `tg` cells we hold, prefill is scored on `ctx_pp` which does not
+move, and no scored row improves. **On any workload that cares about
+time-to-first-token rather than a batch-aggregate decode rate, it is a change to
+make.** Both sentences are true and the recipe is tuned for the first one.
+
+A fold would need its own round, its own pre-declared rule and a **c1 anchor** —
+and c1 is where this trade might read differently, because at c1 `tg` **is**
+`tg_req`, there is no batch span to shorten, and the MTP loss would arrive with
+no offsetting span gain at all. **The prediction, written here to be scored
+later: at c1 removing MTP is worse than at c4, not better.**
+
+### What to run next
+
+1. **A source read, zero box time, and it should come first.** Establish why a
+   one-block eagle tail exclusion becomes a total miss on the hybrid `align`
+   path — `find_longest_cache_hit` for the mamba manager with
+   `drop_eagle_block=True`. If it says "structurally impossible", the whole
+   ladder retires with it.
+2. **`--attention-backend flashinfer`** is now the only untested member of
+   §2.7's trio, and its prior has fallen a long way: the culprit is found and
+   arm 4 shows the mechanism is speculative-decoding-specific. **Do not spend
+   box time on it** unless item 1 says the two interact.
+3. **If anyone wants the trade priced properly, price it at c1 and c2**, not
+   here — c4 is the cell where the span gain is largest and it still lost.
+
+### Cost ledger
+
+Box time: four engine starts and four short grids, 19:33:37 → ~19:58 UTC,
+**~25 minutes**, one idle box, no system settings touched, no `apt`, no
+`--arena`. Harness tokens: ~150k for read-in of the synthesis and the analysis,
+four arms, the source reads, the outcome block and the close-out. **Value: the
+campaign's oldest open defect, carried for seventeen rounds and 220+ samples, is
+closed to a single flag — and the +42% prize that motivated it is refuted in the
+same sitting for the price of one extra arm.**

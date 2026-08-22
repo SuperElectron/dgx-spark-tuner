@@ -21,6 +21,17 @@ This file is a report. It does not edit `RESULTS.md` or `journal.md`.
 >    WRONG** — it is `ttfr` drift. The true rate falls monotonically with depth
 >    (2976 → 2662 → 2252 tok/s).
 >
+> 3. **§2.7's prize is WRONG, and §3's experiment A was run as R24 on
+>    2026-08-22.** The culprit is **MTP speculative decoding** — not
+>    `kv_cache_dtype fp8`, not `flashinfer` — and removing it takes the hit rate
+>    from 0.0% to its 42.14% structural ceiling. But the projected **"+42% at c4,
+>    `tg` ~247"** is **REFUTED, measured at 143.24 = −15.7%**: the fix costs 33.4%
+>    of per-request decode to buy 26.6% of batch span. The c2/c5 flips built on
+>    the same arithmetic are not a live prospect, and **§2.7's "common cause of …
+>    all six prefill losses" is wrong on the phase labels** — those rows are
+>    `ctx_pp`, which is Phase 1, the pass that *populates* the cache. It moves
+>    +4.8%. See the `Round 24 outcome` block in `journal.md`.
+>
 > The re-scrape also settled the question this file left open: the artefact does
 > **not** cancel. Every opponent on every scored prefill row ran with a warm
 > prefix cache, because ranking by cell top selects a warm entry by construction.
