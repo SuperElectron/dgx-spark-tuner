@@ -1,10 +1,32 @@
 # Results — qwen36-35b-nvfp4-cells
 
-## READ THIS FIRST — the standings in ten lines (final, 2026-08-22)
+## READ THIS FIRST — the standings in ten lines (2026-08-22, after R11)
+
+> ### ⚠️ `recipe.yaml` CHANGED TODAY — THIS IS A CONFIG EPOCH BOUNDARY
+>
+> **R11 folded `max_num_batched_tokens: 65536` into `recipe.yaml`** (it was
+> 8192). That is the **first change to the recipe in the campaign's history** —
+> R1 through R13d all ran on the recipe exactly as inherited.
+>
+> **Consequence you must not miss:** every row in this file that used to say
+> "campaign config" was measured at **mnbt 8192** and is **no longer reproducible
+> from `recipe.yaml`**. Those rows now say **"mnbt 8192 — PRE-FOLD recipe"**.
+> Nothing in the archives is invalidated and **no margin moved**; what changed is
+> what "unmutated" means after today. **The next round that runs `./recipe.yaml`
+> without `-o` flags gets a different engine from every round before R11, and at
+> `c>1` it gets dramatically different numbers.**
+>
+> **Why the fold was allowed:** R11 measured the c1 anchor at the new value
+> first, because that anchor is what every depth and concurrency comparison in
+> the campaign hangs from. `tg128 @ d16384 c1` reads **112.92** at mnbt 65536
+> against **112.62** at mnbt 8192 — **+0.27%, i.e. nothing** — so no baseline
+> moves and no depth-curve point is invalidated. The fold rule and its band were
+> declared in `journal.md` before the run.
 
 - **WON 8 board cells, LOST 12**, and a long tail the board publishes no figure
-  for and which therefore cannot be scored either way. Those counts have not
-  moved since the synthesis pass and nothing overnight moved them.
+  for and which therefore cannot be scored either way. **R11 moved no cell** —
+  it measured a crowded cell that was never a campaign target, and its product is
+  the fold, not a standing.
 - **Widest margin: `ctx_tg @ d16384 c4` at 6.21x** (171.77 vs 27.68), on a
   **mutation** — `max_num_batched_tokens 131072 + max_num_seqs 5`, pooled over 14
   runs from two engine starts (R13c + **R13d**). It took the title from the
@@ -17,11 +39,28 @@
   nothing. R13's 98304 buys nothing over 65536. **R11's fold value is 65536.**
 - **c5 was never taken.** It is the only loss with a live route to a win and it
   ends the campaign at 0.73x. It is recorded as a loss.
-- **R13d ran last and closed the queue's last scoreable cell.** It repeated
+- **R13d closed the queue's last scoreable cell.** It repeated
   `ctx_tg @ d16384 c4` at mnbt 131072 and **moved the widest-margin title to
   6.21x on 14 pooled runs**, retiring R13c's unpromoted 6.34x as a high draw
   (repeat came in −2.99%). **No standing changed sign; the counts are still
   8 won / 12 lost.** Everything below still applies.
+- **R11 ran last and settled the fold.** It is the round the synthesis called the
+  highest-value item outstanding, and it did what it was queued to do: the token
+  budget is **inert at c1** (+0.27% on the anchor, and the Phase-1 partner is
+  inside its own noise), so the flag went into the recipe. **Eight of the
+  eighteen win rows are now the config the recipe ships rather than a per-round
+  `-o` flag.**
+- **R11 also answered open question 13 for free.** R13 found `tg_req` rising
+  +15.5% at both c4 and c5 on a budget change and nobody could say whether that
+  was sharing or an intrinsic per-request effect, because every measurement was
+  at `c>1`. At c1, `tg` **is** `tg_req` by assignment — and it moved **+0.27%**.
+  **The per-request rise at `c>1` is a sharing artefact, not a property of the
+  request.**
+- ⚠️ **`runs=3` is no longer safe at `tg128 @ d16384`, and R6's rule saying it is
+  should not be quoted again.** The same cell has now read σ/med **2.6% (R6) /
+  5.5% (R8) / 8.01% (R11)** across three engine starts. At 8.01% a 3-run median
+  carries a standard error near 5.8%. **runs=7 is the only budget that has been
+  safe at all three.**
 
 **What changed overnight, in four items — all four are corrections, and two of
 them retired figures this file had published:**
@@ -47,8 +86,12 @@ them retired figures this file had published:**
    downward correction of unknown origin**. Two same-config figures were pooled
    to 14-run medians: **3.74x → 3.67x** and **6.16x → 6.15x**.
 
-**If you are picking this up:** run **R11 at `max_num_batched_tokens 65536`**,
-not 32768 and not 98304. See the handoff at the end of `journal.md`.
+**If you are picking this up:** ✅ **R11 is DONE and the flag is folded** — see
+the epoch warning above before you compare anything to a pre-fold row. The next
+items are the zero-box-time prefill metric check, then **`mnbt 65536 + mns 4` at
+c4**, which is the config the recipe now actually ships and which has never been
+measured (the 3.71x row was taken at `mns 5`). See the handoff at the end of
+`journal.md`.
 
 ---
 
@@ -71,10 +114,15 @@ several cells, so one benchId spans several rows.
 
 ## Standings so far
 
-Every row names its CONFIGURATION. "campaign config" is `recipe.yaml`
-unmutated (`--max-num-seqs 4 --max-num-batched-tokens 8192`); a **MUTATION**
-row was measured with the named `-o` overrides and is NOT what `recipe.yaml`
-does. A tuned row and an untuned row must never look alike here.
+Every row names its CONFIGURATION. **"mnbt 8192 — PRE-FOLD recipe"** means
+`--max-num-seqs 4 --max-num-batched-tokens 8192`, which is what `recipe.yaml`
+did for rounds R1 through R13d and **is no longer what it does** — R11 folded
+`max_num_batched_tokens: 65536` on 2026-08-22, so those rows must be reproduced
+with an explicit `-o max_num_batched_tokens=8192`. A **MUTATION** row was
+measured with the named `-o` overrides on top of the pre-fold recipe. A tuned row
+and an untuned row must never look alike here, and after the fold **neither may
+be confused with what the recipe now ships** — which is `mns 4 + mnbt 65536`, a
+combination that has been measured at **c1 only** (R11).
 
 **Every row also names its PHASE, and the labels are not what they look like.**
 A `ctx_` row is llama-benchy **Phase 1, the CONTEXT LOAD** — the *uncached* pass
@@ -89,47 +137,55 @@ what changes and what does not.
 
 ### WON — 8 board cells, 18 rows
 
-Eight cells, eighteen rows: the two `c4` cells each carry a campaign-config
-figure plus FIVE token-budget points, because R13c curved the budget. **Ten of
-the eighteen rows are MUTATIONS that are not in `recipe.yaml`** — that is the
-campaign's unresolved tension, and R11 is the round that settles it.
+Eight cells, eighteen rows: the two `c4` cells each carry a pre-fold figure plus
+FIVE token-budget points, because R13c curved the budget.
+
+**⚠️ R11 SETTLED THIS AND THE ARITHMETIC BELOW IS NOW BACKWARDS FROM WHAT IT
+SAID.** This paragraph used to read "ten of the eighteen rows are MUTATIONS that
+are not in `recipe.yaml`". After the fold, **`max_num_batched_tokens 65536` IS
+the recipe**, so the rows at that budget are no longer mutations — and the eight
+rows measured at **mnbt 8192** are the ones the recipe no longer produces. Read
+the CONFIGURATION column, not the word "MUTATION", which is retained on the rows
+where it was true at the time of measurement. Rows still carrying a genuine
+mutation on top of the current recipe are those naming `mns 5`, `mns 16` or a
+budget other than 65536.
 
 | Cell | Configuration | Ours | Board top | Margin | Note |
 |---|---|---:|---:|---:|---|
-| tg32 @ d16384 c1 | campaign config, runs=7 | 116.43 | 28.11 | **4.14x** | revised DOWN by R6 from R1's 3-run 129.32 |
-| tg32 @ d32768 c1 | campaign config, runs=3 | 115.56 | 23.31 | **4.96x** | ⚠ 3-run figure, provisional — see the runs-budget note |
-| tg32 @ d8192 c1 | campaign config, runs=3 | 106.24 | sole entry, no number published | uncontested | ⚠ 3-run figure, provisional |
-| tg128 @ d16384 c4 | campaign config, 6 runs pooled | 52.85 | 46.68 | **1.13x** | verified by repeat; worst of 6 runs 51.25 still +9.8% |
+| tg32 @ d16384 c1 | mnbt 8192 — PRE-FOLD recipe, runs=7 | 116.43 | 28.11 | **4.14x** | revised DOWN by R6 from R1's 3-run 129.32 |
+| tg32 @ d32768 c1 | mnbt 8192 — PRE-FOLD recipe, runs=3 | 115.56 | 23.31 | **4.96x** | ⚠ 3-run figure, provisional — see the runs-budget note |
+| tg32 @ d8192 c1 | mnbt 8192 — PRE-FOLD recipe, runs=3 | 106.24 | sole entry, no number published | uncontested | ⚠ 3-run figure, provisional |
+| tg128 @ d16384 c4 | mnbt 8192 — PRE-FOLD recipe, 6 runs pooled | 52.85 | 46.68 | **1.13x** | verified by repeat; worst of 6 runs 51.25 still +9.8% |
 | tg128 @ d16384 c4 | **MUTATION mnbt 32768**, runs=7 | **147.25** | 46.68 | **3.15x** | R10; reproduces R9's A1 143.08 to 2.9% from a separate start |
 | tg128 @ d16384 c4 | **MUTATION mnbt 98304 + mns 5**, **14 runs pooled** | **171.31** | 46.68 | **3.67x** | **R13 + R13c**, two engine starts (174.68 and 169.69, gap −2.86%). Was claimed at 3.74x on R13's 7 runs alone; **R13c reproduced it and the pooled median is now the claimed figure** |
-| tg128 @ d16384 c4 | **MUTATION mnbt 65536 + mns 5**, runs=7 | **173.34** | 46.68 | **3.71x** | **R13c — THE KNEE.** peak_thr 308, span 1.505, σ 4.39%. Statistically identical to mnbt 98304 and 131072; this is the cheapest budget that reaches the ceiling |
+| tg128 @ d16384 c4 | **mnbt 65536** (the FOLDED budget) **+ mns 5**, runs=7 | **173.34** | 46.68 | **3.71x** | **R13c — THE KNEE, and the budget half of this row is now `recipe.yaml`.** peak_thr 308, span 1.505, σ 4.39%. Statistically identical to mnbt 98304 and 131072; the cheapest budget that reaches the ceiling. ⚠ **`mns 5` was NOT folded** — the recipe ships `mns 4`. At c4 the width is worth ≤2.9% (mnbt 32768 measured at mns 4/5/16 reads 143.08/143.83/147.25) and mns 4 holds full `(4,0)` residency at c4 from 32768 up, so the recipe should land within a few percent — but **`mnbt 65536 + mns 4` has never been measured** and this row must not be quoted as what the recipe produces |
 | tg128 @ d16384 c4 | **MUTATION mnbt 131072 + mns 5**, **14 runs pooled** | 170.84 | 46.68 | **3.66x** | R13c + R13d, two engine starts (170.89 and 168.97, gap −1.12%) — above the knee, buys nothing over 65536. Not the claimed c4 figure: **the claimed one is the 65536 knee at 3.71x** |
 | tg128 @ d16384 c4 | **MUTATION mnbt 16384 + mns 5**, runs=7 | 85.90 | 46.68 | **1.84x** | R13c — below the knee, scheduler never holds full occupancy |
-| ctx_tg @ d16384 c4 | campaign config, 6 runs pooled | 56.36 | 27.68 | **2.04x** | |
+| ctx_tg @ d16384 c4 | mnbt 8192 — PRE-FOLD recipe, 6 runs pooled | 56.36 | 27.68 | **2.04x** | |
 | ctx_tg @ d16384 c4 | **MUTATION mnbt 32768**, runs=7 | **126.35** | 27.68 | **4.56x** | R10 |
 | ctx_tg @ d16384 c4 | **MUTATION mnbt 131072 + mns 5**, **14 runs pooled** | **171.77** | 27.68 | **6.21x** | **R13c + R13d — the campaign's WIDEST margin**, past tg128 @ d65536 c1's 5.71x. Two engine starts (175.40 and 170.16, gap −2.99%). **R13d's repeat settled the cell R13c would not promote**: the pooled figure clears the previous title (170.36) by **0.83%**, so the title moves by a margin too small to mean anything physically — what changed is that it now rests on 14 runs at a re-measured config. **R13c's 175.40 = 6.34x is RETIRED as the high draw it looked like.** No third measurement of this cell — the question is closed |
 | ctx_tg @ d16384 c4 | **MUTATION mnbt 98304 + mns 5**, **14 runs pooled** | 170.36 | 27.68 | **6.15x** | **SUPERSEDED as the widest margin by the mnbt 131072 row above (6.21x), by 0.83%.** Still a win at 6.15x and still the best value below 131072. R13 + R13c, two engine starts (170.59 and 168.37, gap −1.30%); was claimed at 6.16x on R13's 7 runs alone |
-| ctx_tg @ d16384 c4 | **MUTATION mnbt 65536 + mns 5**, runs=7 | 164.95 | 27.68 | **5.96x** | R13c — the knee. peak_thr 289, span 1.505 |
+| ctx_tg @ d16384 c4 | **mnbt 65536** (the FOLDED budget) **+ mns 5**, runs=7 | 164.95 | 27.68 | **5.96x** | R13c — the knee. peak_thr 289, span 1.505. ⚠ Same caveat as the Phase-2 row above: `mns 5` is not in the recipe and `mnbt 65536 + mns 4` is unmeasured |
 | ctx_tg @ d16384 c4 | **MUTATION mnbt 16384 + mns 5**, runs=7 | 68.79 | 27.68 | **2.49x** | R13c — below the knee |
-| tg128 @ d65536 c1 | campaign config, runs=7 | 94.10 | 16.48 | **5.71x** | revised DOWN by R8 from R3's 3-run 108.15 |
-| ctx_tg @ d65536 c1 | campaign config, runs=7 | 92.98 | 20.70 | **4.49x** | revised by R8 from R3's 89.76 |
-| ctx_pp @ d65536 c1 | campaign config, runs=7 | 4013.59 | 1393.35 | **2.88x** | ⚠ mapping caveat — see the prefill section |
+| tg128 @ d65536 c1 | mnbt 8192 — PRE-FOLD recipe, runs=7 | 94.10 | 16.48 | **5.71x** | revised DOWN by R8 from R3's 3-run 108.15 |
+| ctx_tg @ d65536 c1 | mnbt 8192 — PRE-FOLD recipe, runs=7 | 92.98 | 20.70 | **4.49x** | revised by R8 from R3's 89.76 |
+| ctx_pp @ d65536 c1 | mnbt 8192 — PRE-FOLD recipe, runs=7 | 4013.59 | 1393.35 | **2.88x** | ⚠ mapping caveat — see the prefill section |
 
 ### LOST — 12 board cells, and they are recorded as plainly as the wins
 
 | Cell | Configuration | Ours | Board top | Like-for-like | Verdict |
 |---|---|---:|---:|---:|---|
-| tg128 @ d131072 c1 | campaign config, runs=3 | 77.13 | 81.60 (Nemotron Lightning NVFP4) | — | **0.95x — LOST**, short by 5.5%. ⚠ 3-run |
-| tg128 @ d16384 c2 | campaign config | 84.00 | 325.44 (LFM2.5-350M BF16) | 163.27 (board's own Qwen3.6-35B-A3B-NVFP4, vLLM) | **0.51x — LOST** |
+| tg128 @ d131072 c1 | mnbt 8192 — PRE-FOLD recipe, runs=3 | 77.13 | 81.60 (Nemotron Lightning NVFP4) | — | **0.95x — LOST**, short by 5.5%. ⚠ 3-run |
+| tg128 @ d16384 c2 | mnbt 8192 — PRE-FOLD recipe | 84.00 | 325.44 (LFM2.5-350M BF16) | 163.27 (board's own Qwen3.6-35B-A3B-NVFP4, vLLM) | **0.51x — LOST** |
 | tg128 @ d16384 c2 | **MUTATION mnbt 32768 + mns 5**, runs=7 | 140.77 | 325.44 | 163.27 | **0.86x — still LOST**, was 0.51x |
-| tg128 @ d16384 c5 | campaign config + mns 5 | 48.12 | 428.95 (LFM2.5-350M BF16) | 225.46 (Qwen3.6-35B-A3B-NVFP4-Fast, vLLM) | **0.21x — LOST** |
+| tg128 @ d16384 c5 | mnbt 8192 — PRE-FOLD recipe + mns 5 | 48.12 | 428.95 (LFM2.5-350M BF16) | 225.46 (Qwen3.6-35B-A3B-NVFP4-Fast, vLLM) | **0.21x — LOST** |
 | tg128 @ d16384 c5 | **MUTATION mnbt 32768 + mns 5**, runs=7 | 128.93 | 428.95 | 225.46 | **0.57x — still LOST**, was 0.21x |
 | tg128 @ d16384 c5 | **MUTATION mnbt 98304 + mns 5**, runs=7 | 164.27 | 428.95 | 225.46 | **0.73x — still LOST**, was 0.57x. **R13**, the round aimed at this cell and did not take it. peak_thr **303**, stagger 1.54, σ 3.29%. Against the CELL TOP 428.95 it is 0.38x |
-| ctx_tg @ d8192 c1 | campaign config (tg32 arm), runs=3 | 126.52 | 207.60 (LFM2.5-350M BF16) | 118.07 (Nemotron-3.5-Lightning-30B-A3B-NVFP4, vLLM) | **0.61x — LOST** to the top; **1.07x** over best vLLM+NVFP4. ⚠ 3-run |
-| ctx_tg @ d16384 c1 | campaign config (tg32 arm), runs=7 | 122.97 | 193.09 (LFM2.5-350M BF16) | 153.86 (our own model on Atlas) | **0.64x — LOST**; best vLLM+NVFP4 not in the scrape |
-| ctx_tg @ d32768 c1 | campaign config (tg32 arm), runs=3 | 84.03 | 117.37 (Qwen3.6-35B-A3B-NVFP4 on **Atlas**) | 116.65 (Nemotron-3.5-Lightning-30B-A3B-NVFP4, vLLM) | **0.72x — LOST** both ways. ⚠ 3-run |
-| pp2048 @ d8192, d16384, d32768 c1 (3 cells) | campaign config | 1187.51 / 637.09 / 295.71 | 215894 / 99229 / 63080 (all Atlas) | 4644.54 at d32768 | **LOST, ~0.006x of top and 0.064x of best vLLM** — the size of that gap is itself a warning, see the prefill section |
-| ctx_pp @ d8192, d16384, d32768 c1 (3 cells) | campaign config | 6148.56 / 5856.93 / 5086.51 | 775123 / 884765 / 945271 (all Atlas) | not in scrape | **LOST by ~150x** — same warning |
+| ctx_tg @ d8192 c1 | mnbt 8192 — PRE-FOLD recipe (tg32 arm), runs=3 | 126.52 | 207.60 (LFM2.5-350M BF16) | 118.07 (Nemotron-3.5-Lightning-30B-A3B-NVFP4, vLLM) | **0.61x — LOST** to the top; **1.07x** over best vLLM+NVFP4. ⚠ 3-run |
+| ctx_tg @ d16384 c1 | mnbt 8192 — PRE-FOLD recipe (tg32 arm), runs=7 | 122.97 | 193.09 (LFM2.5-350M BF16) | 153.86 (our own model on Atlas) | **0.64x — LOST**; best vLLM+NVFP4 not in the scrape |
+| ctx_tg @ d32768 c1 | mnbt 8192 — PRE-FOLD recipe (tg32 arm), runs=3 | 84.03 | 117.37 (Qwen3.6-35B-A3B-NVFP4 on **Atlas**) | 116.65 (Nemotron-3.5-Lightning-30B-A3B-NVFP4, vLLM) | **0.72x — LOST** both ways. ⚠ 3-run |
+| pp2048 @ d8192, d16384, d32768 c1 (3 cells) | mnbt 8192 — PRE-FOLD recipe | 1187.51 / 637.09 / 295.71 | 215894 / 99229 / 63080 (all Atlas) | 4644.54 at d32768 | **LOST, ~0.006x of top and 0.064x of best vLLM** — the size of that gap is itself a warning, see the prefill section |
+| ctx_pp @ d8192, d16384, d32768 c1 (3 cells) | mnbt 8192 — PRE-FOLD recipe | 6148.56 / 5856.93 / 5086.51 | 775123 / 884765 / 945271 (all Atlas) | not in scrape | **LOST by ~150x** — same warning |
 
 ### CANNOT BE SCORED — the board has no figure for these cells
 
@@ -143,10 +199,18 @@ c1` (119.54) — the board has **zero entries** at that depth, so it is an empty
 cell rather than a won one, and nothing can be posted to it anyway. All
 sixteen R9b rows — three flags from the campaign config, explicitly diagnostic.
 
-`tg128 @ d16384 c1` (112.62 pooled over 14 runs, R6+R8) is the crowded cell and
-was never a campaign target: 116.03 best vLLM NVFP4, 188.47 overall, so 0.97x
-against like-for-like. It is listed for the reproduction gap (now **-2.9%**),
-not as a cell we went after.
+`tg128 @ d16384 c1` (112.62 pooled over 14 runs, R6+R8, at mnbt 8192) is the
+crowded cell and was never a campaign target: 116.03 best vLLM NVFP4, 188.47
+overall, so 0.97x against like-for-like. It is listed for the reproduction gap
+(now **-2.9%**), not as a cell we went after.
+
+**R11 re-measured it at the folded budget and this is the anchor the fold rests
+on: 112.92 at mnbt 65536, +0.27% on the 112.62 anchor** (runs=7, σ 9.05,
+σ/med 8.01%). The two figures are **NOT pooled** — different configurations, and
+pooling across a config difference is the thing this file says must never happen.
+Against 116.03 the new figure is **0.97x**, unchanged. **This is the cell that
+licenses every cross-fold comparison in this file:** because it did not move, no
+depth-curve point and no c1 baseline is invalidated by the recipe change.
 
 ⚠️ **Round 8 revised the campaign's second-widest win DOWN by 13%, and killed
 the "depth is flat" reading.** `tg128 @ d65536 c1` was claimed at 108.15 on
@@ -960,6 +1024,51 @@ and wrong to call it a rule.** With the phase-label correction having dissolved
 the question this asymmetry was posed to answer, no puzzle remains attached to
 these numbers.
 
+### R11 — the fold decision: the c1 anchor at the folded budget, one invocation, runs=7
+
+The round that changed `recipe.yaml`. `mnbt 65536`, `mns 4` (the recipe's own
+width — **one** mutation, not two), `session_count: 1`, `crash_count: 0`. Neither
+row is a standing: `tg128 @ d16384 c1` is the crowded cell the campaign never
+targeted, and the Phase-1 partner has no scraped incumbent. **Their job is to
+show the fold does not move the baselines, and they do.**
+
+| benchId | date | cell / probe | tg med t/s | tg σ | ttfr ms | board top | verdict |
+|---|---|---|---:|---:|---:|---:|---|
+| **bench_c9518e3e96a3-r11** | 2026-08-22 | tg128 @ d16384 c1 (**mnbt 65536 = THE FOLDED RECIPE + mns 4**, runs=7) | **112.92** | 9.05 | 3303.92 | 116.03 best vLLM NVFP4 (188.47 overall) | **THE FOLD ANCHOR — +0.27% on the 112.62 mnbt-8192 pooled anchor, i.e. nothing** (0.07 standard errors of the median). Pre-declared fold band 107.0–118.3; the pre-declared caution zone 117.2–118.3 was not entered. **NOT pooled with the anchor — different configuration.** 0.97x like-for-like, unchanged. `peak_throughput` **117.43 — identical to the last decimal to both R6's and R8's**, three engine starts and two budgets on one number. **`tg_throughput == tg_req_throughput` exactly**, so span ratio **1.000** by assignment (`results.py:195`) — there is no denominator here for the budget to shorten. Scheduler `(1,0)` in 4 of 4 loaded samples. ⚠ **σ/med 8.01%, the noisiest reading of this cell in the campaign** (2.6% R6 / 5.5% R8 / 8.01% R11) — runs span 91.92–118.65, mode-plus-low-draws |
+| **bench_c9518e3e96a3-r11** | 2026-08-22 | ctx_tg128 @ d16384 c1 (**mnbt 65536 + mns 4**, runs=7) | 98.72 | 10.08 | 2851.19 | not scraped | hold — the second, independent inertness test, and it agrees. −4.15% on the 102.99 pooled Phase-1 anchor (R6 104.85 + R8 102.68), which is **0.89 standard errors** on a cell whose σ/med is **10.21%**: not a move, and inside its own pre-declared 96–110 band. `peak_throughput` 108.14. BELOW Phase 2 by −12.6% |
+
+**What these two rows establish, and it is the whole point of the round.** The
+token budget is a **scheduling** lever end to end, and at a concurrency of one
+there is nothing to schedule: the two routes by which it has ever moved this
+metric — **occupancy** (measured: `(1,0)`, residency 1 of 1 at any budget) and
+**the span denominator** (measured: `tg == tg_req`, span exactly 1.000) — are
+structurally absent. **`peak_throughput` reading 117.43 across three engine
+starts and two budgets says the hardware ceiling at c1 does not know the flag
+exists.**
+
+**And it answers open question 13 at no extra cost.** R13 found `tg_req` rising
+**+15.5% at both c4 and c5** on a budget change, and R13c curved it to **+98%**
+across 8192 → 65536 at c4 — a *per-request* quantity moving with a scheduler
+knob, measured only ever at `c>1`. At c1, `tg` **is** `tg_req` by assignment, so
+this row measures that quantity with sharing removed. It moved **+0.27%**. If
+even a tenth of the +98% were intrinsic to the request, c1 would have lifted
+~10%. **The per-request rise at `c>1` is a sharing artefact — a request stalled
+behind its neighbours' chunked prefills — and not a property of the request.**
+
+**One prediction missed in an interesting direction.** R11 predicted `ttfr` would
+**fall** at c1, on the argument that its six consecutive budget-driven rises were
+all `c>1` effects (more neighbours admitted per step ⇒ a longer step before
+anyone's first token) and that mechanism cannot apply with no neighbours.
+Measured **3303.92 ms against 3237.23 / 3269.39** — it **rose**, by 1–2%, which
+is 2.7–3.9 SE and therefore real. **Seventh consecutive budget increase, seventh
+worse `ttfr`, and the first at a concurrency where the campaign's explanation for
+it does not apply.** The magnitude argument survives (+1.6% here against +7.3% to
++32.4% at `c>1`, an order of magnitude), so most of the effect *is* a `c>1`
+effect; what is left at c1 needs a smaller cause. Candidate, not a finding: at
+65536 the whole 18432-token prefill runs in **one** scheduler step instead of
+three, and a single 18432-token forward pass looks marginally less efficient per
+token than three chunked ones — `pp2048` agrees in sign and size (−0.8%).
+
 ## Prefill cells (pp2048)
 
 pp2048 rides along in every round by default, so these were measured at no extra
@@ -1085,3 +1194,11 @@ rather than against it.
 | **bench_0509b2a740f6-r13d** | 2026-08-22 | pp2048 @ d16384 c4 (**R13d, MUTATION mnbt 131072 + mns 5**) | 636.99 | **3.59** | 12847.72 | not scraped | hold — inside the 610–690 band R13d recorded it against (it was **not** gated, per R13c's finding that this gate was too tight). Reproduces R13c's 670.32 to −5.0%, and its σ collapses from 25.06 to 3.59 |
 | **bench_0509b2a740f6-r13d** | 2026-08-22 | ctx_pp2048 @ d16384 c4 (**R13d**, Phase 1) | 5781.15 | 136.29 | — | not scraped | ⚠ **THE REPLACEMENT GATE MISSED ON ITS FIRST OUTING.** R13c declared `ctx_pp` the session gate after `pp2048` broke its own; R13d predicted 5900–6400 from R13c's single 6163.69 and measured **5781.15 — low by 2.0%**. Not a broken instrument: this is a −6.2% move whose σ fell from 416.60 to 136.29, so the two arms disagree about dispersion as much as level. **Widen the `ctx_pp` gate to ±10% — the band the protection points use — or stop calling it a gate.** Phase pair: `ctx_pp / pp` = **9.08** against the prediction 9.00, residual +0.9%; the phase-label audit now stands at **36 of 37 pairs** |
 | R13c, all six arms | 2026-08-22 | ctx_pp2048 @ d16384 c4 (Phase 1) | 5875.22 / 6007.70 / 6117.63 / 6200.01 / 6189.65 / 6163.69 | 25.63 / 19.47 / 15.42 / 17.79 / 172.99 / 416.60 | — | not scraped | hold — Phase 1, at mnbt 8192 / 16384 / 32768 / 65536 / 98304 / 131072. **Six new phase pairs for the phase-label correction**: `ctx_pp / pp` reads 9.21 / 9.11 / 9.12 / 9.23 / 9.58 / 9.20 against the zero-free-parameter prediction `(16384+2048)/2048` = **9.00**, residuals **+1.2% to +6.4%**, the 9.58 being the arm with the depressed `pp` draw. The correction pass's 29-of-30 result now stands at **35 of 36 pairs**, and these six add a token-budget dimension it did not have |
+
+
+### R11 — the prefill rows at the folded budget, c1
+
+| benchId | date | cell / probe | pp med t/s | pp σ | ttfr ms | board top | verdict |
+|---|---|---|---:|---:|---:|---:|---|
+| **bench_c9518e3e96a3-r11** | 2026-08-22 | pp2048 @ d16384 c1 (**mnbt 65536 = THE FOLDED RECIPE + mns 4**, runs=7) | 629.78 | 5.32 | 3303.92 | 99229 (Atlas) — 637.09 is our own pre-fold figure | **LOST as a cell** at the recorded ~0.006x margin, unchanged and unaffected by the fold. Read here as the **session control, and it PASSES**: 629.78 sits inside the flat **623–643** d16384 series held across nine invocations, so the round's `tg` readings are not sitting on a slow session. −0.8% against R6's 634.99 — the same small negative sign as the `ttfr` rise, and the two together are the (unproven) candidate for why one 18432-token prefill step is marginally worse than three chunked ones |
+| **bench_c9518e3e96a3-r11** | 2026-08-22 | ctx_pp2048 @ d16384 c1 (**mnbt 65536 + mns 4**, runs=7, Phase 1) | **5853.81** | 80.38 | 2851.19 | 884765 (Atlas) | **LOST as a cell**, unchanged. **THE SESSION GATE, WIDENED TO ±10% PER R13d — AND IT PASSES COMFORTABLY.** Predicted 5270–6440; measured 5853.81, which reproduces R6's 5849.11 to **0.09%** and R8's 5856.93 to **0.05%** — the tightest cross-invocation reproduction of any quantity in the campaign. **R13d's advice to widen this gate rather than abandon it was correct**, and this is its first clean outing. Phase pair: `ctx_pp / pp` = **9.295** against the zero-free-parameter prediction `(depth+2048)/2048 = 9.00`, residual **+3.3%** — the **38th** archived pair and the first at c1 above mnbt 8192, so the phase-label audit now stands at **37 of 38 pairs across five depths, eight token budgets and five concurrencies** |
