@@ -1,0 +1,36 @@
+benchmark_id: bench_c9518e3e96a3
+cluster_id: sparkrun_55e0583fe6b308a0_313596140c4f
+recipe_qualified_name: recipe
+framework: llama-benchy
+profile: null
+base_args:
+  pp:
+  - 2048
+  depth:
+  - 16384
+  prefix_caching: true
+  tg:
+  - 128
+  concurrency:
+  - 1
+  runs: 7
+schedule:
+- depth: 16384
+  concurrency: 1
+intent_id: 55e0583fe6b308a0
+completed_indices:
+- 0
+failed_indices: []
+crash_count: 0
+session_count: 1
+sessions:
+- session: 1
+  started_at: '2026-08-22T13:02:33.745931+00:00'
+  status: completed
+  ended_at: '2026-08-22T13:03:47.695806+00:00'
+extras:
+  framework_version: 0.4.0
+  container_image_longterm_ref: ghcr.io/spark-arena/dgx-vllm-eugr-nightly:2026082102
+  container_image_longterm_pinned: true
+created_at: '2026-08-22T12:59:00.406012+00:00'
+updated_at: '2026-08-22T13:03:47.695811+00:00'

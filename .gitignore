@@ -3,20 +3,48 @@
 .DS_Store
 __pycache__/
 .omc/
-# Experiment run data stays local; the hypothesis and its conclusion are tracked.
-# Git cannot re-include a file inside an excluded directory, so the hypothesis
-# directories must be un-excluded first, then their run data excluded again.
+# Experiments: an allow-list. A run must stay reproducible AND its measurements
+# must survive, because a benchmark is stochastic — re-running never reproduces
+# a past number (R21 re-measured four rows at runs=7 and all four moved).
+#
+# TRACKED, per run (~100 KB):
+#   engine-capture.log  the serve command actually executed, INCLUDING -o
+#                       overrides, plus the engine's prefix-cache hit rate and
+#                       scheduler Running/Waiting lines. Nothing else records
+#                       these. Not present in ~/.cache/sparkrun either.
+#   state.yaml          probe args, pinned image digest, framework version,
+#                       crash count, session timestamps
+#   recipe-*.yaml       the candidate recipe, where a variant used one
+#   round-tmp.json      every individual run value, so medians/σ recompute
+#   telemetry*.log      clocks/temp/power — how R23 ruled out a thermal cause
+#   clocks-*.txt        per-run clock snapshots
+#
+# IGNORED, deliberately:
+#   consolidated.json   byte-identical duplicate of round-tmp.json
+#   round-tmp.csv       the same numbers in another encoding
+#   round-tmp.yaml      largest category, and it stores the recipe's CURRENT
+#                       defaults — for pre-fold runs it states a value the run
+#                       did not use (R23 arm1 ran at 8192; this file says 65536)
+#   runs/               adds only version/timestamp/latency_mode/latency_ms/
+#                       prefix_caching_enabled; throughputs already in round-tmp.json
+#   *stdout*.log        sparkrun console output, no unique evidence
+#
+# Git cannot re-include a file inside an excluded directory, so each level is
+# un-excluded before the level below it is excluded again.
 research/*/experiments/*
 !research/*/experiments/*/
 research/*/experiments/*/*
 !research/*/experiments/*/HYPOTHESIS.md
 !research/*/experiments/*/EXPERIMENT.md
-# A candidate recipe records the exact serve configuration a run used — it is
-# the reproducibility record, so it is tracked wherever it sits. Measurements
-# (state.yaml, round-tmp.*, runs/, logs) stay local.
 !research/*/experiments/*/*/
 research/*/experiments/*/*/*
+!research/*/experiments/*/*/engine-capture.log
+!research/*/experiments/*/*/engine-serve.log
+!research/*/experiments/*/*/state.yaml
 !research/*/experiments/*/*/recipe-*.yaml
+!research/*/experiments/*/*/round-tmp.json
+!research/*/experiments/*/*/telemetry*.log
+!research/*/experiments/*/*/clocks-*.txt
 !research/*/experiments/*/*/PROVENANCE.md
 !research/_template/experiments/.gitkeep
 research/milestones/

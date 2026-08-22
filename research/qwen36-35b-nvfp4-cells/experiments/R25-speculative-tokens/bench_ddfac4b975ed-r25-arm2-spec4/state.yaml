@@ -1,0 +1,36 @@
+benchmark_id: bench_ddfac4b975ed
+cluster_id: sparkrun_55e0583fe6b308a0_313596140c4f
+recipe_qualified_name: /private/tmp/claude-501/-Users-mat-code-dgx-spark-tuner/b771370d-523a-49d9-a6c1-3bfeeef951f7/scratchpad/recipe-r25-spec4.yaml
+framework: llama-benchy
+profile: null
+base_args:
+  pp:
+  - 2048
+  depth:
+  - 16384
+  prefix_caching: true
+  tg:
+  - 128
+  concurrency:
+  - 1
+  runs: 7
+schedule:
+- depth: 16384
+  concurrency: 1
+intent_id: 55e0583fe6b308a0
+completed_indices:
+- 0
+failed_indices: []
+crash_count: 0
+session_count: 1
+sessions:
+- session: 1
+  started_at: '2026-08-22T20:18:23.512499+00:00'
+  status: completed
+  ended_at: '2026-08-22T20:19:33.982382+00:00'
+extras:
+  framework_version: 0.4.0
+  container_image_longterm_ref: ghcr.io/spark-arena/dgx-vllm-eugr-nightly:2026082102
+  container_image_longterm_pinned: true
+created_at: '2026-08-22T20:15:18.367210+00:00'
+updated_at: '2026-08-22T20:19:33.982386+00:00'
