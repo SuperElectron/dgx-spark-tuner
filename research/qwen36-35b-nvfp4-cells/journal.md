@@ -10415,3 +10415,147 @@ hardware, so our 0.0% hit rate is a property of *our* configuration, not an
 architectural limit of hybrid-mamba models on GB10. That raises the prior on the
 open experiment A (which flag breaks our cache — 13 minutes of box time for a
 binary readout) and it is now the only open item from that analysis.
+
+## Round 24 hypothesis — WHICH FLAG BREAKS THE PREFIX CACHE: `tg128 @ d16384 c4`, three arms, one engine start each, runs=3
+
+**Written 2026-08-22 BEFORE any arm ran.** This is experiment **A** of
+`ANALYSIS-prefill-metric.md` §3 — the item that file ranked 1 by a wide margin,
+and the only open item left from it after the board re-scrape closed B.
+
+### The question, and why it is worth box time
+
+`--enable-prefix-caching` ships ON in `recipe.yaml`. Across **220+ engine
+samples in 17 rounds it has never hit once** — `Prefix cache hit rate: 0.0%`,
+every sample, every round, both budgets, at every depth. R9c measured that the
+flag is nonetheless worth **2.414x** end-to-end at this exact cell (146.32 ON vs
+60.60 OFF, `tg128 @ d16384 c4`, `mnbt 32768`), of which **83% is batch span and
+17% per-request decode**. So an enabled feature that never fires is leaving the
+single largest known multiplier in the campaign untouched.
+
+**What is already ruled out and must NOT be re-tested:**
+
+- **The instrument.** The hit rate is vLLM's own log line, not a benchy metric.
+- **The access pattern.** `runner.py:137-166` + `client.py:298-300`: Phase 1 and
+  Phase 2 share a byte-identical system message placed first, so the two
+  requests share an identical 16384+ token prefix. `prompt_batch` is generated
+  once per run and both phases index the same element.
+- **KV capacity.** Peak usage is **3.6% of a 3,071,735-token pool**; the working
+  set is 4 x 16384 = 65,536 tokens, ~47x under.
+- **Eviction.** Nothing is evicted for space at 3.6% occupancy.
+- **Block alignment.** `interface.py:911` forces attention block size 2144; a
+  16384-token prefix is 7.64 blocks, so 7 full blocks (15,008 tokens) are
+  aligned and eligible. The alignment ceiling is ~81%, not 0%.
+
+The cause is therefore **engine-side — a flag interaction, not a resource
+limit.** The 2026-08-22 per-entry board re-scrape sharpens the prior: **~84% of
+the d32768 field and ~82% of the d16384 field run warm on this same hardware**,
+so prefix reuse is not architecturally unavailable on GB10 and our 0.0% is a
+property of our own flag set.
+
+**Free desk read done before this round, recorded so the next agent does not
+repeat it.** Every `enable_prefix_caching = False` assignment in the pinned image
+(`ghcr.io/spark-arena/dgx-vllm-eugr-nightly:2026082102`) was located and read:
+`v1/engine/core.py:282` (non-causal attention layers), `attention.py:378`
+(FLASHINFER/TRITON_MLA **only under `VLLM_BATCH_INVARIANT`**, which we do not
+set), `mla_attention.py:521`, `models/config.py:167` (Unlimited-OCR only),
+`platforms/cpu.py:382`, `arg_utils.py:2735` (RISC-V only). **None of them fires
+on our configuration**, which is consistent with the engine printing a hit-rate
+line at all: the cache manager is live and simply never matches. So the defect
+is a **miss**, not a silent disable — and that is what makes an arm-by-arm probe
+the right instrument rather than more source reading.
+
+### The three arms
+
+Cell `tg128 @ d16384 c4`, `depth 16384`, `pp 2048`, `tg 128`, `concurrency 4`,
+**runs=3**, one engine start per arm, run in this order:
+
+| arm | recipe | mutation | why |
+|---|---|---|---|
+| **arm1 CONTROL** | `./recipe.yaml` unchanged | none — `mnbt 65536 + mns 4`, `kv-cache-dtype fp8`, MTP on | establishes the 0.0% in this session, on the shipped config |
+| **arm2 KV DTYPE** | `recipe-r24-arm2-kvauto.yaml` | `--kv-cache-dtype auto` (was `fp8`) | fp8 KV quantisation is the first of §2.7's three suspects |
+| **arm3 SPEC OFF** | `recipe-r24-arm3-specoff.yaml` | `--speculative-config` removed entirely | MTP speculative decoding is the second suspect |
+
+Both mutations are serve-command flags, not templated defaults, so each needs
+its own candidate recipe — `-o` cannot reach them. Both candidate recipes are
+committed with this block and archived alongside their runs.
+
+**`runs=3` is deliberate and sufficient, because THE READOUT IS BINARY.** A
+0.0%-vs-nonzero reading is immune to the ±5% arm-to-arm spread R23 measured, to
+MTP acceptance bimodality, and to the three-run problem. R23 also **refuted** the
+position bias (four contrasts, mean −0.44%, p = 1.0), so no counterbalanced
+design is needed and none is used. We are not quoting a throughput as a claim.
+
+### PRE-DECLARED THRESHOLDS
+
+**PRIMARY readout: `Prefix cache hit rate` from each arm's engine log**, captured
+with R9c's two-wait recipe (`docker exec <container> tail -f -n +1
+/tmp/sparkrun_serve.log`, container matched on `^sparkrun_`, waiting for BOTH
+the container and the file).
+
+- **CONFIRM** — any arm reports a hit rate **> 50%** in its loaded samples. That
+  arm's flag is the culprit.
+- **REFUTE** — **all three arms read exactly 0.0%** in every logged sample.
+  Neither `kv_cache_dtype fp8` nor MTP is the cause, and the next probe must go
+  elsewhere (named below).
+- **DEAD ZONE** — an arm reads **> 0.0% but ≤ 50%**. Partial reuse: recorded as a
+  lead, **not** as a culprit, and it earns a repeat arm rather than a fold.
+
+**SECONDARY: `tg` and `ctx_tg` medians per arm**, so a confirming arm can be
+priced at this cell. What must be true if an arm really restores caching:
+
+- **Phase 2 `tg` rises and Phase 1 `ctx_tg` does not.** This is the sharp
+  discriminator and it follows from the phase labels: `ctx_` is Phase 1, the
+  **uncached** context load that POPULATES the cache; only Phase 2 can hit it.
+  An arm whose `tg` and `ctx_tg` move together did **not** restore caching — it
+  changed decode speed.
+- **Size.** §2.7's projection at this cell is `tg` → ~247 from the `mns 5` knee
+  anchor; against R23's shipped-recipe anchor of **179.34** the same +42% is
+  ~255. Declared band for "the projection held": Phase 2 `tg` **≥ 210**. Between
+  the control and 210 the caching is real but worth less than projected, and the
+  projection is what gets written down as wrong.
+- **`ttfr` spread within the batch collapses.** R9c measured 1516 ms (cache
+  flag on, never hitting) vs 6269 ms (flag off). A genuinely hitting arm should
+  fall well below 1516 ms, because the span is what the flag buys.
+
+**⚠ Two confounds priced in advance, so no arm's throughput is over-read:**
+
+1. **arm2 changes KV memory, not just caching.** `auto` stores KV at model dtype
+   instead of fp8, roughly halving KV token capacity (~3.07M → ~1.5M). That is
+   still ~23x the 65,536-token working set, so **capacity stays ruled out** — but
+   any `tg` move in arm2 is not attributable to caching alone.
+2. **arm3's throughput is uninterpretable by construction.** Removing MTP
+   removes speculative decode outright; arm3's `tg` **will** fall sharply whether
+   or not caching is restored. **Only arm3's hit rate is a readout.** Its `tg` is
+   recorded for the archive and must not be compared to the control as a price.
+
+**GATES, checked on every arm:** `crash_count: 0`, `session_count: 1`, engine log
+captured (>100 lines), and `nvidia-smi clocks.sm` + temperature recorded at each
+arm start so a thermal explanation can be checked rather than assumed.
+
+**NO FOLD THIS ROUND, whatever lands.** If an arm confirms, the finding is
+recorded as a **candidate** `recipe.yaml` change and nothing more; a fold needs
+its own pre-declared rule and a c1 anchor, exactly as R11 did. Naming the culprit
+and folding it are two different rounds.
+
+### If it refutes, where the next probe goes
+
+Stated now so the outcome block is not written after the fact:
+
+1. **`--attention-backend flashinfer`** — the third suspect of §2.7 and the only
+   one this round does not test. It is the cheapest remaining arm.
+2. **The hybrid `align` path itself** — read `find_longest_cache_hit` for the
+   Mamba manager in the pinned image and establish whether a hybrid KV group can
+   report a hit at all when the mamba state was never checkpointed at a block
+   boundary. **Zero box time, and it should be run BEFORE any further arm**, since
+   a source read that says "structurally impossible" retires the whole ladder.
+3. **`--async-scheduling`**, last, on the weakest prior.
+
+### Predicted outcome, on the record before the run
+
+**Refute is the more likely single result.** The strongest argument against both
+suspects is that neither is exotic: fp8 KV and MTP are common on this board, and
+the board is 82–84% warm. The strongest argument *for* the round is that the
+board publishes only `recipeType`, never server flags, so "common" is an
+assumption about the field and not a measurement of it. Prediction, written
+down to be scored: **arm1 0.0%, arm2 0.0%, arm3 0.0%**, with the real cause in
+item 2 above — the hybrid-mamba `align` path never checkpointing reusable state.
