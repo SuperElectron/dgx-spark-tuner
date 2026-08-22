@@ -3657,14 +3657,19 @@ interfering with it — and, chasing a validity gate that failed, discovered tha
 prefix caching has never once hit on this benchmark and that the campaign has had
 its two measurement phases labelled backwards since Round 1.**
 
-## CAMPAIGN SYNTHESIS — the whole campaign, R1 through R13d
+## CAMPAIGN SYNTHESIS — the whole campaign, R1 through R13d and R11 (which ran last, and folded the recipe)
 
-**Written after R12 on 2026-08-22 and REVISED three times the same day: after
-R13 / the `ctx_` phase-label correction / R5c / R13c; again after **R13d**; and
+**Written after R12 on 2026-08-22 and REVISED four times the same day: after
+R13 / the `ctx_` phase-label correction / R5c / R13c; again after **R13d**;
 again after **R11**, which ran last and is the only round that ever changed
-`recipe.yaml`. This revision replaces every earlier one; there is no second
-synthesis and there must never be one. It is the ONE authoritative handoff — read
-it instead of the round blocks, and read `RESULTS.md` for the standings.**
+`recipe.yaml`; and a fourth time — **CURRENT AS OF 2026-08-22, post-R11 fold** —
+to carry the config-epoch consequences of that change into the handoff itself:
+the cross-condition rule below the epoch warning, the `c1`-vs-`c>1` asymmetry of
+the budget lever, and the removal of the pre-fold "not folded" language this
+section still carried. This revision replaces every earlier one; there is no
+second synthesis and there must never be one. It is the ONE authoritative
+handoff — read it instead of the round blocks, and read `RESULTS.md` for the
+standings.**
 
 > **⚠️ THE RECIPE CHANGED ON 2026-08-22. R11 folded
 > `max_num_batched_tokens: 65536` into `recipe.yaml`, which had been untouched
@@ -3675,6 +3680,25 @@ it instead of the round blocks, and read `RESULTS.md` for the standings.**
 > fold. But **"unmutated" means something different after today**, and a round
 > that runs `./recipe.yaml` without `-o` flags now gets a different engine from
 > every round before R11.
+>
+> **AND THE RULE THAT FOLLOWS, WHICH IS THE ONE THIS CAMPAIGN LEARNED THE HARD
+> WAY.** Every row this campaign published was measured at `mnbt 8192`. A future
+> round that runs the folded recipe and compares its number to one of those rows
+> is making a **cross-condition comparison across separate engine starts** — the
+> single move this campaign refuted more often than any other. **R6 over R1**
+> (the tg32 generation-length effect: 26.5% across invocations, **4.79%** with
+> both arms under one engine start), **R8 over R3** (depth is flat: level across
+> invocations, **−16.8%** in one), **R9b over R4** (the chunked-prefill
+> mechanism: the deficit survives with the flag physically off). All three were
+> comparisons between numbers taken under conditions that differed in ways the
+> comparer had not priced, and all three read a real effect that was not there.
+> The fold makes exactly that difference the *default* rather than the exception.
+> So: **do not compare a post-fold number to a pre-fold row.** Either re-measure
+> the baseline in the same invocation as the new arm with an explicit
+> `-o max_num_batched_tokens=8192`, or state the budget difference as an
+> uncontrolled term and do not read a mechanism out of the gap. R11 itself is the
+> worked example — it did not assume the flag was inert at c1, it measured the
+> anchor at the new value before touching the file.
 
 Thirteen rounds plus three no-box-time passes, one model, one box, one image
 epoch. Written to be read by someone who was not here; it assumes none of the
@@ -3984,16 +4008,19 @@ thresholds this campaign had conflated: **residency** saturates at 32768, the
 **span ratio** does not, and it keeps falling to 65536 with nothing waiting at
 either.
 
-**What it implies for the recipe.** The lever is real, verified at runs=7 across
-four separate engine starts and three scheduler widths, and it is the difference
-between 1.13x and 3.71x on our best contested cell. It is still NOT folded into
-`recipe.yaml`, for one good reason: at d16384 a prefill is two chunks at 8192 and
-one at 32768, so the change is not inert at c1 either, and the c1 anchor (112.62,
-pooled over R6+R8) that every depth and concurrency comparison hangs from was
-measured at 8192. Folding without re-measuring that anchor silently creates a new
-epoch. **R11 is exactly that measurement and it is the highest-value round left —
-and R13c has now told it which value to test: 65536, not 32768 and not 98304.**
-Three things must go into the recipe note whichever way R11 lands: at c2 the
+**What it implies for the recipe — ⚠ REVISED, IT IS NOW FOLDED.** The lever is
+real, verified at runs=7 across four separate engine starts and three scheduler
+widths, and it is the difference between 1.13x and 3.71x on our best contested
+cell. It sat outside `recipe.yaml` for thirteen rounds for one good reason: the
+c1 anchor (112.62, pooled over R6+R8) that every depth and concurrency comparison
+hangs from was measured at 8192, and folding without re-measuring that anchor
+would silently create a new epoch. **R11 was exactly that measurement, R13c told
+it which value to test (65536, the knee — not 32768 and not 98304), and it
+landed: the anchor reads 112.92 at 65536, +0.27%. `recipe.yaml` now carries
+`max_num_batched_tokens: 65536`.** The epoch is therefore *declared* rather than
+silent — see the warning at the top of this synthesis.
+Three things went into the recipe note, and they are the trade the fold buys:
+at c2 the
 hardware ceiling did not move at all (181 vs 182) while the board metric rose two
 thirds, so this buys a *ranking*, not throughput; **time-to-first-response gets
 worse at every concurrency and at every budget increase tested** (+7.3% c2,
@@ -4406,6 +4433,33 @@ new measurement to a row labelled "mnbt 8192 — PRE-FOLD recipe".**
 ships, which has been measured at c1 only. It is one invocation and it closes the
 last gap between what this file claims and what the recipe does. Then the
 zero-box-time prefill metric check.
+
+**THE TOKEN BUDGET IS A `c>1` LEVER AND ONLY A `c>1` LEVER — this is the
+campaign's clearest tuning result, and its three legs belong together.** Three
+rounds measured the same flag in three places and the shape they make is the
+thing to carry out of this campaign:
+
+| leg | round | measurement | reading |
+|---|---|---|---|
+| **Inert at c1** | **R11** | `tg128 @ d16384 c1`, 8192 → 65536 (an **8x** budget rise): 112.62 → **112.92**, **+0.27%**, 0.07 SE | the flag does **nothing** at c1 |
+| **Knees at 65536 at c4** | **R13c** | `tg128 @ d16384 c4`, six budgets one invocation each: 52.07 → **173.34**, **+233%** to the knee | the flag is the **largest lever in the campaign** at c4 |
+| **Flat above the knee at c4** | **R13d** | 65536 → 131072 at c4: **−1.4%** on Phase 2; on the `ctx_` arm 5.96x → 6.15x → 6.21x | the ordering is **bookkeeping**, not the lever still paying |
+
+**Why the asymmetry, and it is mechanical rather than empirical.** The budget
+has only ever moved this metric by two routes, and R11 measured **both absent at
+c1**: residency read `(1,0)` in 4 of 4 loaded scheduler samples — one request
+cannot fail to be resident — and `tg == tg_req` exactly, so the span ratio is
+**1.000 by assignment** and there is no admission stagger for a bigger budget to
+remove. At `c>1` both routes are live, which is why the same flag is worth +233%
+at c4. **The corollary is the one that generalises: the +15.5% per-request rise
+R13 read at `c>1` is a sharing artefact** (open question 13, closed by R11) —
+at c1, where `tg` *is* `tg_req`, the same change moves it +0.27%.
+
+**What this licenses and what it does not.** It licenses the fold: a flag that
+is inert at c1 cannot move the anchor every depth and concurrency comparison
+hangs from. It does **not** license reading the knee at any other concurrency —
+the curve was taken at c4 only, and the admission arithmetic says the knee must
+move with `c`.
 
 **On the token budget above the knee — read this before you queue another
 budget point.** R13d put the campaign's widest margin at `mnbt 131072`, and on
@@ -6401,8 +6455,9 @@ campaign after R6, and it changed the only tuned artifact in it.
 
 **This is the end of the round log, not the end of the campaign's conclusions.**
 The authoritative handoff is the **`CAMPAIGN SYNTHESIS — the whole campaign, R1
-through R13d`** section above, revised 2026-08-22 to cover everything below it:
-R5c, R13, the `ctx_` phase-label correction, R13c and **R13d**. It is the only
+through R13d and R11`** section above, revised 2026-08-22 to cover everything below it:
+R5c, R13, the `ctx_` phase-label correction, R13c, R13d and **R11 — including
+its fold and the config-epoch rule that follows from it**. It is the only
 synthesis in this file and it must stay the only one — revise it, never append a
 second.
 

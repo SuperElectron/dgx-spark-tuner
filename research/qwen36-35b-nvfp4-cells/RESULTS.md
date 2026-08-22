@@ -190,14 +190,15 @@ budget other than 65536.
 ### CANNOT BE SCORED — the board has no figure for these cells
 
 `tg128 @ d16384 c8` (43.51, peak_thr 355) and `c16` (40.47 / peak_thr 440 at
-campaign config; 53.45 / peak_thr **515** at mnbt 32768) — the scrape covers
+mnbt 8192 — pre-fold recipe; 53.45 / peak_thr **515** at mnbt 32768) — the scrape covers
 c1, c2, c4 and c5 only. `ctx_tg @ d16384` at c2 (127.09) and c5 (104.75 at mnbt
 32768; **160.67 at mnbt 98304 + mns 5, R13**), and
 every `pp2048`/`ctx_pp` cell at `c>1` — the board's prefill and context cells
 are c1 only. `ctx_tg @ d131072 c1` (76.66) — never scraped. `pp2048 @ d65536
 c1` (119.54) — the board has **zero entries** at that depth, so it is an empty
 cell rather than a won one, and nothing can be posted to it anyway. All
-sixteen R9b rows — three flags from the campaign config, explicitly diagnostic.
+sixteen R9b rows — three flags off the pre-fold campaign config (mnbt 8192),
+explicitly diagnostic.
 
 `tg128 @ d16384 c1` (112.62 pooled over 14 runs, R6+R8, at mnbt 8192) is the
 crowded cell and was never a campaign target: 116.03 best vLLM NVFP4, 188.47
@@ -515,7 +516,7 @@ Round 4's two cells (c2, c5) were scraped afterwards — 325.44 and 428.95, with
 best-vLLM-NVFP4 runners-up at 163.27 and 225.46. They were briefly marked
 DISPUTED while R7's units question was open; **R10 closed that question from
 llama-benchy's source and they are scored above as LOSSES**, at 0.51x/0.21x on
-the campaign config and 0.86x/0.57x on the raised budget. Round 7's two cells
+the pre-fold campaign config (mnbt 8192) and 0.86x/0.57x on the raised budget. Round 7's two cells
 (c8, c16) have no board figures at all and cannot be scored at any units.
 
 The depth curve at tg128 c1 — **rewritten by R8, and it is monotone now:**
@@ -843,6 +844,27 @@ test types at c1 only.
 
 ## Reading these tables
 
+> **⚠️ "CAMPAIGN CONFIG" AND "UNMUTATED" ARE PRE-FOLD TERMS EVERYWHERE BELOW
+> THIS LINE.** They were written when `recipe.yaml` carried
+> `max_num_batched_tokens: 8192`, and every archive row that uses them was
+> measured at **mnbt 8192 + mns 4**. Since R11 folded `mnbt 65536` on
+> 2026-08-22, `recipe.yaml` unmutated means **mns 4 + mnbt 65536** instead —
+> a different engine. **No row below describes what the recipe now ships**
+> unless it names `mnbt 65536` explicitly (only R11's own rows do). Reproducing
+> any of them requires `-o max_num_batched_tokens=8192`.
+>
+> **The same holds for a row that names no configuration at all.** Most archive
+> rows from R1–R9 name only the cell and the run count, because at the time
+> there was one recipe and nothing to distinguish. **Read every such row as
+> `mnbt 8192 + mns 4` — the pre-fold recipe.** A row is at a different budget
+> only where it says so (`MUTATION mnbt …`, `mnbt 65536 = THE FOLDED RECIPE`).
+> **And do not compare a number you measure on today's recipe to any of these
+> rows** without either re-measuring the baseline in the same invocation at
+> `-o max_num_batched_tokens=8192`, or stating the budget as an uncontrolled
+> term — the budget is worth up to **+233%** at `c>1` (R13c) even though it is
+> worth **+0.27%** at c1 (R11). See the epoch warning at the top of this file
+> and the cross-condition rule in `journal.md`'s synthesis.
+
 tg/pp columns are MEDIANS of the runs — means are not verdicts (MTP acceptance
 is bimodal). σ is the run standard deviation, kept as the noise flag.
 `ctx_` rows are **Phase 1 of the same run, the CONTEXT LOAD** — a separate board
@@ -937,9 +959,9 @@ row, and they answer different questions:** `tg` is what the board ranks,
 | bench_f58c56da6658-verify | 2026-08-21 | ctx_tg128 @ d16384 c4 | 55.92 | 0.62 | 8641.49 | 27.68 | **win — pooled median 56.36 = 2.04x** over the R5b-scraped incumbent |
 | bench_dab043abba20 | 2026-08-21 | tg128 @ d65536 c1 | 108.15 | 10.41 | 17281.66 | 16.48 | **RETIRED — SUPERSEDED by R8's 7-run 94.10 (5.71x).** A lucky 3-run draw, 13% high, at a cell whose σ is 9.0%. The standings carry 5.71x, not 6.56x |
 | bench_dab043abba20 | 2026-08-21 | ctx_tg128 @ d65536 c1 | 89.76 | 1.80 | 16377.23 | 20.70 | win — 4.34x; **SUPERSEDED by R8's 7-run 92.98 (4.49x)**, which is the claimed figure. First ctx_ cell with a known board figure. Phase 1, the context load — not a cached pass |
-| bench_0ef7af8997ce | 2026-08-22 | tg128 @ d16384 c2 | 84.00 | 1.18 | 5657.56 | 163.27 best vLLM NVFP4 (325.44 overall) | **LOSS — 0.51x** on the campaign config. Board figure landed in R5b's scrape after the run; scored by R10. ~~aggregate 168.0, 82% scaling efficiency vs c1~~ **WITHDRAWN — `per-request × c` double-counts an already-aggregate metric (R10, R5c).** R12 later read 140.77 (0.86x) at the raised budget |
+| bench_0ef7af8997ce | 2026-08-22 | tg128 @ d16384 c2 (mnbt 8192 — pre-fold recipe) | 84.00 | 1.18 | 5657.56 | 163.27 best vLLM NVFP4 (325.44 overall) | **LOSS — 0.51x** on the campaign config. Board figure landed in R5b's scrape after the run; scored by R10. ~~aggregate 168.0, 82% scaling efficiency vs c1~~ **WITHDRAWN — `per-request × c` double-counts an already-aggregate metric (R10, R5c).** R12 later read 140.77 (0.86x) at the raised budget |
 | bench_0ef7af8997ce | 2026-08-22 | ctx_tg128 @ d16384 c2 | 79.44 | 1.06 | 4825.98 | not scraped | hold — BELOW cold (-5.4%), first below-cold ctx_ at this depth |
-| bench_0ef7af8997ce | 2026-08-22 | tg128 @ d16384 c5 (max_num_seqs 4, unmutated) | 45.60 | 0.26 | 11866.00 | 225.46 best vLLM NVFP4 (428.95 overall) | **LOSS — 0.20x.** Scheduler-limited: the fifth request queues, so this arm is not the cell's claimed figure (the `mns 5` row below is). ~~aggregate 228.0~~ **WITHDRAWN — double-counts (R10, R5c)** |
+| bench_0ef7af8997ce | 2026-08-22 | tg128 @ d16384 c5 (max_num_seqs 4, mnbt 8192 — pre-fold recipe) | 45.60 | 0.26 | 11866.00 | 225.46 best vLLM NVFP4 (428.95 overall) | **LOSS — 0.20x.** Scheduler-limited: the fifth request queues, so this arm is not the cell's claimed figure (the `mns 5` row below is). ~~aggregate 228.0~~ **WITHDRAWN — double-counts (R10, R5c)** |
 | bench_0ef7af8997ce | 2026-08-22 | ctx_tg128 @ d16384 c5 (max_num_seqs 4) | 48.18 | 0.31 | 9914.85 | not scraped | hold — above cold (+5.7%) |
 | bench_858173ba5753-mns5 | 2026-08-22 | tg128 @ d16384 c5 (MUTATION max_num_seqs 5) | 48.12 | 0.07 | 12088.40 | 225.46 best vLLM NVFP4 (428.95 overall) | **LOSS — 0.21x**, and this is the cell's campaign-config-plus-`mns 5` figure in the standings. +5.5% over the unmutated arm; mutation NOT kept in recipe.yaml. R12 read 128.93 (0.57x) and R13 164.27 (0.73x) at raised budgets — still losses |
 | bench_858173ba5753-mns5 | 2026-08-22 | ctx_tg128 @ d16384 c5 (MUTATION max_num_seqs 5) | 51.25 | 0.26 | 9850.01 | not scraped | hold — above cold (+6.5%) |
@@ -957,10 +979,10 @@ row, and they answer different questions:** `tg` is what the board ranks,
 | bench_3d8149654d1b | 2026-08-22 | tg128 @ d65536 c1 (**runs=7**, SAME engine start as the row above) | **94.10** | 8.44 | 17144.32 | 16.48 | **win — 5.71x incumbent; REVISES R3's 3-run 108.15 DOWN 13.0%**; worst of 7 runs 81.79 still 4.96x. **Depth is NOT flat: -16.8% below d16384 in the same invocation**, against a ±6% pre-declared resolution |
 | bench_3d8149654d1b | 2026-08-22 | ctx_tg128 @ d16384 c1 (runs=7) | 102.68 | 8.03 | 2809.36 | not scraped | hold — BELOW cold (-9.2%), same sign as R6's -5.63% at this depth and generation length; NOISIER than cold (7.8% vs 5.5%), the third break of the ctx-quietness rule |
 | bench_3d8149654d1b | 2026-08-22 | ctx_tg128 @ d65536 c1 (runs=7) | 92.98 | 8.07 | 16340.55 | 20.70 | **win — 4.49x incumbent** (was 4.34x at 89.76); worst of 7 runs 77.33 still 3.74x. **R3's -17% ctx inversion did NOT reproduce: -1.2% vs cold here** — treat the deep inversion as unmeasured |
-| bench_5399a85d7aec-a0 | 2026-08-22 | tg128 @ d16384 c4 (**arm A0 — campaign config, UNMUTATED**) | 52.64 | 0.58 | 10205.51 | 46.68 | hold — reproduces R2's pooled 52.85 to 0.4%. Same engine start as the c5 row below (`session_count: 1`). ~~Verdict NOT rewritten: units dispute (R5c) still open.~~ **R5c CLOSED 2026-08-22 — there was no dispute: the board reports the same aggregate field we do, so this row's 1.13x always compared like with like and the verdict stands unchanged.** **Engine log shows this cell never reaches full occupancy** — see the R9 occupancy note |
-| bench_5399a85d7aec-a0 | 2026-08-22 | tg128 @ d16384 c5 (**arm A0 — campaign config, UNMUTATED**) | 45.05 | 0.28 | 11847.76 | 225.46 best vLLM NVFP4 | LOSS — 0.20x, and reproduces R4's campaign-config c5 figure. Read here as a control, not as the cell's claim. **D0 = -14.4% against the c4 row above, measured in ONE engine start**. R4 computed -13.7% across two invocations; the deficit is real and is not an engine-start artefact |
-| bench_5399a85d7aec-a0 | 2026-08-22 | ctx_tg128 @ d16384 c4 (arm A0, campaign config) | 54.98 | 0.19 | 8633.16 | not scraped | hold — ABOVE cold (+4.4%) |
-| bench_5399a85d7aec-a0 | 2026-08-22 | ctx_tg128 @ d16384 c5 (arm A0, campaign config) | 48.04 | 0.44 | 9840.74 | not scraped | hold — ABOVE cold (+6.6%); reproduces R4's 48.18 to 0.3% |
+| bench_5399a85d7aec-a0 | 2026-08-22 | tg128 @ d16384 c4 (**arm A0 — mnbt 8192 + mns 4, the PRE-FOLD recipe, unmutated as of the run date**) | 52.64 | 0.58 | 10205.51 | 46.68 | hold — reproduces R2's pooled 52.85 to 0.4%. Same engine start as the c5 row below (`session_count: 1`). ~~Verdict NOT rewritten: units dispute (R5c) still open.~~ **R5c CLOSED 2026-08-22 — there was no dispute: the board reports the same aggregate field we do, so this row's 1.13x always compared like with like and the verdict stands unchanged.** **Engine log shows this cell never reaches full occupancy** — see the R9 occupancy note |
+| bench_5399a85d7aec-a0 | 2026-08-22 | tg128 @ d16384 c5 (**arm A0 — mnbt 8192 + mns 4, the PRE-FOLD recipe, unmutated as of the run date**) | 45.05 | 0.28 | 11847.76 | 225.46 best vLLM NVFP4 | LOSS — 0.20x, and reproduces R4's campaign-config c5 figure. Read here as a control, not as the cell's claim. **D0 = -14.4% against the c4 row above, measured in ONE engine start**. R4 computed -13.7% across two invocations; the deficit is real and is not an engine-start artefact |
+| bench_5399a85d7aec-a0 | 2026-08-22 | ctx_tg128 @ d16384 c4 (arm A0, mnbt 8192 — pre-fold recipe) | 54.98 | 0.19 | 8633.16 | not scraped | hold — ABOVE cold (+4.4%) |
+| bench_5399a85d7aec-a0 | 2026-08-22 | ctx_tg128 @ d16384 c5 (arm A0, mnbt 8192 — pre-fold recipe) | 48.04 | 0.44 | 9840.74 | not scraped | hold — ABOVE cold (+6.6%); reproduces R4's 48.18 to 0.3% |
 | bench_d9fdc68576f2-a1 | 2026-08-22 | tg128 @ d16384 c4 (**arm A1 — MUTATION max_num_batched_tokens 32768**) | 143.08 | 3.97 | 11798.88 | — | hold — **NOT COMPARABLE and NOT CLAIMED**: `tg x c` = 572.3 exceeds `peak_throughput` 297, so the figure is invalid as an aggregate (open question 9). What IS solid: occupancy goes to a clean `Running 4 / Waiting 0`, and `peak_throughput` rises 272 -> 297 (**+9.2%**) |
 | bench_d9fdc68576f2-a1 | 2026-08-22 | tg128 @ d16384 c5 (**arm A1 — MUTATION max_num_batched_tokens 32768**) | 81.73 | 8.16 | 11871.93 | — | hold — **NOT COMPARABLE and NOT CLAIMED**: `tg x c` = 408.7 exceeds `peak_throughput` 289. σ **9.98%** (runs 83.06 / 65.12 / 81.73) breaks the round's own error budget. `peak_throughput` 276 -> 289 (+4.7%) |
 | bench_d9fdc68576f2-a1 | 2026-08-22 | ctx_tg128 @ d16384 c4 (arm A1, MUTATION mnbt 32768) | 121.42 | 3.28 | 10320.43 | — | hold — not comparable, same estimator break as its cold row |
@@ -979,7 +1001,7 @@ row, and they answer different questions:** `tg` is what the board ranks,
 | bench_433eeaf9827e | 2026-08-22 | ctx_tg128 @ d16384 c4 (**MUTATION mnbt 98304 + mns 5**, runs=7) | **170.59** | 6.34 | 10517.21 | 27.68 | **WIN — 6.16x on these 7 runs; SUPERSEDED by the pooled 14-run 170.36 = 6.15x** (R13c re-ran this exact config and read 168.37). ⚠ **SUPERSEDED as the widest margin by R13d** — the mnbt 131072 pooled 14-run 171.77 = 6.21x. This row stays a win at 6.15x. Phase 1, the context load. `peak_throughput` 294, span ratio 1.45, `tg_req` 61.93, residency 3.95 of 4. σ 3.72%. BELOW Phase 2 (−2.3%), and it staggers LESS than Phase 2 — refuting R12's asymmetry |
 | bench_433eeaf9827e | 2026-08-22 | tg128 @ d16384 c5 (**MUTATION mnbt 98304 + mns 5**, runs=7) | **164.27** | 5.40 | 15126.01 | 225.46 best vLLM NVFP4 (428.95 overall) | **LOSS — 0.73x, short by 27%**, up from 0.57x. The round's target cell, not taken. Against the cell top 428.95 it is **0.38x**. `peak_throughput` 303, span ratio 1.54, `tg_req` 50.50 (+15.5%), residency 4.81 of 5. σ 3.29% |
 | bench_433eeaf9827e | 2026-08-22 | ctx_tg128 @ d16384 c5 (**MUTATION mnbt 98304 + mns 5**, runs=7) | 160.67 | 3.48 | 15552.29 | not scraped | hold — Phase 1. `peak_throughput` 314, span ratio 1.52, `tg_req` 48.73, residency 5.06 of 5. σ 2.16%. BELOW Phase 2 (−2.2%) |
-| bench_9379c15468ec-a-chunk | 2026-08-22 | tg128 @ d16384 c4 (**R9b ARM A — prefix caching OFF, mnbt 32768, mns 4, chunked prefill ON**, runs=3) | 62.13 | 0.70 | 11559.86 | **NOT SCOREABLE** | diagnostic — three flags from the campaign config, not a standings row. `peak_throughput` **297**, IDENTICAL to R9's A1 with caching ON, while `tg` falls **−56.6%** (143.08 → 62.13): the hardware ceiling did not move, the batch span did. Stagger **3.32** vs A1's 1.62. `tg_req` 51.49 (−11.0%) |
+| bench_9379c15468ec-a-chunk | 2026-08-22 | tg128 @ d16384 c4 (**R9b ARM A — prefix caching OFF, mnbt 32768, mns 4, chunked prefill ON**, runs=3) | 62.13 | 0.70 | 11559.86 | **NOT SCOREABLE** | diagnostic — three flags off the pre-fold campaign config (mnbt 8192), not a standings row. `peak_throughput` **297**, IDENTICAL to R9's A1 with caching ON, while `tg` falls **−56.6%** (143.08 → 62.13): the hardware ceiling did not move, the batch span did. Stagger **3.32** vs A1's 1.62. `tg_req` 51.49 (−11.0%) |
 | bench_9379c15468ec-a-chunk | 2026-08-22 | tg128 @ d16384 c5 (**R9b ARM A**, runs=3) | 50.28 | 0.81 | 12309.92 | **NOT SCOREABLE** | diagnostic — `peak_throughput` 298, `tg_req` 25.46, stagger 2.53, residency 3.77 of 5. Scheduler `(4,1)` in four samples, reproducing R9's direct observation at this cell |
 | bench_9379c15468ec-a-chunk | 2026-08-22 | ctx_tg128 @ d16384 c4 (**R9b ARM A**, runs=3) | 70.90 | 0.56 | 10123 | **NOT SCOREABLE** | diagnostic — **and this row is the CONTEXT-LOAD pass, not a cached pass**: with prefix caching off there is no cache, and llama-benchy's `ctx_` phase was never the cached one anyway (see the phase-label correction above). `peak_throughput` 282 |
 | bench_9379c15468ec-a-chunk | 2026-08-22 | ctx_tg128 @ d16384 c5 (**R9b ARM A**, runs=3) | 57.48 | 0.47 | 10760 | **NOT SCOREABLE** | diagnostic — `peak_throughput` 281 |
