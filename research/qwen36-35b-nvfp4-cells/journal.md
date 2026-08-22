@@ -4036,8 +4036,10 @@ with configurations in `RESULTS.md`; the shape of it:
   R13d repeated the 131072 cell). The 98304 row remains a win at 6.15x from two
   engine starts. Its neighbour at `mnbt 65536` reads 5.96x on 7 runs.
 - **Widest CAMPAIGN-CONFIG win:** `tg128 @ d65536 c1` 94.10 vs 16.48 (**5.71x**),
-  then `tg32 @ d32768 c1` ⚠ **112.59 vs 23.31 (4.83x**, pooled 10 runs — R8c
-  protected this cell and R1's 3-run 115.56 / 4.96x is retired), `ctx_tg @ d65536 c1` 92.98
+  then `tg32 @ d32768 c1` ⚠ **115.85 vs 23.31 (4.97x**, pooled **24** runs —
+  REVISED BY R22 from the pooled-10 **112.59 / 4.83x** this bullet carried after
+  R8c; R1's 3-run 115.56 / 4.96x remains retired. At the folded budget the same
+  cell reads **110.16 = 4.72x** on 21 pooled runs), `ctx_tg @ d65536 c1` 92.98
   vs 20.70 (**4.49x**), `tg32 @ d16384 c1` 116.43 vs 28.11 (**4.14x**).
 - **The transformed cell:** `tg128 @ d16384 c4` — the only contested cell we won
   (8 entries, a real field) — **1.13x** on the campaign config, **3.67x** at
@@ -9758,6 +9760,22 @@ recorded here and in `RESULTS.md` as a failure with its confound named. This is
 the one place in the round where I have departed from a pre-declared procedure,
 and I would rather flag that than bury it. The three other rows stand cleanly and
 none of them needed the exception.
+
+**THE PHASE-2 POOLED FIGURES THE ROUND ALSO PRODUCED, recorded here because they
+had only ever been written into `RESULTS.md`.** Both Phase-2 arms stood inside
+their bands, so both pool, and `tg32 @ d32768 c1` — a WIN — moves at both
+budgets. Recomputed from the archived per-run values in
+`experiments/*/consolidated.json`:
+
+| row | pooled runs | median | vs 23.31 | σ/med | median SE |
+|---|---:|---:|---:|---:|---:|
+| `tg32 @ d32768 c1`, **mnbt 8192** (R1 3 + R8c E 7 + R22 G 14) | **24** | **115.85** | **4.97x** | 13.51% | 3.46% |
+| `tg32 @ d32768 c1`, **mnbt 65536** (R8c F 7 + R22 H 14) | **21** | **110.16** | **4.72x** | 16.29% | 4.45% |
+
+⚠ **This retires the pooled 10-run 112.59 = 4.83x that the standings summary
+above and the R8c block below still quote in places.** The 24-run figure is the
+campaign's largest sample at any cell. The margin widened; **no cell changed
+side and the counts stay 8 won / 12 lost.**
 
 ### THE −27% INVERSION STAYS RETIRED — now on five intra-invocation readings
 
