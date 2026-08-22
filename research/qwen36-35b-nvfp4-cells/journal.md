@@ -10874,3 +10874,160 @@ four arms, the source reads, the outcome block and the close-out. **Value: the
 campaign's oldest open defect, carried for seventeen rounds and 220+ samples, is
 closed to a single flag — and the +42% prize that motivated it is refuted in the
 same sitting for the price of one extra arm.**
+
+## Round 25 hypothesis — THE UNTESTED LEVER: `num_speculative_tokens` 3 / 4 / 5 at `tg128 @ d16384 c1`, runs=7, one engine start per arm
+
+**Written 2026-08-22 BEFORE any arm ran.** Every threshold, the refutation
+condition and the fold rule below were fixed before the first invocation.
+
+### Why this round exists
+
+`num_speculative_tokens: 3` has been in `recipe.yaml` since R1 and has **never
+been varied upward in eighteen rounds**. It was inherited from the source recipe,
+like `--moe-backend marlin`, and inherited values are the ones nobody tests.
+`num_speculative_tokens: k` means up to `k` drafted tokens plus one bonus token,
+so the **ceiling on mean acceptance length is `k + 1` = 4.0** on the shipped
+value. R24 established the neighbouring fact and bounded the alternative: MTP is
+what holds the prefix cache at 0.0%, at **any** lookahead size including 1, and
+buying the cache back by deleting `--speculative-config` costs **−15.7% `tg`** at
+c4. So MTP stays. The only untested direction is **up**.
+
+⚠ **AND THE PREMISE IS WEAKER AT THIS CELL THAN THE CAMPAIGN ANALYSIS CLAIMS —
+RECORDED BEFORE THE RUN RATHER THAN DISCOVERED AFTER.** The "acceptance sits at
+89–93% of its ceiling, so the ceiling binds" reading comes from **d32768 c1**
+(3.56–3.71 across four engine starts, R5/R8c/R22). At **this round's cell**,
+`tg128 @ d16384 c1`, the only clean sample is R11's engine log:
+**median 3.13, range 2.79–3.24 over 7 samples — 78.3% of the 4.0 ceiling**, not
+89–93%. R24's c4 control reads 3.07 (median of 10). At 78% of ceiling the
+binding constraint is at least partly **per-position acceptance**, not the
+ceiling, and the round is correspondingly less likely to pay. It is still worth
+running because it is cheap, one-dimensional, and the last untested lever that
+can reach c1 — but the round is not entitled to expect a win.
+
+### The arms
+
+Cell `tg128 @ d16384 c1` — `depth 16384`, `pp 2048`, `tg 128`, `concurrency 1`,
+**runs=7**, one engine start per arm, plain sequential order (R23 refuted the
+position bias: four contrasts, mean −0.44%, p = 1.0, so no counterbalancing).
+
+| arm | recipe | `num_speculative_tokens` | acceptance ceiling |
+|---|---|---:|---:|
+| **arm1 CONTROL** | `./recipe.yaml` unchanged | **3** (shipped) | 4.0 |
+| **arm2 SPEC 4** | `recipe-r25-spec4.yaml` | 4 | 5.0 |
+| **arm3 SPEC 5** | `recipe-r25-spec5.yaml` | 5 | 6.0 |
+
+`--speculative-config` is a serve-command flag, not a templated default, so each
+raised arm needs its own candidate recipe; `-o` cannot reach it. Configuration is
+what `recipe.yaml` ships and was **confirmed against the file, not assumed**:
+`max_num_batched_tokens: 65536`, `max_num_seqs: 4`, `kv-cache-dtype fp8`,
+`--moe-backend marlin`, `--attention-backend flashinfer`, prefix caching on.
+
+**The low anchor is REUSED, not re-measured.** R24 arm4
+(`bench_f6e4a4c51f71-r24-arm4-spec1`) measured `num_speculative_tokens: 1`:
+`tg` **148.12**, `ctx_tg` **152.81**, **mean acceptance length median 1.85**
+(range 1.83–1.98 over 9 samples, **92.5% of its 2.0 ceiling**), prefix cache
+**0.0% × 12 of 12**. ⚠ **It was measured at c4, not c1** — so it anchors the
+*acceptance* curve, which is a per-request property, and it does **not** anchor
+the `tg` curve this round measures. That distinction travels with every use of
+it below.
+
+### PRE-DECLARED THRESHOLDS
+
+**Sampling.** c1 cells at this depth run σ/med ≈ 8–12% across seven engine starts
+(R23: 2.6 / 5.5 / 8.01 / 8.26 / 10.95 / 12.22 / 10.90%). Taking σ/med = 10% at
+runs=7, the median standard error is `1.253 × 10% / √7` = **4.74%**, and the
+standard error of a difference between two arms is `4.74% × √2` = **6.70%**.
+Independently, R23 measured the arm-to-arm spread on **identical** configurations
+at about **±5%**. So:
+
+- **CONFIRM — a genuine improvement:** Phase-2 `tg` median **≥ +10.0%** over the
+  same-session control. Ten points is ~1.5 SE of the difference and twice the
+  demonstrated identical-config spread; anything smaller cannot be told from a
+  draw at runs=7 and this campaign has been burned four times by pretending
+  otherwise.
+- **REFUTE:** Phase-2 `tg` **≤ +2.0%** (flat or declining) as the ceiling rises,
+  **or** engine-reported mean acceptance length failing to rise above the
+  control's median. The second clause refutes the premise **directly and
+  independently of `tg`**: if a higher ceiling does not buy more accepted tokens
+  per verify step, the ceiling was not the binding constraint and the whole
+  reason for the round is wrong.
+- **DEAD ZONE: +2.0% to +10.0%.** Real-looking, inside the campaign's own
+  arm-to-arm spread, recorded as a lead. **No fold, no standings row, no claim.**
+
+**MECHANISTIC READOUT, and it is the primary one.** Per arm, from the engine's
+own `SpecDecoding metrics` line: **median mean-acceptance-length** and
+**Avg draft acceptance rate**, plus the `Prefix cache hit rate` line (expected
+0.0% on all three arms — R24 showed any `--speculative-config` kills it — so a
+nonzero reading on any arm would be a surprise worth its own round).
+
+**Arithmetic prediction, on the record before the run.** R11's 3.13 at `k = 3`
+implies a per-position acceptance `p ≈ 0.84` on the geometric model
+`(1 − p^(k+1))/(1 − p)`. That model predicts **3.64 at `k = 4` (+16%)** and
+**4.05 at `k = 5` (+29%)**. But a longer draft also costs more per verify step:
+R24's own `k = 1` → `k = 3` step bought +66% of accepted length and only **+14.7%
+of `tg`** at c4, i.e. `tg` captured **~22%** of the acceptance gain. Applying that
+ratio here predicts **`tg` +3.5% at `k = 4` and +6.5% at `k = 5`** — **both
+inside the declared dead zone.** ⚠ **So the predicted outcome of this round is:
+premise CONFIRMED (accepted length rises), effect DEAD ZONE, NO FOLD.** Written
+down so the outcome block cannot be reinterpreted after the fact.
+
+### THE FOLD RULE — R11 is the precedent, and nothing folds unless every clause fires
+
+`num_speculative_tokens: N` (N > 3) is folded into `recipe.yaml` **only if ALL
+five hold**:
+
+1. **Measured at the anchor cell** `tg128 @ d16384 c1`, runs=7, in the **same
+   session** as the control arm, one engine start per arm — R11's discipline: it
+   measured the c1 anchor at the new value before touching the file.
+2. **Phase-2 `tg` median ≥ +10.0%** over that same-session control (the CONFIRM
+   band above).
+3. **Phase-1 `ctx_tg` median not worse than the control by more than −5.0%.**
+   R11 and R8c both required the conjunction: a change may not be folded on one
+   phase while quietly costing the other.
+4. **Engine-reported mean acceptance length rises above the control's median.**
+   The mechanism has to be present, not merely the throughput — a `tg` rise
+   without an acceptance rise is a draw wearing a mechanism's clothes.
+5. **Gates clean in that arm:** `crash_count: 0`, `session_count: 1`,
+   `container_image_longterm_ref: ghcr.io/spark-arena/dgx-vllm-eugr-nightly:2026082102`,
+   engine log captured.
+
+If any clause fails, **`recipe.yaml` is untouched** and the finding is recorded
+as a candidate only. A fold at any **other** cell (c4 in particular) needs its
+own round and its own rule; this round licenses nothing at `c > 1`.
+
+### GATES AND VOID CONDITIONS
+
+- `crash_count > 0` or `session_count > 1` in any arm voids that arm.
+- The `Benchmark args:` echo must read `pp: [2048]`, `depth: [16384]`,
+  `tg: [128]`, `concurrency: [1]`, `runs: 7` in every arm. **`sparkrun` silently
+  defaults an omitted `-b depth` to 0** — R5 lost a start to it.
+- `tg_throughput != tg_req_throughput` at c1 voids the reading (at c1 that
+  equality is an assignment, not a measurement — R10). ⚠ **This round is c1, so
+  the per-request and batch-aggregate figures COINCIDE**; nothing here is a batch
+  aggregate and nothing is ever multiplied by concurrency.
+- Any container image other than `dgx-vllm-eugr-nightly:2026082102`.
+- `nvidia-smi --query-gpu=clocks.sm,temperature.gpu,power.draw` recorded at each
+  arm start, so a thermal explanation can be checked rather than assumed.
+- Engine log per R13d's recipe: `docker exec <container> tail -f -n +1
+  /tmp/sparkrun_serve.log`, container matched on `^sparkrun_`.
+
+### OPTIONAL RIDE-ALONG — `--moe-backend`, LAST, and only if the three arms land cleanly
+
+`--moe-backend marlin` was inherited from the source recipe and has never been
+tested against an alternative in nineteen rounds. One arm, same cell, same probe,
+`--moe-backend triton` (chosen because the MTP module already runs
+`"moe_backend":"triton"` in the shipped recipe, so the kernel is known to exist
+in this build). **Higher crash risk than anything else in the queue.** A crash is
+a RESULT: archive with a `-crash` suffix per the skill, record what the engine
+said, and it does **not** invalidate the three R25 arms above it. No fold either
+way — a `--moe-backend` change would need its own round and its own rule.
+
+### COST
+
+Three invocations (four with the ride-along), one engine start each, ~130 s grid
+at c1 plus ~180 s starts. **~25–35 min wall estimated.**
+
+### ABSOLUTELY NO ARENA SUBMISSION
+
+No `--arena` flag in any arm, no `sparkrun arena` subcommand of any kind. There
+is no login and nothing has ever been submitted.
