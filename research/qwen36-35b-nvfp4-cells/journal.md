@@ -850,3 +850,329 @@ invocation and the live engine-log diagnosis. Four cells measured, one scoreable
 and that one lost. That is the honest ratio for a stretch round, and it is the
 argument for never returning to this depth: d131072 costs ~8x R3's box time per
 round and the cell is not winnable without tuning the campaign refuses to do.
+
+## Round 6 hypothesis — the tg32-vs-tg128 control @ d16384 c1, runs=7
+
+The campaign's first round run purely as a CONTROL. No new cell, no new depth,
+no mutation: both probes have been measured before, and the round exists to
+decide whether one of those measurements was ever real. R1 measured tg32 @
+d16384 c1 at median 129.32; our tg128 @ d16384 c1 baseline is 102.2, carried in
+from qwen36-35b-quant round 0. Same depth, same concurrency, same config —
+and the SHORTER generation came out 27% FASTER, which the amortization argument
+says should be impossible. `tg t/s` is tokens over the decode span, so a 32-token
+generation amortizes whatever fixed per-request cost sits at the head of decode
+(prefill handoff, MTP warmup) over 4x fewer tokens. Every reading of that
+predicts tg32 BELOW tg128, and R1 got the opposite at all three of its depths.
+
+The two measurements have never sat under one engine start. That is the whole
+defect this round repairs: **tg=32 and tg=128 at d16384 c1 in ONE invocation,
+runs=7 each**, so both cells see the same engine, the same page-cache state and
+the same thermal window, and the only thing that differs between them is the
+number of tokens generated.
+
+runs=7, not 3, and that is not caution — it is the round's premise. c1 is the
+bimodal MTP-acceptance regime this campaign has documented five times over: σ ran
+to 22.72 at c1 in R1 against 0.07-0.75 at c4/c5 in R4. R1 proved directly that
+three runs cannot rank anything here — its own d8192 cell spanned 73.07 to
+128.35, a spread wider than the gaps between its three cell medians. A 3-run
+median drawn from a σ≈18 distribution is itself an estimator with a sampling
+spread near ±14, which is half the size of the 27-point gap this round is
+supposed to explain.
+
+### Three candidate mechanisms, and what separates them
+
+**H1 — undersampling. The gap is a 3-run artefact and does not survive.** Both
+of the numbers in dispute are 3-run medians from the campaign's widest
+distribution. Note the arithmetic that makes this the default reading: variance
+alone cannot move a MEDIAN. If tg32 and tg128 sample the same underlying decode
+rate with different spreads, their 7-run medians should converge regardless of
+how much noisier tg32 is. Under H1 the two medians land within ~5% of each other
+and R1's 129.32 falls.
+
+**H2 — acceptance decays along a generation, so the gap is real.** MTP
+acceptance is highest at the head of a generation, where the drafted continuation
+is most strongly conditioned on the prompt. R5 watched per-position acceptance
+directly and saw it at 1.000 / 0.962 / 0.846 before the deep contexts pulled it
+to 0.608 / 0.451 / 0.373. If acceptance decays with generation position, a
+32-token generation samples only the high-acceptance head while a 128-token
+generation averages the head against a slower tail — and that shifts the median
+genuinely, not just the spread. Under H2 tg32 stays materially above tg128 at
+runs=7, by more than 10%.
+
+**H3 — the tg128 baseline is depressed.** The 102.2 figure is inherited from a
+different experiment series and has never been re-measured in this campaign.
+Under H3 tg128 re-measures ABOVE 102.2 and the gap closes from the other side.
+
+H1 and H3 are not exclusive and both point at the same defect; H2 is the one
+that would make R1's number a finding rather than a draw.
+
+### Numeric predictions
+
+- **tg128 @ d16384 c1: median 100-115, centre ~107.** The centre is not 102.2.
+  R3 measured 108.15 at d65536 and R5's depth curve says the response is flat
+  within noise from d16384 to d65536 — so if the depth term is negligible over
+  that range, 102.2 and 108.15 are two draws of the same quantity and its centre
+  is nearer 105 than 102.
+- **tg32 @ d16384 c1: median 108-125, centre ~116.** Below R1's 129.32, above the
+  tg128 centre. This is H1 with a partial concession to H2: most of the 27% is
+  expected to be undersampling, some of it may be real.
+- **The gap, which is the actual verdict: +5% to +10%, tg32 over tg128.**
+  This is the number to read in the morning. The discriminator is explicit:
+  a gap at or above 20% confirms H2 and makes generation length a real lever;
+  a gap at or below 3% confirms H1 and retires R1's 129.32 as a lucky draw.
+
+### What this round buys for open question 2, for free
+
+The -12% reproduction gap against the board's best vLLM NVFP4 entry (116.03)
+rests entirely on that inherited 102.2. This round re-measures exactly that cell
+at runs=7 under the campaign's own engine. **If tg128 lands at or above 116.03
+the reproduction gap never existed and was undersampling all along.** At the
+predicted centre of 107 the gap narrows from -12% to about -8% but does not
+close, which would say the shortfall is real and belongs to the config or the
+box rather than to a thin sample. Either way the answer goes in the outcome
+explicitly. Note the cell itself is the crowded one (top 188.47, LFM2.5-350M
+BF16) and is NOT expected to be taken — nothing here is tuned for it.
+
+### Side-predictions, so the round can be refuted on more than one axis
+
+- **σ is WIDER at tg32 than at tg128, in relative terms — predict tg32 above 12%
+  of its median, tg128 8-12%.** This is the acceptance-variance story's own
+  prediction and it is independent of the medians: a 32-token generation
+  completes in roughly 8-32 verify steps against 32-128 for tg128, so it averages
+  the bimodal acceptance draw over 4x fewer trials. If tg32 instead comes back
+  the QUIETER of the two, the variance mechanism this campaign has leaned on
+  since R2 is wrong about where the averaging happens.
+- **pp2048 is identical in both arms, 630-645.** The prefill work does not depend
+  on how many tokens are generated afterwards, and this figure has read 637.09
+  (c1), 634.04 (c2), 643.31 (c4) at this depth. It is therefore a within-round
+  CONTROL on box state: if the two arms' pp2048 rows differ by more than ~2%,
+  something drifted mid-invocation and the tg comparison is contaminated.
+- **ttfr is identical in both arms, 3000-3500 ms** (R1's tg32 arm read 3230.01
+  at this depth), for the same reason. Second control on the same fact.
+- **ctx_ phases sit at or slightly ABOVE cold in both arms, within ±8%.** At
+  d16384 c1 R1 read ctx 130.16 against cold 129.32 (+0.6%); the below-cold
+  inversion belongs to d32768 and deeper. Predict the quietness holds here too —
+  ctx σ under 5% of its median — because the quietness only broke at d131072
+  (R5), where R5 argued the acceptance draw had come to dominate both phases.
+
+Config. **Mutation: NONE.** Incumbent recipe.yaml, and for only the second time
+in the campaign no `max_model_len` override is needed — d16384 + pp 2048 + tg 128
+fits the recipe default 32768 with room. Telemetry is sampled alongside, because
+this round's second target is open question 2 and every past argument about that
+gap has leaned on the box's clock; R4 and R5 agree at 2392-2398 MHz and a third
+sample under a different load shape is nearly free.
+
+Probe: `-b tg=32,128 -b depth=16384 -b concurrency=1 -b runs=7`
+(pp=2048 rides along by default, so both `pp2048` and both `ctx_` phases are
+measured in the same invocation — 8 cells from one engine start).
+
+Cost note: 14 runs at the campaign's cheapest depth. R1 ran 9 runs across three
+depths in 349 s; this is more runs at a shallower average depth, so predict
+250-400 s of benchmark time and one engine start.
+
+Per R5's process failure: the `Benchmark args:` block sparkrun echoes before
+`Benchmark ID:` will be read before the run is allowed to proceed, and it must
+show `tg: [32, 128]`, `depth: [16384]`, `concurrency: [1]`, `runs: 7`.
+
+## Round 6 outcome — bench_dd3afc9e1c94 (2026-08-22)
+
+All four cells under ONE engine start, runs=7 each, one invocation:
+
+| Cell | median | (mean) | σ | σ/median | runs |
+|---|---:|---:|---:|---:|---|
+| tg32 @ d16384 c1 | 116.43 | (120.77) | 11.55 | 9.9% | 110.44 / 140.72 / 108.96 / 109.88 / 130.18 / 116.43 / 128.77 |
+| tg128 @ d16384 c1 | 111.11 | (112.27) | 2.91 | 2.6% | 109.31 / 116.58 / 111.11 / 112.38 / 109.47 / 116.66 / 110.36 |
+| ctx_tg32 @ d16384 c1 | 122.97 | (120.70) | 8.44 | 6.9% | 107.83 / 126.00 / 133.96 / 112.15 / 122.97 / 115.96 / 126.01 |
+| ctx_tg128 @ d16384 c1 | 104.85 | (103.90) | 9.73 | 9.3% | 104.85 / 107.08 / 92.47 / 89.15 / 111.91 / 102.51 / 119.32 |
+
+**Verdict on the control: H1 wins. The 27% gap was undersampling.** R1's tg32 @
+d16384 read 129.32 against a tg128 baseline of 102.2 — a 26.5% advantage for the
+shorter generation. Under one engine start at runs=7 the same comparison reads
+116.43 against 111.11: **+4.79%.** Four fifths of the effect was never there.
+tg32 fell 10.0% from its 3-run figure and tg128 rose 8.7% from its inherited
+one, and the two moved toward each other exactly as the sampling argument in the
+hypothesis said they must — variance cannot shift a median, so two medians drawn
+from the same quantity with different spreads have to converge once the sample
+is large enough to find them.
+
+**And the residual 4.79% is smaller than it looks, because the round's own
+controls priced the systematic.** Both prefill controls came in offset in the
+same direction and by the same amount: pp2048 reads 623.13 in the tg32 arm
+against 634.99 in the tg128 arm (-1.90%), and ttfr reads 3298.58 against 3237.23
+(+1.90%). That work is IDENTICAL in the two arms — the prefill does not know how
+many tokens will be generated afterwards — so a 1.9% arm-to-arm offset is pure
+systematic, presumably the tg32 arm running first into a marginally colder box.
+Subtract it and the residual generation-length advantage is **~2.9%**, which
+lands precisely on the hypothesis's own H1 threshold ("a gap at or below 3%
+confirms H1"). **H2 — MTP acceptance decaying along a generation, which would
+have made generation length a real tuning lever — is not supported at any useful
+magnitude.** R1's 129.32 is retired as a lucky draw.
+
+The three numeric predictions were the campaign's second accurate set, and again
+they were built by interpolating our own measured points rather than reasoning
+forward from the architecture:
+
+- tg128 predicted 100-115, centre ~107 — measured **111.11**, inside the band,
+  above centre. The centre was deliberately set above the inherited 102.2 on
+  R3/R5's flatness reading, and that adjustment was the right call.
+- tg32 predicted 108-125, centre ~116 — measured **116.43**, essentially on the
+  centre.
+- The gap predicted +5% to +10% — measured **+4.79%**, a fifth of a point below
+  the bottom of the band. Called a miss, and a miss by a hair on the side that
+  makes the round's conclusion stronger, not weaker.
+
+### Open question 2: the reproduction gap was two-thirds undersampling
+
+This is the round's second finding and it comes free. The -12% gap rests entirely
+on the inherited 102.2 for tg128 @ d16384 c1. Re-measured here at runs=7 under
+this campaign's own engine: **111.11 against the board's best vLLM NVFP4 entry of
+116.03 — a gap of -4.24%, not -12%.** Two of the seven runs (116.58 and 116.66)
+clear 116.03 outright, so the board's figure sits at the top of our own run
+distribution rather than outside it.
+
+The honest statement is therefore: **most of the reproduction gap never existed,
+and what remains is small and not obviously a defect.** A -4.2% median shortfall
+against a single published entry, with our distribution straddling that entry, is
+what two boxes under the same fleet-wide clock policy should look like. Open
+question 2 should be closed as "largely resolved — was undersampling", not
+carried forward as an unexplained deficit. Note the cell itself is the crowded
+one (overall top 188.47, LFM2.5-350M BF16) and remains far out of reach; nothing
+here was tuned for it and nothing is claimed against it.
+
+### The noise prediction: direction right, both magnitudes wrong, and the miss
+### is the round's most interesting result
+
+Predicted tg32 σ above 12% of its median and tg128 σ at 8-12%. Measured 9.9% and
+**2.6%**. The DIRECTION held emphatically — tg32 is 3.8x noisier than tg128 in
+relative terms, which is the averaging story's own prediction, since a 32-token
+generation completes in roughly 8-32 verify steps against 32-128 for tg128 and so
+averages the bimodal acceptance draw over 4x fewer trials. But the tg128 figure
+refutes something the campaign has believed since R1.
+
+**"c1 is the noisy regime" is false as stated.** Five rounds have treated
+concurrency as the variable that controls variance: σ 14-22% at c1 in R1, 9.6% at
+c1 in R3, 9.3% at c1 in R5, against 0.15-1.4% at c2/c4/c5 in R2 and R4. Here is a
+c1 cell at 2.6%. Lining up every c1 cold measurement the campaign has taken:
+
+| cell | σ/median |
+|---|---:|
+| tg128 @ d16384 c1 (this round) | 2.6% |
+| tg32 @ d16384 c1 (this round) | 9.9% |
+| tg128 @ d65536 c1 (R3) | 9.6% |
+| tg128 @ d131072 c1 (R5) | 9.3% |
+| tg32 @ d16384 c1 (R1) | 14.2% |
+| tg32 @ d8192 c1 (R1) | 21.4% |
+
+The pattern is not concurrency. It is **number of verify steps per measurement,
+and acceptance quality**. Long generations at shallow depth — many verify steps,
+and R5 measured acceptance at 93.6% with per-position 1.000/0.962/0.846 in
+exactly that regime — give a quiet c1 cell. Short generations average over too
+few steps; deep contexts collapse acceptance to 47.7% and make each step's draw
+itself wide. Concurrency was a proxy for the first of those all along: raising c
+multiplies the sequences averaged per step, which is the same lever as
+lengthening the generation.
+
+Practical consequence, and it is a planning consequence: **runs=3 is adequate for
+tg128 at d16384 c1** (σ 2.6% means three runs pin it to a few percent), and
+inadequate for tg32 anywhere and for tg128 at d65536 and deeper. R8's premise —
+runs=7 at d16384 AND d65536 to settle whether the depth response is flat — is
+strengthened, because the d16384 half is now known to be quiet and the d65536
+half is known to be noisy, so the comparison's error budget is dominated by one
+side and R8 can spend its runs accordingly.
+
+### Open question 4 gets its cleanest evidence yet, and it kills the depth reading
+
+**The ctx-vs-cold sign flips with GENERATION LENGTH, at one depth, one
+concurrency, inside one engine start.**
+
+| arm | cold | ctx | ctx vs cold |
+|---|---:|---:|---:|
+| tg32 | 116.43 | 122.97 | **+5.62%** |
+| tg128 | 111.11 | 104.85 | **-5.63%** |
+
+Same invocation, same depth, same concurrency, same thermal window — the only
+difference is 32 tokens versus 128 — and the sign reverses with almost identical
+magnitude. Every previous observation of this effect was confounded: R3's was
+across depths and invocations, R4's was across concurrencies. This one is not
+confounded by anything. R4 already said to stop treating open question 4 as a
+depth question; this round says to stop treating it as a depth question OR a
+concurrency question. The sign moves with all three, which means the driver is
+something all three modulate, and prefill-vs-decode mix and MTP acceptance are
+the only candidates left standing.
+
+The prediction here was refuted on the tg128 arm: predicted ctx at or above cold
+in both arms, within ±8%, on the basis that the below-cold inversion belonged to
+d32768 and deeper. It held for tg32 (+5.6%) and inverted for tg128 (-5.6%).
+
+**The ctx quietness broke again, and R5's explanation for the break does not
+survive.** ctx_tg128 σ is 9.3% of its median against cold's 2.6% — the cached
+phase is 3.5x NOISIER than the cold one. R5 saw the same reversal at d131072 and
+attributed it to depth: the acceptance draw dominating both phases out where
+acceptance has collapsed. That cannot explain this one, which happens at d16384
+where acceptance is high and the cold phase is the quietest c1 measurement the
+campaign has ever taken. The regularity "removing prefill removes the variance"
+held for four rounds and has now failed twice for two different reasons; it
+should be retired rather than patched. ctx_tg32 is the one arm that behaves as
+the old rule expects (6.9% against cold's 9.9%, quieter).
+
+### The controls, which did their job
+
+pp2048 and ttfr were written into the hypothesis as within-round controls on box
+state, with a contamination threshold of ~2%. They came in at 1.90% on both,
+i.e. the control PASSED but only just, and the offset it exposed is the same
+order as the effect being measured — which is why the round subtracts it above
+rather than ignoring it. Writing the controls down in advance is what made the
+4.79% figure readable as ~2.9%; without them the round would have reported a
+5% generation-length effect that is mostly a warm-up artefact. pp2048 in the
+tg32 arm is also 3x noisier (σ 8.72 vs 2.77), consistent with that arm running
+across a settling box.
+
+Absolute pp2048 levels reproduce the campaign's flat d16384 series: 637.09 (R1
+c1), 634.04 (c2), 643.31 (c4), now 623.13 / 634.99. The tg32 arm's 623.13 sits
+just below the predicted 630-645 band; the tg128 arm's 634.99 is inside it.
+ttfr 3237-3299 ms is inside the predicted 3000-3500 and matches R1's 3230.01 at
+this depth.
+
+### Standings effect
+
+tg32 @ d16384 c1 remains a WIN and its claimed figure is REVISED DOWN, from
+R1's 3-run 129.32 (4.60x) to this round's 7-run 116.43 — **4.14x against the
+incumbent 28.11**. The worst of the seven runs, 108.96, still clears the
+incumbent by 3.88x, so there is no draw of these runs that loses the cell. A
+revision that lowers our own number is the correct outcome of a control round and
+RESULTS.md carries the 7-run figure from here.
+
+ctx_tg32 and ctx_tg128 at this depth still have no scraped board figure and are
+held, not claimed. R5b remains the cheapest standings gain in the queue.
+
+Telemetry, sampled alongside (315 samples, archived as
+`experiments/bench_dd3afc9e1c94/telemetry.log`): SM clock 2398 MHz median,
+2372-2411, against the same 3003 MHz ceiling; temperature peaked at 69 °C and
+power at 94.72 W. That is the THIRD consecutive session to read 2392-2398 MHz
+(R4 2392, R5 2398), under a load shape quite different from R5's — short and
+shallow rather than long and deep — and it confirms the clock as a flat policy
+figure at ~80% of ceiling. R1's 2554 MHz is now outnumbered three to one and
+should be treated as a bad reading. Open question 5 stays downgraded. No clock,
+power-policy, driver or kernel setting was touched.
+
+Config and epoch. **Mutation: NONE**, and no `max_model_len` override — d16384 +
+pp 2048 + tg 128 fits the recipe default 32768, with sparkrun reporting 66.88 GiB
+of KV cache available and a 95.9x context multiplier. Epoch unchanged:
+`state.yaml` records `container_image_longterm_ref:
+ghcr.io/spark-arena/dgx-vllm-eugr-nightly:2026082102`, identical to R1/R3/R4/R5,
+so every cross-round comparison above is within one epoch. Page cache again could
+not be cleared (no passwordless sudo), uniform across rounds as always. The
+`Benchmark args:` echo was read before the run was allowed to proceed, per R5's
+process lesson, and confirmed `tg: [32, 128]`, `depth: [16384]`,
+`concurrency: [1]`, `runs: 7` — no repeat of R5's silent depth default.
+
+Cost, and it is the campaign's best ratio. **124 s of measurement grid time**
+against a predicted 250-400 s — the one prediction that missed low, because 14
+runs at the shallowest depth in the campaign are cheap and the estimate was
+anchored on R1's three-depth sweep. Total invocation about 7 minutes of wall
+clock: engine start 06:16-06:19, grid 06:19:28 onward, complete before 06:23.
+One engine start, no wasted invocations, roughly 45k harness tokens. Four cells
+measured, one board cell re-claimed at a corrected figure, one open question
+largely closed and a second one sharpened — for a third of R3's box time and a
+fifteenth of R5's. **Control rounds are the cheapest rounds this campaign runs
+and this queue has been under-scheduling them.**

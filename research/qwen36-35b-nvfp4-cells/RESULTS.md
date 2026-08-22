@@ -15,7 +15,7 @@ Cells taken, best figure we have, against the board:
 
 | Cell | Ours | Board top | Margin |
 |---|---:|---:|---:|
-| tg32 @ d16384 c1 | 129.32 | 28.11 | **4.60x** |
+| tg32 @ d16384 c1 | 116.43 | 28.11 | **4.14x** (revised down by R6, 7 runs) |
 | tg32 @ d32768 c1 | 115.56 | 23.31 | **4.96x** |
 | tg32 @ d8192 c1 | 106.24 | sole entry, no number | uncontested |
 | tg128 @ d16384 c4 | 52.85 | 46.68 | **1.13x**, verified |
@@ -24,6 +24,28 @@ Cells taken, best figure we have, against the board:
 | tg128 @ d16384 c2 | 84.00 | not scraped | cannot be scored |
 | tg128 @ d16384 c5 | 48.12 | not scraped | cannot be scored |
 | **tg128 @ d131072 c1** | **77.13** | **81.60** | **0.95x — LOST** |
+| tg128 @ d16384 c1 (the crowded cell) | 111.11 | 116.03 best vLLM NVFP4 (188.47 overall) | 0.96x — not a target, see below |
+
+**Round 6's headline, and it is a correction to our own numbers.** R6 was a
+control round: tg=32 and tg=128 at d16384 c1 in ONE engine start at runs=7. Two
+things came out of it that change what is written above.
+
+1. **tg32 @ d16384 c1 is revised DOWN, from 129.32 to 116.43** — still a clear
+   win at 4.14x over the incumbent 28.11 (worst of seven runs, 108.96, is still
+   3.88x), but R1's 3-run median was a lucky draw and the 7-run figure is what
+   this campaign now claims.
+2. **The -12% reproduction gap was mostly undersampling.** The inherited tg128 @
+   d16384 c1 baseline of 102.2 re-measures at **111.11** over seven runs, so the
+   gap against the board's best vLLM NVFP4 entry (116.03) is **-4.2%, not -12%**
+   — and two of our seven runs (116.58, 116.66) clear 116.03 outright. That cell
+   is the crowded one and was never a campaign target; it is listed above for the
+   gap, not as a loss we went after.
+
+The tg32-vs-tg128 puzzle is also settled: shorter generations are NOT faster in
+any useful sense. The 26.5% advantage R1 appeared to show is +4.79% under one
+engine start, and the round's own prefill controls (pp2048 and ttfr both offset
+1.90% between the arms, on work that is identical in both) price the residual
+generation-length effect at **~2.9%**.
 
 Six cells taken, and **round 5 is the campaign's first LOSS**: tg128 @ d131072 c1
 came in at median 77.13 against Nemotron Lightning NVFP4's 81.60 — short by 5.5%.
@@ -40,11 +62,14 @@ The depth curve at tg128 c1, which is what R5 actually bought:
 
 | depth | ours | board top | margin |
 |---:|---:|---:|---|
-| 16384 | 102.2 | 116.03 (best vLLM NVFP4) | 0.88x — reproduction gap |
+| 16384 | **111.11** (R6, 7 runs; was 102.2) | 116.03 (best vLLM NVFP4) | 0.96x — gap now -4.2%, was -12% |
 | 65536 | 108.15 | 16.48 | **6.56x** |
 | 131072 | 77.13 | 81.60 | 0.95x — LOST |
 
-Flat from d16384 to d65536, then a 29% fall to d131072. The depth term finally
+R6 replaced the d16384 point with a 7-run median from this campaign's own engine.
+The curve is now 111.11 / 108.15 / 77.13, so the flatness across the first 4x is
+*tighter* than it looked (2.7% apart rather than 5.8%) and the fall to d131072 is
+31%. Flat from d16384 to d65536, then a 31% fall to d131072. The depth term finally
 bites, and it bites between d65536 and d131072 — the first genuine decline the
 campaign has measured on any axis.
 
@@ -59,6 +84,12 @@ Per-request is the metric the board publishes; aggregate is per-request x c.
 | 4 | 4 | 52.85 | 211.4 | 2.07x | 52% |
 | 5 | 4 | 45.60 | 228.0 | 2.23x | 45% |
 | 5 | **5** (mutation) | **48.12** | **240.6** | 2.35x | 47% |
+
+Note on the c1 anchor: this table's c1 row and the efficiency column derive from
+the old 102.2 figure, which R6 has since re-measured at 111.11. The rows are left
+as R4 computed them so the round's arithmetic stays auditable; against the
+corrected anchor every efficiency figure drops by about 8% relative (c2 82% ->
+76%, c4 52% -> 48%), and the SHAPE — the knee between c2 and c4 — is unchanged.
 
 The knee is between c2 and c4. Raising `--max-num-seqs` from 4 to 5 to match a
 c5 probe is worth +5.5% per-request and +5.5% aggregate — a real effect (σ 0.07
@@ -77,6 +108,14 @@ the numbers are already measured and sitting in the tables.
 tg/pp columns are MEDIANS of the runs — means are not verdicts (MTP acceptance
 is bimodal). σ is the run standard deviation, kept as the noise flag.
 `ctx_` rows are the prefix-caching phase of the same run (a separate board cell).
+
+**How many runs a cell needs (revised by R6).** "c1 is the noisy regime" is not
+right: what drives σ is how many MTP verify steps a measurement averages over and
+how good acceptance is in that regime. Long generations at shallow depth are
+quiet even at c1 — tg128 @ d16384 c1 came in at σ 2.6%, the campaign's quietest
+c1 cell — while short generations (tg32: 9.9-21.4%) and deep contexts (tg128 @
+d65536: 9.6%, @ d131072: 9.3%) are not. Three runs are enough for tg128 at
+d16384; anything tg32, and anything at d65536 or deeper, needs seven.
 
 **tg t/s is PER-REQUEST, not aggregate.** At c1 the two coincide; at c4 they do
 not. The board publishes the same per-request metric, so these comparisons are
@@ -106,6 +145,10 @@ like-for-like, but a c4 row at 52.85 is ~211 tok/s of aggregate work.
 | bench_858173ba5753-mns5 | 2026-08-22 | ctx_tg128 @ d16384 c5 (MUTATION max_num_seqs 5) | 51.25 | 0.26 | 9850.01 | not scraped | hold — above cold (+6.5%) |
 | bench_076db52d341c | 2026-08-22 | tg128 @ d131072 c1 | 77.13 | 7.17 | 48102.89 | 81.60 | **LOSS — 0.95x, short by 5.5%**; runs 72.37 / 89.39 / 77.13, best run alone would have won at 1.10x. Not tuned for, by design |
 | bench_076db52d341c | 2026-08-22 | ctx_tg128 @ d131072 c1 | 76.66 | 10.16 | 46770.69 | not scraped | hold — level with cold (-0.6%), and NOISIER than cold (σ 13.3% vs 9.3%): first round where the ctx_ phase is the noisy one |
+| bench_dd3afc9e1c94 | 2026-08-22 | tg32 @ d16384 c1 (**runs=7**) | 116.43 | 11.55 | 3298.58 | 28.11 | **win — 4.14x incumbent**; REVISES R1's 3-run 129.32 down 10.0%; worst of 7 runs 108.96 still 3.88x |
+| bench_dd3afc9e1c94 | 2026-08-22 | tg128 @ d16384 c1 (**runs=7**) | 111.11 | 2.91 | 3237.23 | 116.03 best vLLM NVFP4 (188.47 overall) | **reproduction gap now -4.2%, was -12%** — replaces the inherited 102.2 baseline (+8.7%); 2 of 7 runs (116.58, 116.66) clear 116.03. Crowded cell, never a campaign target, not tuned for. σ 2.6% is the QUIETEST c1 cell in the campaign |
+| bench_dd3afc9e1c94 | 2026-08-22 | ctx_tg32 @ d16384 c1 (runs=7) | 122.97 | 8.44 | 2850.87 | not scraped | hold — ABOVE cold (+5.62%), and quieter than cold (6.9% vs 9.9%) |
+| bench_dd3afc9e1c94 | 2026-08-22 | ctx_tg128 @ d16384 c1 (runs=7) | 104.85 | 9.73 | 2813.42 | not scraped | hold — BELOW cold (-5.63%), opposite sign to the tg32 arm in the SAME invocation; and NOISIER than cold (9.3% vs 2.6%) |
 
 ## Prefill cells (pp2048)
 
@@ -136,3 +179,7 @@ the cached prefix and sit an order of magnitude higher.
 | bench_858173ba5753-mns5 | 2026-08-22 | ctx_pp2048 @ d16384 c5 (MUTATION max_num_seqs 5) | 5869.43 | 16.83 | 9850.01 | not scraped | hold — likewise restored |
 | bench_076db52d341c | 2026-08-22 | pp2048 @ d131072 c1 | 42.59 | 0.02 | 48102.89 | not scraped | hold — 0.359x of d65536, steepening again (0.50x, then 0.40x, now 0.36x per doubling); campaign's tightest measurement, σ 0.05% |
 | bench_076db52d341c | 2026-08-22 | ctx_pp2048 @ d131072 c1 | 2803.17 | 2.43 | 46770.69 | not scraped | hold — 0.70x of d65536, the steepest fall in the cached-prefill series |
+| bench_dd3afc9e1c94 | 2026-08-22 | pp2048 @ d16384 c1 (tg32 arm, runs=7) | 623.13 | 8.72 | 3298.58 | not scraped | hold — R6 CONTROL: identical prefill work to the tg128 arm below, so the 1.90% gap between them prices the arm-to-arm systematic |
+| bench_dd3afc9e1c94 | 2026-08-22 | pp2048 @ d16384 c1 (tg128 arm, runs=7) | 634.99 | 2.77 | 3237.23 | not scraped | hold — control passes (1.90% < 2% threshold), matching the flat d16384 series 637.09 / 634.04 / 643.31 |
+| bench_dd3afc9e1c94 | 2026-08-22 | ctx_pp2048 @ d16384 c1 (tg32 arm, runs=7) | 5772.30 | 75.83 | 2850.87 | not scraped | hold — in line with the 5810-5967 series at this depth |
+| bench_dd3afc9e1c94 | 2026-08-22 | ctx_pp2048 @ d16384 c1 (tg128 arm, runs=7) | 5849.11 | 56.10 | 2813.42 | not scraped | hold — 1.33% above the tg32 arm, same direction as the cold control |
