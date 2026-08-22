@@ -10559,3 +10559,35 @@ board publishes only `recipeType`, never server flags, so "common" is an
 assumption about the field and not a measurement of it. Prediction, written
 down to be scored: **arm1 0.0%, arm2 0.0%, arm3 0.0%**, with the real cause in
 item 2 above — the hybrid-mamba `align` path never checkpointing reusable state.
+
+## Round 24b hypothesis — narrowing the culprit: is it MTP, or is it MULTI-MODULE MTP? One arm, declared before it ran
+
+**Written 2026-08-22 after R24 arm3 landed and BEFORE arm4 ran.** Arm 3 restored
+prefix caching by deleting `--speculative-config` outright, which identifies the
+flag but not the mechanism, and deleting MTP costs 33% of per-request decode.
+The useful question is whether a *cheaper* deletion works.
+
+**The source says the two are not the same thing.** In the pinned image,
+`v1/core/sched/scheduler.py:265-281` sets `num_prefill_lookahead =
+num_spec_tokens` when `speculative_config.use_multi_module_mtp()` and **1**
+otherwise, and `v1/core/kv_cache_coordinator.py:105-134` documents that the
+prefix-cache tail excluded under EAGLE/MTP must be "large enough to contain" that
+lookahead. Our recipe ships `num_speculative_tokens: 3`, which is the
+multi-module path. **`num_speculative_tokens: 1` keeps speculation and takes the
+single-module lookahead.**
+
+- **arm4**: `recipe-r24-arm4-spec1.yaml` — identical to `recipe.yaml` except
+  `"num_speculative_tokens":1`. Same cell, same probe, runs=3, one engine start.
+- **CONFIRM (cache restored)**: hit rate **≥ 40%**, i.e. at or near the
+  structural ceiling derived in the outcome block below.
+- **REFUTE**: **0.0%**, which would mean any MTP at all breaks the cache and the
+  only way to have prefix caching on this model is to have no speculation.
+- **DEAD ZONE**: anything strictly between. Recorded as a lead, not a culprit.
+- **Secondary, and it is the whole point of the arm**: if arm4 confirms, its
+  `tg` is the number that decides whether a fold is even arguable, because it
+  keeps some speculation. Declared band: a fold becomes **arguable** only if
+  arm4's Phase-2 `tg` is **≥ 169.89**, the control measured in this session. Any
+  lower and restoring the cache costs board throughput at this cell and the
+  finding is a latency/prefill trade, not an upgrade.
+- **Still no fold this round, whatever arm4 reads.** A fold needs its own round
+  and a c1 anchor.
