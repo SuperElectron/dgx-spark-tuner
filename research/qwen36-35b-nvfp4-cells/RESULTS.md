@@ -24,8 +24,12 @@ Cells taken, best figure we have, against the board:
 | **ctx_tg128 @ d16384 c4 (MUTATION mnbt 32768)** | **126.35** | 27.68 | **4.56x** — R10, runs=7 |
 | tg128 @ d65536 c1 | 94.10 | 16.48 | **5.71x** (revised down by R8, 7 runs) |
 | ctx_tg128 @ d65536 c1 | 92.98 | 20.70 | **4.49x** (revised by R8, 7 runs) |
-| tg128 @ d16384 c2 | 84.00 | 325.44 (163.27 best vLLM NVFP4) | **0.51x — LOST** vs like-for-like |
-| tg128 @ d16384 c5 | 48.12 | 428.95 (225.46 best vLLM NVFP4) | **0.21x — LOST** vs like-for-like |
+| tg128 @ d16384 c2 (campaign config) | 84.00 | 325.44 (163.27 best vLLM NVFP4) | **0.51x — LOST** vs like-for-like |
+| **tg128 @ d16384 c2 (MUTATION mnbt 32768 + mns 5)** | **140.77** | 163.27 best vLLM NVFP4 | **0.86x — still LOST**, was 0.51x — R12, runs=7 |
+| tg128 @ d16384 c5 (campaign config, mns 5) | 48.12 | 428.95 (225.46 best vLLM NVFP4) | **0.21x — LOST** vs like-for-like |
+| **tg128 @ d16384 c5 (MUTATION mnbt 32768 + mns 5)** | **128.93** | 225.46 best vLLM NVFP4 | **0.57x — still LOST**, was 0.21x — R12, runs=7 |
+| ctx_tg128 @ d16384 c2 (MUTATION mnbt 32768 + mns 5) | 127.09 | not scraped | cannot be scored |
+| ctx_tg128 @ d16384 c5 (MUTATION mnbt 32768 + mns 5) | 104.75 | not scraped | cannot be scored |
 | tg128 @ d16384 c8 | 43.51 (peak_thr 355) | not scraped | cannot be scored |
 | tg128 @ d16384 c16 (campaign config) | 40.47 (peak_thr 440) | not scraped | cannot be scored |
 | tg128 @ d16384 c16 (MUTATION mnbt 32768) | 53.45 (peak_thr **515**) | not scraped | cannot be scored |
@@ -80,6 +84,39 @@ span. Raising `--max-num-batched-tokens` from 8192 to 32768 moves
 against the same incumbent — and R9's independent 3-run measurement of the same
 change (143.08) agrees to 2.9%. **The mutation is NOT folded into recipe.yaml**;
 see the journal's R10 outcome for why, and R11 for the fold decision.
+
+🔬 **Round 12 priced the config gap, and it is almost entirely admission
+stagger.** R12 ran c2 and c5 at `max_num_batched_tokens 32768` + `max_num_seqs 5`
+under ONE engine start at runs=7. Both cells are **still losses** and are
+recorded as such — but c2 goes **84.00 → 140.77** (0.51x → **0.86x** of 163.27)
+and c5 goes **48.12 → 128.93** (0.21x → **0.57x** of 225.46), against the board's
+own Qwen3.6-35B-A3B-NVFP4 on vLLM.
+
+Because `tg = c × tg_req / stagger`, a zero-stagger run of the same engine is
+just `c × tg_req`, and that bound splits the residual gap:
+
+| cell | ours | zero-stagger bound | incumbent | stagger's share of the gap | decode's share |
+|---|---:|---:|---:|---:|---:|
+| c2 | 140.77 (stagger **1.13**) | **159.46** = 0.98x | 163.27 | **83%** | 17% |
+| c5 | 128.93 (stagger **1.70**) | **218.60** = 0.97x | 225.46 | **93%** | 7% |
+
+**Our per-request decode rate is within 3% of what the incumbent's headline
+figure requires, at both concurrencies.** The gap is not silicon and it is not
+the model — it is how staggered our batch admission is.
+
+And **at c2 the hardware ceiling did not move at all**: `peak_throughput` reads
+181 against 182 at `mnbt 8192` (−0.5%) while `tg` rose **+67.6%**. The token
+budget bought nothing from the GPU; it bought a shorter denominator. That is the
+cleanest demonstration in the campaign that `tg_throughput` is a *scheduling*
+measurement wearing a throughput's units.
+
+⚠️ **R12 lost its primary occupancy instrument.** The engine-log capture used
+`docker logs -f`, which returns only the container's CUDA banner — vLLM's serve
+output does not reach container stdout on this image. **Scheduler
+`Running`/`Waiting` and MTP acceptance are UNMEASURED for R12 and no figure is
+quoted for either.** Residency from `peak_throughput / peak_req_throughput`
+survives as corroboration (1.93 of 2 at c2, 4.92 of 5 at c5). The correct
+capture is `docker exec <container> tail -f /tmp/sparkrun_serve.log`.
 
 **Round 10's headline, in five lines.** R10 ran c4 and c16 at
 `max_num_batched_tokens 32768` under ONE engine start at runs=7, and read
@@ -201,8 +238,20 @@ lockstep; the amount above 1.0 is what admission stagger costs the board metric.
 | 5 | **5** | 8192 | 48.12 | 0.15% | 265 | 2.25 | R4 (mutation) |
 | 8 | **8** | 8192 | 43.51 | 0.51% | 355 | 2.08 | R7 (mutation) |
 | 16 | **16** | 8192 | 40.47 | 0.15% | 440 | 2.06 | R7 (mutation) |
+| **2** | **5** | **32768** | **140.77** | 6.28% | 181 | **1.13** | **R12 (mutation, runs=7)** |
 | **4** | **16** | **32768** | **147.25** | 3.25% | 284 | **1.57** | **R10 (mutation, runs=7)** |
+| **5** | **5** | **32768** | **128.93** | 1.81% | 290 | **1.70** | **R12 (mutation, runs=7)** |
 | **16** | **16** | **32768** | **53.45** | 0.52% | **515** | 2.89 | **R10 (mutation, runs=7)** |
+
+**The `mnbt 32768` block now has four points and the stagger column orders them
+exactly as prefill arithmetic says it should.** At d16384 a scheduler step admits
+`floor(32768 / 16384) = 2` whole prefills, so the whole batch is admitted in 1
+step at c2, 2 at c4, 3 at c5 and 8 at c16 — and stagger reads
+**1.13 < 1.57 < 1.70 < 2.89** in that order. R12 predicted this ordering before
+the run from the integer arithmetic alone. (Its *numeric* floor for c5, >1.80,
+missed low at 1.70, because c5's trailing third step admits one prefill rather
+than two and therefore costs about half a step — reported as a mixed
+discriminator, not forced.)
 
 **Read the table in two halves, because they are two different configurations.**
 Down the `mnbt 8192` block the board metric falls monotonically with concurrency
@@ -269,7 +318,9 @@ batch aggregate at `c>1`), so the `per-request` column above was a misreading of
 our own instrument and the `aggregate` column double-counted it. Both are gone.
 c2 is 84.00 vs 163.27 (**0.51x, lost**) and c5 is 48.12 vs 225.46 (**0.21x,
 lost**) against the board's own Qwen3.6-35B-A3B-NVFP4 on vLLM. The c4 win keeps
-its original 1.13x.
+its original 1.13x. **R12 has since re-run both cells at the raised budget:
+0.86x and 0.57x. Still losses, and still recorded as losses** — see R12's
+standings block near the top of this file.
 
 **WHY OUR SERIES FALLS WHERE THE BOARD'S RISES.** `tg_throughput` divides total
 decode tokens by `max(last_token) - min(first_token)`, so it is charged for
@@ -280,6 +331,15 @@ our 35B model at a starved token budget staggers badly and its aggregate falls.
 Same metric, different prefill cost. **R10 confirms the lever: at c4, raising
 `--max-num-batched-tokens` 8192 -> 32768 cuts the stagger ratio from 2.54 to
 1.57 and takes the cell from 52.85 to 147.25.**
+
+**R12 completes the argument and quantifies it.** At c2 the stagger drops to
+**1.13** — near the c1 floor, because at d16384 a 32768-token budget admits both
+prefills in ONE scheduler step — and the cell rises +67.6% while
+`peak_throughput` moves −0.5%. Removing the stagger is the entire mechanism, and
+the residual after removing it is small: the zero-stagger bound `c × tg_req` puts
+us at **0.98x** of the c2 incumbent and **0.97x** of the c5 incumbent. **The
+board's like-for-like entry is not decoding meaningfully faster than this box; it
+is admitting its batch with less stagger.**
 
 Raising `--max-num-seqs` to match the probe is worth +5.5% at c5 — a real effect
 (σ 0.07 and 0.26, run ranges disjoint) — and R7 confirms it is a QUEUEING effect
@@ -395,6 +455,10 @@ row, and they answer different questions:** `tg` is what the board ranks,
 | bench_860b43edd154 | 2026-08-22 | ctx_tg128 @ d16384 c4 (MUTATION mnbt 32768 + mns 16, runs=7) | 126.35 | 1.64 | 10278.24 | 27.68 | **WIN — 4.56x incumbent** (board figure from the R5b scrape in docs/arena-recipe.md). `peak_throughput` 290. **BELOW cold (-14.2%)**, a SIGN FLIP against the +4.4% the same cell shows at mnbt 8192 — the ctx-vs-cold sign moves with the token budget, a pure scheduler knob |
 | bench_860b43edd154 | 2026-08-22 | tg128 @ d16384 c16 (**MUTATION mnbt 32768 + mns 16**, runs=7) | 53.45 | 0.28 | 39389.36 | not scraped | hold — no incumbent. Aggregate `peak_throughput` **515** (σ 3.0%), up **+17.0%** on R7's 440: the largest aggregate the campaign has measured. Residency at peak **14.31 of 16**, up from R7's 11.89. But the scheduler log still reads `Running` median **11**, `Waiting` median **5** — the gate is HALVED, not removed. σ 0.52% |
 | bench_860b43edd154 | 2026-08-22 | ctx_tg128 @ d16384 c16 (MUTATION mnbt 32768 + mns 16, runs=7) | 54.54 | 0.10 | 30241.71 | not scraped | hold — `peak_throughput` **566**, the single largest aggregate figure in the campaign. ABOVE cold by only +2.0%, against +12.7% at mnbt 8192: R7's "ctx-vs-cold margin grows monotonically with concurrency" does not survive a budget change |
+| bench_ac37f5b64487 | 2026-08-22 | tg128 @ d16384 c2 (**MUTATION mnbt 32768 + mns 5**, runs=7) | **140.77** | 8.84 | 6069.14 | 163.27 best vLLM NVFP4 (325.44 overall) | **LOSS — 0.86x, short by 13.8%**, but was 0.51x on the campaign config (84.00): **+67.6% from a scheduler knob**. `peak_throughput` **181** — UNCHANGED against 182 at mnbt 8192, so the hardware ceiling did not move while the board metric rose two thirds. **Stagger 1.13, the lowest `c>1` figure in the campaign**; zero-stagger bound `2 × tg_req` = **159.46 = 0.98x of the incumbent**, so **83% of the residual gap is admission stagger and 17% is decode rate**. Residency 1.93 of 2. σ **6.28%**, the noisiest `c>1` cell measured (runs span 122.33-151.51, mode-plus-one-low-draw) — runs=7 earned its keep. ttfr ROSE +7.3% on the budget change |
+| bench_ac37f5b64487 | 2026-08-22 | ctx_tg128 @ d16384 c2 (MUTATION mnbt 32768 + mns 5, runs=7) | 127.09 | 4.01 | 5269.25 | not scraped | hold — BELOW cold (−9.7%), deepening the −5.4% the same cell shows at mnbt 8192. `peak_throughput` 167. **Stagger 1.17 — HIGHER than cold's 1.13**, and `tg_req` 74.45 is BELOW cold's 79.73, so the cached phase is behind on both terms. See the ctx-stagger contradiction note |
+| bench_ac37f5b64487 | 2026-08-22 | tg128 @ d16384 c5 (**MUTATION mnbt 32768 + mns 5**, runs=7) | **128.93** | 2.34 | 14484.92 | 225.46 best vLLM NVFP4 (428.95 overall) | **LOSS — 0.57x, short by 43%**, but was 0.21x on the campaign config (48.12): **+168%**. First run of c5 with BOTH settings raised (R9's arm A1 had mnbt 32768 but `mns 4`, so the fifth request still queued for a slot; it read 81.73). `peak_throughput` **290**, up +9.4% on 265. **Stagger 1.70**; zero-stagger bound `5 × tg_req` = **218.60 = 0.97x of the incumbent**, so **93% of the residual gap is admission stagger and 7% is decode rate**. Residency 4.92 of 5. σ 1.81%. ttfr ROSE +19.8% |
+| bench_ac37f5b64487 | 2026-08-22 | ctx_tg128 @ d16384 c5 (MUTATION mnbt 32768 + mns 5, runs=7) | 104.75 | 1.16 | 12731.35 | not scraped | hold — BELOW cold (−18.7%), a **SIGN FLIP** against the +6.5% the same cell shows at mnbt 8192, reproducing what R10 saw at c4 (+4.4% → −14.2%). `peak_throughput` 290. **Stagger 2.12 — HIGHER than cold's 1.70**, which contradicts R10's stated mechanism for the flip |
 
 ## Prefill cells (pp2048)
 
@@ -441,3 +505,7 @@ the cached prefix and sit an order of magnitude higher.
 | bench_860b43edd154 | 2026-08-22 | ctx_pp2048 @ d16384 c4 (MUTATION mnbt 32768 + mns 16) | 6168.36 | 8.80 | 10278.24 | not scraped | hold — above the 5772-5967 campaign-config series at this depth |
 | bench_860b43edd154 | 2026-08-22 | pp2048 @ d16384 c16 (MUTATION mnbt 32768 + mns 16) | 667.00 | 1.75 | 39389.36 | not scraped | hold — +6.1% on R7's 628.74 at the same concurrency and scheduler width, so the lift is the budget and nothing else. Prediction 640-700 HELD |
 | bench_860b43edd154 | 2026-08-22 | ctx_pp2048 @ d16384 c16 (MUTATION mnbt 32768 + mns 16) | 6108.27 | 8.82 | 30241.71 | not scraped | hold — +5.5% on R7's 5791.30 |
+| bench_ac37f5b64487 | 2026-08-22 | pp2048 @ d16384 c2 (MUTATION mnbt 32768 + mns 5) | 658.93 | 2.76 | 6069.14 | not scraped | hold — above the flat 623-643 campaign-config series, in line with the other raised-budget arms (669.28 / 672.59 / 667.00). Prediction 655-695 HELD |
+| bench_ac37f5b64487 | 2026-08-22 | ctx_pp2048 @ d16384 c2 (MUTATION mnbt 32768 + mns 5) | 6065.02 | 53.65 | 5269.25 | not scraped | hold — above the 5772-5967 campaign-config series at this depth |
+| bench_ac37f5b64487 | 2026-08-22 | pp2048 @ d16384 c5 (MUTATION mnbt 32768 + mns 5) | 677.44 | 0.94 | 14484.92 | not scraped | hold — **R12 SESSION CONTROL PASSES, and it settles R4's depression**: the highest cold prefill figure at this depth in the campaign, against the 581.44 R4 measured at c5 with `mns 4` and mnbt 8192. Prediction 650-695 HELD. This is what licenses reading the R12 tg figures as scheduler effects |
+| bench_ac37f5b64487 | 2026-08-22 | ctx_pp2048 @ d16384 c5 (MUTATION mnbt 32768 + mns 5) | 6158.49 | 20.66 | 12731.35 | not scraped | hold — also restored, against R4's depressed 5236.80 at this cell |
