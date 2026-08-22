@@ -11,6 +11,13 @@ research/*/experiments/*
 research/*/experiments/*/*
 !research/*/experiments/*/HYPOTHESIS.md
 !research/*/experiments/*/EXPERIMENT.md
+# A candidate recipe records the exact serve configuration a run used — it is
+# the reproducibility record, so it is tracked wherever it sits. Measurements
+# (state.yaml, round-tmp.*, runs/, logs) stay local.
+!research/*/experiments/*/*/
+research/*/experiments/*/*/*
+!research/*/experiments/*/*/recipe-*.yaml
+!research/*/experiments/*/*/PROVENANCE.md
 !research/_template/experiments/.gitkeep
 research/milestones/
 research/*/QUEUE.md
