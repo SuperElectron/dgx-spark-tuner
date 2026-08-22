@@ -1,0 +1,35 @@
+command: |
+  vllm serve Qwen/Qwen3.6-35B-A3B \
+    --host {host} \
+    --port {port} \
+    --trust-remote-code \
+    --kv-cache-dtype fp8 \
+    --attention-backend flashinfer \
+    --gpu-memory-utilization {gpu_memory_utilization} \
+    --max-model-len {max_model_len} \
+    --max-num-seqs {max_num_seqs} \
+    --max-num-batched-tokens {max_num_batched_tokens} \
+    --enable-chunked-prefill \
+    --async-scheduling \
+    --enable-prefix-caching \
+    --speculative-config '{{"method":"mtp","num_speculative_tokens":3,"moe_backend":"triton"}}' \
+    --load-format fastsafetensors \
+    --reasoning-parser qwen3 \
+    --tool-call-parser qwen3_xml \
+    --enable-auto-tool-choice \
+recipe_version: '1'
+model: Qwen/Qwen3.6-35B-A3B
+solo_only: false
+container: vllm-node
+cluster_only: false
+env:
+  VLLM_MARLIN_USE_ATOMIC_ADD: '1'
+description: Qwen3.6-35B-A3B BF16 arm (same serve config minus marlin)
+name: Qwen3.6-35B-A3B-BF16-solo
+defaults:
+  port: 8000
+  max_num_batched_tokens: 8192
+  max_model_len: 32768
+  gpu_memory_utilization: 0.8
+  max_num_seqs: 4
+  host: 0.0.0.0
