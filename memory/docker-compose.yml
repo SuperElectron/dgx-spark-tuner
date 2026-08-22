@@ -1,0 +1,90 @@
+name: sparkmem
+
+# Independent long-lived memory stack for the box. Kept out of sparkrun_*
+# naming (project name "sparkmem") so `sparkrun ... --fresh` never touches it.
+# mem0 is a derived index; research journal/RESULTS files stay canonical.
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    restart: unless-stopped
+    shm_size: 128mb
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+    networks:
+      - sparkmem
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  embeddings:
+    # GB10 (sm_121a/arm64) needs the community image with source-built
+    # FlashInfer/NCCL for this arch - stock vllm/vllm-openai lacks the
+    # kernels. Digest is the one the box actually runs; tracked as
+    # VLLM_GB10_IMAGE/VLLM_GB10_IMAGE_DIGEST in research/docs/image-versions.env,
+    # agrees with research/docs/vllm-parameters.md:10. Bump both together.
+    image: ghcr.io/timothystewart6/vllm-gb10@sha256:fa87aea586e02719aba804f76e0895d1f096e8c387573e7981e2681589b3b712
+    restart: unless-stopped
+    command: ["vllm", "serve", "${EMBED_MODEL}", "--host", "0.0.0.0", "--port", "8001", "--runner", "pooling"]
+    ipc: host
+    # No nvidia docker runtime on this box - GPU access is CDI-only.
+    devices:
+      - nvidia.com/gpu=all
+    ports:
+      - "127.0.0.1:${EMBED_PORT}:8001"
+    volumes:
+      - ./data/hf-cache:/root/.cache/huggingface
+    networks:
+      - sparkmem
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request as u; u.urlopen('http://localhost:8001/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 60
+      start_period: 60s
+
+  mem0:
+    # Our own thin FastAPI wrapper around mem0ai (see server/) - the
+    # published mem0/mem0-api-server image is a stale build that doesn't
+    # support `infer`, hardcodes the OpenAI embedder, and needs a graph
+    # store. This gives us the exact config we need instead.
+    build: ./server
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      embeddings:
+        condition: service_healthy
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_COLLECTION_NAME: memories
+      EMBED_BASE_URL: http://embeddings:8001/v1
+      EMBED_MODEL: ${EMBED_MODEL}
+      EMBEDDING_DIMS: ${EMBEDDING_DIMS}
+    ports:
+      - "127.0.0.1:${MEM0_PORT}:8000"
+    volumes:
+      - ./data/history:/data/history
+    networks:
+      - sparkmem
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+networks:
+  sparkmem:
+    name: sparkmem_net
