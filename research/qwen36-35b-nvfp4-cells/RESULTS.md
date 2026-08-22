@@ -76,6 +76,9 @@ them retired figures this file had published:**
    for twelve rounds was a **denominator artefact**. **Prefix caching never once
    engaged in this campaign's config.** Six claims withdrawn; **no board margin
    moves**, because both sides of every comparison are the same instrument.
+   ⚠ **R9c later priced the flag at 2.414x anyway, 83% of it batch span — the
+   cache never hitting and the flag being worth 2.4x are both true, for the
+   reason set out in the prefix-caching section below.**
 3. **R5c** verified against all 34 archived `c>1` records that the board's `c>1`
    `tg` figure is a **batch aggregate** (`tg_throughput`, `results.py:352`):
    `tg > tg_req` in 34/34. **Never multiply a per-request figure by concurrency.**
@@ -643,15 +646,39 @@ engine (summed from vLLM's `Avg prompt throughput` windows) is **1,079,370 with
 caching on against 1,060,925 with caching off** — 1.7% apart. **No prefill work
 was ever saved.**
 
-Yet the flag is worth **57% of `tg` at c4** (R9 A1 143.08 → R9b A 62.13) while
-`peak_throughput` is **identical to the token** (297 vs 297) and `pp2048` is
-within 0.8%. The mechanism is **unexplained and R9b does not invent one**; the
-leading suspect is that prefix caching off also moves `mamba_block_size` from 16
-to 32768, changing the Gated DeltaNet state granularity for 30 of this model's
-40 layers by a factor of 2048. Queued as **R9c**.
+⚠ **R9c CORRECTED THE TWO FIGURES THIS PARAGRAPH USED TO CARRY — the "57%" and
+the "2048x". Read this version.** The flag is worth **2.414x of `tg` at c4**
+(146.32 ON vs 60.60 OFF, 14 runs re-measured inside **one** session; the 57% was
+two 3-run medians four hours and one engine start apart), while
+`peak_throughput` moves **0.7%** (287 vs 289) and `pp2048` moves 2.9%. The
+decomposition closes exactly on `tg = c x tg_req / span`:
+
+    tg ratio 2.415  =  tg_req ratio 1.160  x  span ratio 2.082
+    log-share:  batch span 83%   per-request decode 17%
+
+and the span was measured directly as within-batch ttfr dispersion: **1516 ms ON
+vs 6269 ms OFF, 4.13x**.
+
+**HOW THAT SITS WITH "THE CACHE NEVER HITS" — it is not a contradiction.** The
+flag is not buying cache hits and is not buying hardware throughput; it is
+buying a **shorter measurement window**, and the window is `tg_throughput`'s
+denominator (R10, from the source). A flag can be worth 2.414x of a scheduling
+measurement while saving zero prefill work, and this one does.
+
+**The suspect was also wrong:** `mamba_block_size` goes **2144 → 32768 (15.3x)**,
+not 16 → 32768 (2048x) — `platforms/interface.py:911-918` overwrites the 16, and
+every archived engine log had been printing the real value. Moved from the only
+legal side (`--block-size 32768`, caching ON), it explains **at most 42%** of the
+span gap and brings a 2.03x decode penalty the caching-OFF arm does not have.
+**The remainder is UNEXPLAINED**, and prefix caching, `mamba_cache_mode` and
+`mamba_block_size` are **provably inseparable in this engine**, so it is a
+source-reading task and not a benchmark. R9c is **DONE — do not re-queue it.**
 
 **Planning consequence:** do not describe this campaign's `c>1` gains as "prefix
-caching working". It is not working. Something riding along with the flag is.
+caching working". It is not working. What rides along with the flag is worth
+**2.414x at c4, and 83% of that is the batch span** — so any margin restated in
+terms of what produced it belongs to the span denominator, not to caching and
+not to the hardware.
 
 ### WHAT IS WITHDRAWN — six claims, and none of them is a standing
 
@@ -1001,7 +1028,7 @@ row, and they answer different questions:** `tg` is what the board ranks,
 | bench_433eeaf9827e | 2026-08-22 | ctx_tg128 @ d16384 c4 (**MUTATION mnbt 98304 + mns 5**, runs=7) | **170.59** | 6.34 | 10517.21 | 27.68 | **WIN — 6.16x on these 7 runs; SUPERSEDED by the pooled 14-run 170.36 = 6.15x** (R13c re-ran this exact config and read 168.37). ⚠ **SUPERSEDED as the widest margin by R13d** — the mnbt 131072 pooled 14-run 171.77 = 6.21x. This row stays a win at 6.15x. Phase 1, the context load. `peak_throughput` 294, span ratio 1.45, `tg_req` 61.93, residency 3.95 of 4. σ 3.72%. BELOW Phase 2 (−2.3%), and it staggers LESS than Phase 2 — refuting R12's asymmetry |
 | bench_433eeaf9827e | 2026-08-22 | tg128 @ d16384 c5 (**MUTATION mnbt 98304 + mns 5**, runs=7) | **164.27** | 5.40 | 15126.01 | 225.46 best vLLM NVFP4 (428.95 overall) | **LOSS — 0.73x, short by 27%**, up from 0.57x. The round's target cell, not taken. Against the cell top 428.95 it is **0.38x**. `peak_throughput` 303, span ratio 1.54, `tg_req` 50.50 (+15.5%), residency 4.81 of 5. σ 3.29% |
 | bench_433eeaf9827e | 2026-08-22 | ctx_tg128 @ d16384 c5 (**MUTATION mnbt 98304 + mns 5**, runs=7) | 160.67 | 3.48 | 15552.29 | not scraped | hold — Phase 1. `peak_throughput` 314, span ratio 1.52, `tg_req` 48.73, residency 5.06 of 5. σ 2.16%. BELOW Phase 2 (−2.2%) |
-| bench_9379c15468ec-a-chunk | 2026-08-22 | tg128 @ d16384 c4 (**R9b ARM A — prefix caching OFF, mnbt 32768, mns 4, chunked prefill ON**, runs=3) | 62.13 | 0.70 | 11559.86 | **NOT SCOREABLE** | diagnostic — three flags off the pre-fold campaign config (mnbt 8192), not a standings row. `peak_throughput` **297**, IDENTICAL to R9's A1 with caching ON, while `tg` falls **−56.6%** (143.08 → 62.13): the hardware ceiling did not move, the batch span did. Stagger **3.32** vs A1's 1.62. `tg_req` 51.49 (−11.0%) |
+| bench_9379c15468ec-a-chunk | 2026-08-22 | tg128 @ d16384 c4 (**R9b ARM A — prefix caching OFF, mnbt 32768, mns 4, chunked prefill ON**, runs=3) | 62.13 | 0.70 | 11559.86 | **NOT SCOREABLE** | diagnostic — three flags off the pre-fold campaign config (mnbt 8192), not a standings row. `peak_throughput` **297**, IDENTICAL to R9's A1 with caching ON, while `tg` falls **−56.6%** (143.08 → 62.13): the hardware ceiling did not move, the batch span did. ⚠ **The −56.6% is SUPERSEDED as the size of the effect** — it compares two 3-run medians across two engine starts four hours apart. R9c re-measured both endpoints at runs=7 inside one session: **146.32 vs 60.60 = 2.414x**, decomposed 83% span / 17% decode / 0.7% hardware. This row's *reading* (ceiling flat, span moved) is what R9c confirmed and sharpened; only its magnitude is retired. Stagger **3.32** vs A1's 1.62. `tg_req` 51.49 (−11.0%) |
 | bench_9379c15468ec-a-chunk | 2026-08-22 | tg128 @ d16384 c5 (**R9b ARM A**, runs=3) | 50.28 | 0.81 | 12309.92 | **NOT SCOREABLE** | diagnostic — `peak_throughput` 298, `tg_req` 25.46, stagger 2.53, residency 3.77 of 5. Scheduler `(4,1)` in four samples, reproducing R9's direct observation at this cell |
 | bench_9379c15468ec-a-chunk | 2026-08-22 | ctx_tg128 @ d16384 c4 (**R9b ARM A**, runs=3) | 70.90 | 0.56 | 10123 | **NOT SCOREABLE** | diagnostic — **and this row is the CONTEXT-LOAD pass, not a cached pass**: with prefix caching off there is no cache, and llama-benchy's `ctx_` phase was never the cached one anyway (see the phase-label correction above). `peak_throughput` 282 |
 | bench_9379c15468ec-a-chunk | 2026-08-22 | ctx_tg128 @ d16384 c5 (**R9b ARM A**, runs=3) | 57.48 | 0.47 | 10760 | **NOT SCOREABLE** | diagnostic — `peak_throughput` 281 |
@@ -1124,6 +1151,18 @@ and 0.7% of it hardware**, and they establish by source read that prefix caching
 `mamba_cache_mode` and `mamba_block_size` **cannot be varied independently in
 this engine** — so open question 1's remaining half is a reading task, not a
 benchmark.
+
+⚠ **AND THE AUDIT THAT MATTERS FOR THE STANDINGS: no board margin in this file
+was ever credited to prefix caching, so none has to be restated.** Every row that
+varies the flag — R9's A1, both R9b arms, all eight R9c rows — is **NOT
+SCOREABLE**, because turning the flag off is a mutation of the shipped recipe and
+all of them sit at a budget the recipe does not ship. The 8 won / 12 lost
+standings are measured with the flag **ON in every case**, i.e. entirely inside
+the ON arm, where the 2.414x is a level and not a difference. What the
+decomposition does change is **language, not arithmetic**: any sentence anywhere
+that explains a `c>1` margin by "prefix caching" is wrong twice — the cache never
+hits (R9b) and 83% of the flag's value is the batch-span denominator (R9c). The
+margins themselves stand at exactly the recorded values.
 
 ## Prefill cells (pp2048)
 
