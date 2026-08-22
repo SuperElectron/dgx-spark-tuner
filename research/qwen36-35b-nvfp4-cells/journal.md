@@ -4104,3 +4104,414 @@ question and wrong about who would answer it — the answer came free, from a ri
 along in a round that was queued for something else entirely. **That is the second
 time this campaign got its biggest result from reading the instrument instead of
 running it.**
+
+---
+
+## Round 13 hypothesis — the one-step admission round: tg128 @ d16384, c4 and c5 at `max_num_batched_tokens 98304`, runs=7, one engine start
+
+**This round runs after the campaign synthesis.** Rounds 1-12 are closed and
+synthesised; this appends to that narrative rather than revising it, and where
+it changes a standing it says so and RESULTS.md is updated. The synthesis is a
+checkpoint, not a seal.
+
+R12 named this cell the only one left with a live route to a win, and it named
+the reason: **c5's remaining gap is 93% admission stagger.** Our per-request
+decode rate is already within 3% of what the incumbent's headline figure
+requires. What the board's own `Qwen3.6-35B-A3B-NVFP4` on vLLM is doing that we
+are not is admitting its whole batch without stretching the span the metric
+divides by. `tg_throughput = sum(decode tokens) / (max_last_token −
+min_first_token)`, so the stagger is charged directly.
+
+### THE PRE-FLIGHT, and it changed the round before any box time was spent
+
+The queue specified `max_num_batched_tokens 81920` (= 5 x 16384) and warned that
+`81920 > max_model_len 32768` would "almost certainly" force a second mutation,
+`-o max_model_len=81920`. It also flagged open question 11 — check the
+validators from the pinned image first, R9b's practice. Both halves of that
+warning turn out to be wrong, and **both were settled by reading, at zero box
+cost.** This is the third consecutive round where reading the instrument beat
+inferring from it.
+
+**1. `max_model_len` does NOT have to move.** From
+`vllm/config/scheduler.py:248-284` in the pinned image
+(`ghcr.io/spark-arena/dgx-vllm-eugr-nightly:2026082102`), `verify_max_model_len`
+contains exactly three constraints on `max_num_batched_tokens`:
+
+- `mnbt < max_model_len` raises **only if chunked prefill is OFF**. Ours is ON
+  (and, per R9's finding, prefix caching forces it ON), so this never fires.
+- `mnbt >= max_num_seqs` — 98304 >= 5, satisfied.
+- `mnbt > max_num_seqs * max_model_len` is a **warning, not an error**, and at
+  5 x 32768 = 163840 it does not even warn.
+
+**There is no `mnbt <= max_model_len` validator.** So the round keeps
+`max_model_len` at the recipe default 32768 and carries **one mutation
+dimension** relative to R12, not two. That matters for more than tidiness:
+raising `max_model_len` would have moved the KV reservation and, per R9b,
+`mamba_block_size` rides on the same family of decisions. R13 vs R12's c5 arm
+now differs in exactly one parameter.
+
+**2. 81920 IS NOT ENOUGH, because the campaign has been using the wrong prefill
+size for twelve rounds.** The admission arithmetic everyone has used is
+`floor(mnbt / 16384)` — one prefill per `depth` tokens. `llama_benchy/runner.py`
+(pinned 0.4.0, the Phase 2 branch at lines 155-172) sends
+`context_text=context` **and** `prompt_text=prompt` in the same request. The
+headline `tg` rows are Phase 2. So a Phase-2 request's prefill is
+**`depth + pp` = 16384 + 2048 = 18432 tokens**, not 16384 — and since R9b
+established that prefix caching never hits (`Prefix cache hit rate: 0.0%` in
+114 engine samples), none of the 16384 is free.
+
+R12's own export corroborates this without a new run. Phase-2 `ttfr` over
+Phase-1 `ttfr`, both pure-prefill quantities on the same batch:
+
+| cell | ctx (Phase 1) ttfr | cold (Phase 2) ttfr | ratio | 18432/16384 |
+|---|---:|---:|---:|---:|
+| c2 | 5269.25 | 6069.14 | **1.152** | 1.125 |
+| c5 | 12731.35 | 14484.92 | **1.138** | 1.125 |
+
+Phase 2 costs ~13-15% more time to first token than Phase 1 on the identical
+batch, against a 12.5% larger prompt and a cache that never hits. The two agree.
+**The `ctx_pp`-vs-`pp` token-count correction R9b made has an admission-side
+consequence nobody had drawn: every prefill in this campaign is 18432 tokens
+wide, not 16384.**
+
+Consequence for the budget. One-step admission of five requests needs
+`5 x 18432 = 92160` tokens.
+
+| budget | token-packing model `ceil(cP/B)` | whole-prefill model `ceil(c/floor(B/P))` | steps at c5 |
+|---:|---:|---:|---|
+| 32768 (R12) | 3 | 5 | **not one step** |
+| **81920** (queue's figure) | **2** | **2** | **not one step** |
+| **98304** | **1** | **1** | **ONE STEP** |
+
+Both readings of how vLLM packs a step agree that 81920 leaves a trailing step
+and that 98304 does not. **81920 would have measured the same class of thing
+R12 already measured and could not have tested the hypothesis.** The round runs
+at **98304** (6 x 16384, i.e. 5 x 19660 per request — 6.6% headroom over the
+92160 requirement, enough to absorb chat-template overhead). This is a
+deliberate, evidenced deviation from the queue's numeral in service of the
+queue's actual hypothesis, and it is recorded as one.
+
+### The arms, and why c4 rides along
+
+ONE invocation, `-b concurrency=4,5`, so both points share an engine start and a
+thermal state. The campaign's central methodological result is that
+cross-invocation inference kept being overturned by single-invocation controls
+(R6 over R1, R8 over R3, R9b over R4, R10 over R2); this round does not repeat
+that mistake.
+
+**c5 is the round.** **c4 rides along for ~220 s** and buys two things c5 alone
+cannot: a second, independent point on the same admission model at the same
+budget under the same engine start (c4 needs `4 x 18432 = 73728 < 98304`, so it
+is also one step), and a possible standings improvement on the one contested
+cell the campaign holds. `max_num_seqs 5` is used for both arms; R10 established
+that `max_num_seqs` comfortably above `c` is neutral (its c4 arm at mns 16 read
+147.25 against R9's A1 at mns 4 reading 143.08, a 2.9% reproduction), so the c4
+arm remains comparable to R10's figure.
+
+### THE DISCRIMINATOR, declared before the run
+
+The queue asked for exactly this and it is the round's whole point. The
+zero-stagger bound `c x tg_req` is only a win if `tg_req` itself does not sag.
+R12's c5 `tg_req` was 43.72. Against the campaign's own per-request series
+(`c1 112.62`, roughly `c^-0.48`):
+
+| c | series prediction | measured (raised budget) | on the series? |
+|---:|---:|---:|---|
+| 2 | 80.8 | 79.73 (R12) | **yes** |
+| 4 | 57.9 | 57.8 (R10) | **yes** |
+| 5 | 52.0 | **43.72** (R12) | **NO — 16% below** |
+
+c2 and c4 sit on the series; c5 alone sits below it. R12 reached its c5 point in
+three admission steps, so its prefill was split and interleaved with ongoing
+decode. If that interleaving is what costs the 16%, one-step admission should
+return c5's `tg_req` to the series.
+
+- **H_span_only** — the budget buys only a shorter denominator, and per-request
+  decode is untouched. Prediction: `tg_req(c5) <= 46.0`.
+- **H_span_plus_decode** — un-splitting the prefill also lifts per-request
+  decode back onto the series. Prediction: `tg_req(c5) >= 48.0`.
+- Between 46.0 and 48.0 the round reports **mixed** and does not force it.
+
+**The two hypotheses differ on the standing, which is what makes this worth box
+time.** At stagger 1.08:
+
+- H_span_only: `5 x 43.7 / 1.08` = **202**, i.e. **0.90x — still a LOSS.**
+- H_span_plus_decode: `5 x 52.0 / 1.08` = **241**, i.e. **1.07x — a WIN.**
+
+### Numeric predictions, built by decomposing the metric
+
+`tg = c x tg_req / stagger`, per R12's post-mortem — bands from the generating
+model, not from scaling the last round's percentages.
+
+| quantity | baseline | predicted | reasoning |
+|---|---|---|---|
+| c5 `tg_throughput` | 128.93 (mnbt 32768) | **195-250**, centre 220 | straddles the 225.46 target; the discriminator decides the side |
+| c5 stagger | 1.70 | **1.00-1.15** | one admission step; c2's one-step-ish figure was 1.13, the c1 floor is 1.00 |
+| c5 `tg_req` | 43.72 | **43.7-53** | the discriminator |
+| c5 `peak_throughput` | 290 | **285-320** | the ceiling barely moves on this knob (c2 -0.5%, c5 +9.4%) |
+| c5 pp2048 (Phase 2) | 677.44 | **670-720** | SESSION CONTROL — must land, or the tg figures are not readable |
+| c5 ttfr | 14484.92 | **14500-19000** | betting AGAINST a fall for the sixth time; a 92160-token step is long, so the FIRST response comes later too |
+| c4 `tg_throughput` | 147.25 (R10) | **190-250**, centre 215 | `4 x ~58 / ~1.08` |
+| c4 stagger | 1.57 | **1.00-1.15** | 73728 < 98304, one step |
+| c4 `tg_req` | 57.8 | **56-65** | already on the series; little room to lift |
+| c4 `peak_throughput` | 284 | **280-310** | |
+| c4 pp2048 | 672.59 | **660-710** | session control |
+| ctx vs cold | — | **ctx BELOW cold at both**, and **ctx stagger ABOVE cold stagger at both** | fourth and fifth test of R12's contradiction of R10's mechanism |
+| σ/med on tg | 1.81% (c5), 3.25% (c4) | **0.5-5%** both | |
+| scheduler `Running`/`Waiting` | UNMEASURED for two rounds | **5/0 and 4/0 in >=95% of loaded samples** | see below |
+| MTP acceptance | 2.85-3.09 / 61.7-69.8% | **2.85-3.15 / 61-72%** | flat under every scheduler knob in four rounds |
+| SM clock median | 2392-2398 | **2392-2398** | tenth consecutive session |
+| grid time | — | **400-560 s** | R12's c5 arm 236 s, R10's c4 arm ~220 s |
+
+### The standings call, made in advance
+
+**c5 is called at 40% to clear 225.46**, and the round declines to predict its
+sign more confidently than that. The band straddles the target and the
+discriminator is genuinely open — the campaign has never measured whether
+per-request decode moves when a prefill stops being split. If c5 clears, it is
+**the first cell this campaign wins against its own model on the board**, and it
+is won on a scheduler knob rather than a probe.
+
+**c4 is called at >90% to improve its margin** from 3.15x, and that is a
+standings change to a cell already in the WON table. It is a smaller result than
+it looks: c4 is already won, so this widens a margin rather than taking a cell.
+
+### MUTATIONS, stated plainly
+
+`-o max_num_seqs=5` and `-o max_num_batched_tokens=98304`. **Both are
+MUTATIONS.** `recipe.yaml` is NOT touched and `max_model_len` stays at its
+default 32768. Every RESULTS.md row this round produces names this
+configuration. The fold decision remains R11's.
+
+### The instrument that has now been lost three times
+
+R8, R12 and (partly) R9 all planned to read `Running: N reqs, Waiting: M reqs`
+and MTP acceptance from the engine log and shipped without them. R12 diagnosed
+why: `docker logs -f` returns only the container's CUDA entrypoint banner
+because vLLM's serve output does not reach container stdout on this image. **The
+capture for this round is `ssh <box> docker exec <container> tail -f
+/tmp/sparkrun_serve.log`, and it is VERIFIED LIVE** — `grep -c 'Running:'` on
+the capture within a minute of the grid starting — before the round is allowed
+to rely on it. If the verification fails, the round says so and quotes no
+occupancy figure, exactly as R12 did.
+
+### Discipline
+
+- **runs=7.** These are headline numbers with a scoreable target. Both 3-run
+  medians this campaign ever promoted had to be retired and **both were too
+  high** (R1's tg32, R3's d65536).
+- **BOTH estimators at every c>1 point** — `tg_throughput` and
+  `peak_throughput` side by side, `tg_req_throughput` for the stagger. Never
+  `tg x c`; R10 settled that it double-counts an already-aggregate metric.
+- **σ is set by MTP verify-step count and acceptance quality, not by
+  concurrency** (R6). These are long generations at shallow depth in a wide
+  batch — the quiet regime — which is why runs=7 is affordable here.
+- Read the `Benchmark args:` echo before letting the run proceed (R5 lost an
+  engine start to a silently-defaulted depth).
+- ONE invocation. Serial — nothing else touches the box. No arena submission,
+  ever. No box system settings, no `apt`.
+
+## Round 13 outcome — bench_433eeaf9827e (2026-08-22)
+
+One invocation, `session_count: 1`, `crash_count: 0`, so c4 and c5 shared one
+engine start and one thermal state. Seven runs at each. Same pinned image epoch
+(`dgx-vllm-eugr-nightly:2026082102`) as every round since R1. Config:
+`-o max_num_seqs=5 -o max_num_batched_tokens=98304`, both **MUTATIONS**;
+`max_model_len` left at the recipe default 32768, which the pre-flight
+established was permitted.
+
+| cell | tg (board metric) | (mean) | σ | σ/med | peak_thr | tg_req | stagger | residency | runs |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---|
+| tg128 @ d16384 c4 | **174.68** | (173.59) | 7.70 | 4.41% | **310** | 66.76 | **1.53** | 3.88 of 4 | 177.10 / 181.08 / 169.05 / 181.16 / 172.87 / 174.68 / 159.19 |
+| tg128 @ d16384 c5 | **164.27** | (165.23) | 5.40 | 3.29% | **303** | 50.50 | **1.54** | 4.81 of 5 | 160.79 / 174.46 / 158.52 / 164.27 / 166.43 / 162.80 / 169.34 |
+| ctx_tg128 @ c4 | 170.59 | (171.97) | 6.34 | 3.72% | 294 | 61.93 | 1.45 | 3.95 of 4 | 181.48 / 170.12 / 164.63 / 170.59 / 165.01 / 178.33 / 173.64 |
+| ctx_tg128 @ c5 | 160.67 | (161.15) | 3.48 | 2.16% | 314 | 48.73 | 1.52 | 5.06 of 5 | 156.51 / 160.67 / 159.16 / 165.46 / 165.26 / 162.77 / 158.20 |
+| pp2048 @ c4 | 676.40 | — | — | — | — | — | — | — | — |
+| pp2048 @ c5 | 676.14 | — | — | — | — | — | — | — | — |
+
+Both estimators are reported side by side at every point. `tg` sits under
+`peak_thr` at both concurrencies (174.68 < 310, 164.27 < 303), so the two
+estimators are consistent and nothing here repeats R7's or R9's break.
+
+### STANDINGS — one win widened, one record margin, and c5 is STILL A LOSS
+
+| cell | was | now | incumbent | was | now |
+|---|---:|---:|---:|---:|---:|
+| tg128 @ d16384 c4 | 147.25 | **174.68** | 46.68 | 3.15x | **3.74x** |
+| ctx_tg @ d16384 c4 | 126.35 | **170.59** | 27.68 | 4.56x | **6.16x** |
+| tg128 @ d16384 c5 | 128.93 | **164.27** | 225.46 (like-for-like) | 0.57x | **0.73x** |
+
+**`ctx_tg @ d16384 c4` at 6.16x is now the campaign's widest margin**, past
+`tg128 @ d65536 c1`'s 5.71x. RESULTS.md is updated accordingly.
+
+**c5 REMAINS A LOSS and is recorded as one.** 164.27 against the like-for-like
+225.46 is 0.73x — improved from 0.57x, short by 27%. And the honest fuller
+statement, which RESULTS.md now carries: the c5 *cell* is topped by
+LFM2.5-350M BF16 at **428.95**, so even clearing 225.46 would have beaten the
+board's own Qwen3.6-35B-A3B-NVFP4 entry without taking the cell. Against the
+cell top we are at 0.38x.
+
+### THE DISCRIMINATOR: H_span_plus_decode HOLDS — and the round's mechanism is REFUTED anyway
+
+Declared before the run: `tg_req(c5) >= 48.0` reads H_span_plus_decode,
+`<= 46.0` reads H_span_only, between is mixed.
+
+**`tg_req(c5) = 50.50`.** H_span_plus_decode holds, cleanly and above the
+threshold. Per-request decode DID lift when the prefill stopped being split —
+43.72 to 50.50, essentially back onto the `c^-0.48` series that predicted 52.0
+and that c2 and c4 already sat on.
+
+**But the round predicted that lift would arrive alongside a stagger collapse,
+and the stagger did not collapse.** Predicted 1.00-1.15 at both arms; measured
+**1.53 at c4 and 1.54 at c5**, against R10's 1.57 and R12's 1.70. c4's stagger
+barely moved at all.
+
+So the round got its numbers from the term it treated as secondary and got
+nothing from the term it was designed around. **Both `tg_req` figures rose by
+exactly the same factor:**
+
+| cell | tg_req before | tg_req now | change | stagger before | stagger now |
+|---|---:|---:|---:|---:|---:|
+| c4 | 57.80 | 66.76 | **+15.5%** | 1.57 | 1.53 |
+| c5 | 43.72 | 50.50 | **+15.5%** | 1.70 | 1.54 |
+
+A uniform +15.5% in per-request decode at two different concurrencies, with the
+span ratio nearly untouched. That is not what an admission-stagger lever looks
+like.
+
+### WHY THE MECHANISM IS REFUTED RATHER THAN MERELY MISSED — the instrument says so directly
+
+**R8b is measured, at the fourth attempt.** The capture
+(`docker exec <container> tail -f /tmp/sparkrun_serve.log`) produced **453 lines,
+48 `Running:` samples and 34 SpecDecoding samples**, verified live before the
+round leaned on it, and archived as `engine-capture.log`. R8, R9 and R12 all
+planned this reading and shipped without it.
+
+**Occupancy, in every loaded sample:**
+
+| arm | reading | loaded samples |
+|---|---|---:|
+| c4 | `Running: 4 reqs, Waiting: 0 reqs` | 10 of 10 |
+| c5 | `Running: 5 reqs, Waiting: 0 reqs` | 13 of 13 |
+
+**`Waiting: 0` in 100% of loaded samples at both concurrencies.** The scheduler
+is admitting the entire batch, exactly as the round's arithmetic said it would
+at 98304. **And the stagger is still 1.54.** So whatever stretches the span
+between the first request's first token and the last request's last token, it
+is **not requests waiting for admission** — there is nothing waiting.
+
+**This reframes R12's headline decomposition.** R12 priced c5's gap as "93%
+admission stagger" and the campaign has been calling the ratio "admission
+stagger" since R10. With the budget raised until nothing queues at all, the
+ratio falls only 1.70 to 1.54. **Most of what the campaign has been attributing
+to admission is not admission.** The name was inherited from the configuration
+that first produced it and it stopped being accurate somewhere before this round.
+
+### THE LEADING CANDIDATE FOR THE RESIDUAL SPAN, stated as a candidate
+
+The requests start together and finish apart. The obvious way that happens on
+this model is **MTP acceptance dispersion across the batch**: a request drawing
+acceptance length 4.00 completes 128 tokens in ~32 verify steps, one drawing
+2.77 needs ~46 — a **1.44x** spread against a measured 1.54.
+
+The engine log's acceptance samples span **2.77 to 4.00** (median 3.085) across
+the grid, so dispersion of the right size is present. Two honest caveats:
+vLLM's SpecDecoding logger reports a **batch aggregate every 10 s**, not a
+per-request figure, so this round **cannot** demonstrate that the dispersion is
+*within* a batch rather than *between* runs; and the span-average occupancy
+computed from our own export (`tg / tg_req` = 3.25 of 5 at c5, against a peak
+residency of 4.81 of 5) is consistent with requests retiring at spread-out times
+but does not identify why. **No figure here is quoted as settled.** What would
+settle it is per-request acceptance, which needs
+`per_request_spec_decode_metrics` — visible as `'none'` in this image's
+observability config, and therefore available without a code change.
+
+### R9b CONFIRMED A THIRD TIME, at a third budget
+
+**`Prefix cache hit rate: 0.0%` in all 48 samples**, flag ON, at
+`max_num_batched_tokens 98304`. R9's A1 (22 samples) and R10 (92 samples) read
+the same at 32768. Prefix caching has now never hit in 162 engine samples across
+three token budgets. Nothing in this round's gains is a caching effect and
+nothing here should be described as one.
+
+### ctx vs cold: the observation holds, and R12's stagger asymmetry BREAKS
+
+ctx is **below cold at both** arms — 170.59 vs 174.68 (−2.3%) at c4, 160.67 vs
+164.27 (−2.2%) at c5 — so the sign is where R10 and R12 found it. But the
+magnitude has almost vanished: R12 read −9.7% and −18.7% at the same cells one
+budget down.
+
+**And R12's asymmetry reverses.** R12 established that the `ctx_` phase staggers
+MORE than cold at every raised-budget point (1.17 vs 1.13, 1.80 vs 1.57, 2.12 vs
+1.70) and made that the sharpened form of open question 4. At 98304 it staggers
+**LESS** at both:
+
+| cell | cold stagger | ctx stagger | R12/R10 at mnbt 32768 |
+|---|---:|---:|---|
+| c4 | 1.529 | **1.452** | 1.57 vs **1.80** |
+| c5 | 1.537 | **1.517** | 1.70 vs **2.12** |
+
+The prediction made before this run was that ctx would stagger more, on R12's
+evidence. **It is refuted at both arms.** Open question 4's sharpened form —
+"why does removing prefill work make the batch stagger worse?" — was built on a
+regularity that holds at one token budget and not at the next, which is the same
+failure mode the ctx-vs-cold question has now suffered four times. It should be
+re-posed as a budget-dependent observation or dropped.
+
+### Predictions: 14 held, 6 missed
+
+- **c5 `tg` 195-250, centre 220: MISSED LOW** at 164.27. **c4 `tg` 190-250:
+  MISSED LOW** at 174.68. Both misses trace to the same wrong term — the bands
+  assumed stagger near 1.05 and it came in near 1.53.
+- **c5 stagger 1.00-1.15: MISSED HIGH** at 1.537. **c4 1.00-1.15: MISSED HIGH**
+  at 1.529. The round's central mechanical claim, and the instrument refuted it.
+- **c5 `tg_req` 43.7-53: HELD** at 50.50 — the discriminator, and the round's
+  one correct forecast about a mechanism.
+- **c4 `tg_req` 56-65: MISSED HIGH** at 66.76, marginally.
+- **peak_throughput both HELD**: 303 at c5 (285-320), 310 at c4 (280-310, at the
+  top edge). Unlike c2 in R12, the ceiling did move here — c5 290 -> 303 (+4.5%),
+  c4 284 -> 310 (+9.2%) — which is consistent with real decode work being
+  recovered rather than only a denominator shrinking.
+- **pp2048 both HELD: SESSION CONTROL PASSES.** 676.40 at c4 (660-710) and
+  676.14 at c5 (670-720), reproducing R12's 677.44 to within 0.2% from a separate
+  engine start. This is what licenses reading the tg figures at all.
+- **ttfr HELD** at 15126.01 (14500-19000), +4.4% on R12's 14484.92. **Raising
+  the budget makes time-to-first-response worse for the sixth consecutive time.**
+  c4's 12101.77 is +2.6% on R12-era figures. Any row from this config says so.
+- **σ/med 0.5-5%: HELD both** at 4.41% (c4) and 3.29% (c5). runs=7 was the right
+  call; c4's runs span 159.19-181.16.
+- **ctx BELOW cold at both: HELD.** **ctx stagger ABOVE cold: REFUTED at both.**
+- **`Running`/`Waiting` 5/0 and 4/0 in >=95% of loaded samples: HELD**, at 100%.
+- **MTP acceptance 2.85-3.15 / 61-72%: HELD** at median 3.085 / 69.6% (34
+  samples). **Fifth consecutive round finding acceptance flat under a scheduler
+  knob** — and this is the strongest version yet, because the knob tripled.
+- **Telemetry: HELD.** 1500 samples, SM clock **2398 MHz** median (2216-2411),
+  75 °C peak, 100.27 W peak — the **tenth consecutive session** agreeing with
+  R4's 2392. First reading above 100 W, by 0.3%. No clock, power-policy, driver
+  or kernel setting was touched, and no `apt` was run.
+- **Grid time 400-560 s: HELD** at **490.1 s** (c4 225.5 s, c5 264.6 s).
+
+### COST, and one cost the round created
+
+One engine start, ~12 min wall, ~85k harness tokens. **The engine start itself
+cost ~225 s against a ~180 s norm**, because 98304 is a new
+`compile_ranges_endpoints` value and torch.compile missed its cache and rebuilt.
+That is a one-off per budget value, not per round, and it is worth knowing before
+anyone sweeps `max_num_batched_tokens` across several values: each new value buys
+a full recompile.
+
+### Mutations NOT folded into recipe.yaml
+
+`recipe.yaml` is untouched. Every R13 row in RESULTS.md names its configuration.
+The fold decision remains **R11's**, and this round makes it harder rather than
+easier: there are now three measured budgets (8192, 32768, 98304) and the c1
+anchor has been measured at only one of them.
+
+### The round's value, in one line
+
+**It widened the campaign's only contested win to 3.74x and set a new widest
+margin of 6.16x, moved c5 from 0.57x to 0.73x without taking it, recovered the
+occupancy instrument after three lost attempts — and used it to refute its own
+mechanism, showing that with `Waiting: 0` in every sample the span ratio still
+sits at 1.54, so most of what this campaign has been calling "admission stagger"
+since R10 is something else.**

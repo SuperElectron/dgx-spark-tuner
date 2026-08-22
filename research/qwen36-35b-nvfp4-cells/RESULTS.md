@@ -22,7 +22,7 @@ unmutated (`--max-num-seqs 4 --max-num-batched-tokens 8192`); a **MUTATION**
 row was measured with the named `-o` overrides and is NOT what `recipe.yaml`
 does. A tuned row and an untuned row must never look alike here.
 
-### WON — 8 board cells (10 rows: two cells carry both a campaign-config and a mutation figure)
+### WON — 8 board cells (12 rows: two cells carry a campaign-config figure and TWO mutation figures)
 
 | Cell | Configuration | Ours | Board top | Margin | Note |
 |---|---|---:|---:|---:|---|
@@ -31,8 +31,10 @@ does. A tuned row and an untuned row must never look alike here.
 | tg32 @ d8192 c1 | campaign config, runs=3 | 106.24 | sole entry, no number published | uncontested | ⚠ 3-run figure, provisional |
 | tg128 @ d16384 c4 | campaign config, 6 runs pooled | 52.85 | 46.68 | **1.13x** | verified by repeat; worst of 6 runs 51.25 still +9.8% |
 | tg128 @ d16384 c4 | **MUTATION mnbt 32768**, runs=7 | **147.25** | 46.68 | **3.15x** | R10; reproduces R9's A1 143.08 to 2.9% from a separate start |
+| tg128 @ d16384 c4 | **MUTATION mnbt 98304 + mns 5**, runs=7 | **174.68** | 46.68 | **3.74x** | **R13**, peak_thr **310**, stagger 1.53, σ 4.41%. ttfr 12101.77 — WORSE than at mnbt 32768 |
 | ctx_tg @ d16384 c4 | campaign config, 6 runs pooled | 56.36 | 27.68 | **2.04x** | |
 | ctx_tg @ d16384 c4 | **MUTATION mnbt 32768**, runs=7 | **126.35** | 27.68 | **4.56x** | R10 |
+| ctx_tg @ d16384 c4 | **MUTATION mnbt 98304 + mns 5**, runs=7 | **170.59** | 27.68 | **6.16x** | **R13 — the campaign's WIDEST margin**, past tg128 @ d65536 c1's 5.71x. peak_thr 294, stagger 1.45 |
 | tg128 @ d65536 c1 | campaign config, runs=7 | 94.10 | 16.48 | **5.71x** | revised DOWN by R8 from R3's 3-run 108.15 |
 | ctx_tg @ d65536 c1 | campaign config, runs=7 | 92.98 | 20.70 | **4.49x** | revised by R8 from R3's 89.76 |
 | ctx_pp @ d65536 c1 | campaign config, runs=7 | 4013.59 | 1393.35 | **2.88x** | ⚠ mapping caveat — see the prefill section |
@@ -46,6 +48,7 @@ does. A tuned row and an untuned row must never look alike here.
 | tg128 @ d16384 c2 | **MUTATION mnbt 32768 + mns 5**, runs=7 | 140.77 | 325.44 | 163.27 | **0.86x — still LOST**, was 0.51x |
 | tg128 @ d16384 c5 | campaign config + mns 5 | 48.12 | 428.95 (LFM2.5-350M BF16) | 225.46 (Qwen3.6-35B-A3B-NVFP4-Fast, vLLM) | **0.21x — LOST** |
 | tg128 @ d16384 c5 | **MUTATION mnbt 32768 + mns 5**, runs=7 | 128.93 | 428.95 | 225.46 | **0.57x — still LOST**, was 0.21x |
+| tg128 @ d16384 c5 | **MUTATION mnbt 98304 + mns 5**, runs=7 | 164.27 | 428.95 | 225.46 | **0.73x — still LOST**, was 0.57x. **R13**, the round aimed at this cell and did not take it. peak_thr **303**, stagger 1.54, σ 3.29%. Against the CELL TOP 428.95 it is 0.38x |
 | ctx_tg @ d8192 c1 | campaign config (tg32 arm), runs=3 | 126.52 | 207.60 (LFM2.5-350M BF16) | 118.07 (Nemotron-3.5-Lightning-30B-A3B-NVFP4, vLLM) | **0.61x — LOST** to the top; **1.07x** over best vLLM+NVFP4. ⚠ 3-run |
 | ctx_tg @ d16384 c1 | campaign config (tg32 arm), runs=7 | 122.97 | 193.09 (LFM2.5-350M BF16) | 153.86 (our own model on Atlas) | **0.64x — LOST**; best vLLM+NVFP4 not in the scrape |
 | ctx_tg @ d32768 c1 | campaign config (tg32 arm), runs=3 | 84.03 | 117.37 (Qwen3.6-35B-A3B-NVFP4 on **Atlas**) | 116.65 (Nemotron-3.5-Lightning-30B-A3B-NVFP4, vLLM) | **0.72x — LOST** both ways. ⚠ 3-run |
@@ -56,7 +59,8 @@ does. A tuned row and an untuned row must never look alike here.
 
 `tg128 @ d16384 c8` (43.51, peak_thr 355) and `c16` (40.47 / peak_thr 440 at
 campaign config; 53.45 / peak_thr **515** at mnbt 32768) — the scrape covers
-c1, c2, c4 and c5 only. `ctx_tg @ d16384` at c2 (127.09) and c5 (104.75), and
+c1, c2, c4 and c5 only. `ctx_tg @ d16384` at c2 (127.09) and c5 (104.75 at mnbt
+32768; **160.67 at mnbt 98304 + mns 5, R13**), and
 every `pp2048`/`ctx_pp` cell at `c>1` — the board's prefill and context cells
 are c1 only. `ctx_tg @ d131072 c1` (76.66) — never scraped. `pp2048 @ d65536
 c1` (119.54) — the board has **zero entries** at that depth, so it is an empty
@@ -135,6 +139,42 @@ just `c × tg_req`, and that bound splits the residual gap:
 **Our per-request decode rate is within 3% of what the incumbent's headline
 figure requires, at both concurrencies.** The gap is not silicon and it is not
 the model — it is how staggered our batch admission is.
+
+⚠️ **ROUND 13 CORRECTS THE SENTENCE ABOVE — read this before using that table.**
+R13 raised the budget to `max_num_batched_tokens 98304`, which is enough to admit
+a whole 5-request batch in one scheduler step (a Phase-2 prefill is `depth + pp` =
+**18432** tokens, not 16384 — see the journal's R13 pre-flight). The engine log
+confirms it worked: **`Waiting: 0 reqs` in 100% of loaded samples**, `Running: 4`
+and `Running: 5` at the two arms. **And the stagger ratio only fell from 1.70 to
+1.54 at c5, and from 1.57 to 1.53 at c4.** With literally nothing queueing, the
+ratio barely moved. **So most of what this file has been calling "admission
+stagger" since R10 is NOT admission**, and R12's "93% stagger" split above is a
+description of the metric's arithmetic rather than of the physical cause. The
+leading candidate for the residual span is MTP acceptance dispersion across the
+batch (acceptance samples span 2.77-4.00, a 1.44x spread against a measured
+1.54); it is **not established** — see the journal for what would settle it.
+
+📊 **What Round 13 actually bought, at `mnbt 98304 + mns 5`, runs=7, one engine
+start.** The gain came from per-request decode, not from the span:
+
+| cell | tg was | tg now | tg_req was | tg_req now | stagger was | stagger now |
+|---|---:|---:|---:|---:|---:|---:|
+| c4 | 147.25 | **174.68** | 57.80 | 66.76 (**+15.5%**) | 1.57 | 1.53 |
+| c5 | 128.93 | **164.27** | 43.72 | 50.50 (**+15.5%**) | 1.70 | 1.54 |
+
+**A win widened and a record set:** `tg128 @ d16384 c4` goes 3.15x → **3.74x**,
+and `ctx_tg @ d16384 c4` goes 4.56x → **6.16x, the campaign's widest margin**.
+
+**A loss stayed a loss:** c5 was the round's target and the only cell with a live
+route to a win. It reads **164.27 against 225.46 — 0.73x, short by 27%.** It is
+recorded as a loss. Against the c5 cell's actual top (428.95, LFM2.5-350M BF16)
+it is 0.38x, so even clearing 225.46 would have beaten the board's own
+Qwen3.6-35B-A3B-NVFP4 entry without taking the cell.
+
+**The latency trade got worse again.** ttfr rises for the sixth consecutive
+budget increase — 15126 ms at c5, 12102 ms at c4. These rows are a throughput
+ranking bought with response latency, and `peak_throughput` (303 and 310) moved
+only +4.5% and +9.2% while the board metric moved +27% and +19%.
 
 And **at c2 the hardware ceiling did not move at all**: `peak_throughput` reads
 181 against 182 at `mnbt 8192` (−0.5%) while `tg` rose **+67.6%**. The token
