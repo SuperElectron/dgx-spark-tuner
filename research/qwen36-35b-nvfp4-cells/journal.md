@@ -200,3 +200,170 @@ not even rank three depths in round 1.
 The ctx_ prefix-caching phase at c4 is again slightly ABOVE the cold phase
 (pooled median 56.36 vs 52.85, +6.6%) and again quieter. Its board figure was
 never scraped, so it is recorded and held, not claimed.
+
+## Round 3 hypothesis — tg128 @ d65536 c1
+
+The deepest contested cell in the campaign, and the only round where BOTH board
+figures are known in advance: tg128 @ d65536 c1 holds 16.48 (DeepSeek-V4-Flash-
+REAP MXFP4, 2 entries) and ctx_tg @ d65536 c1 holds 20.70 (DeepSeek-V4-Flash-
+REAP FP8, 1 entry). The prefix-caching phases run inside the same invocation, so
+one benchmark settles two board cells.
+
+Mechanism. Depth 65536 is 4x round 2's d16384 and 2x round 1's deepest point.
+The decode step at c1 is memory-bound on two reads: the weights, and the KV
+cache. The weight read is fixed at roughly 3B active parameters in NVFP4 —
+about 1.7 GB per step regardless of depth — and it is the term that dominates
+today. The KV read is the one that grows with depth, and this architecture
+suppresses it twice over: only 10 of 40 layers carry a KV cache at all (the
+other 30 are Gated DeltaNet, fixed-state, depth-independent), and those 10 are
+stored FP8 rather than BF16. So doubling context doubles a quarter-width,
+half-precision term against a fixed dominant one. The prediction that follows is
+a gentle decline, not a cliff.
+
+Numeric prediction: median 70-85, centre ~78, i.e. a 24% fall from our tg128 @
+d16384 c1 figure of 102.2 across a 4x depth increase. Against 16.48 that is
+about 4.7x, wide enough that the verify repeat is not required; the repeat
+becomes mandatory only if the median lands under ~33 (2x incumbent).
+
+For the ctx_ cell the prediction runs the other way, and this is the round's
+second, sharper test. Rounds 1 and 2 saw the cached-prefix phase sit at or
+slightly ABOVE the cold phase at d8192, d16384 (both c1 and c4) — but at
+d32768 it inverted, coming in at 84.03 against the cold 115.56, -27%, and the
+inversion has had no explanation since. If the inversion is a depth effect it
+should deepen at 65536; if it was a one-cell artefact of three noisy runs it
+should not reappear. Predict ctx_tg 55-75, BELOW the cold phase. Either result
+is informative, which is what open question 4 has been waiting for. Even the
+bottom of that band clears 20.70 by 2.7x.
+
+Two more falsifiable claims, recorded so the round can refute them:
+- pp2048 @ d65536 lands near 140-150. The cold prefill rows have halved almost
+  exactly per depth doubling (1187.51 / 637.09 / 295.71), because cold prefill
+  processes the whole context and its throughput is reported per prompt token.
+- σ is wide — above 8% of the median. This is c1, the bimodal regime; round 1
+  ran σ to 14-22% there and round 2 established that the noise is per-sequence
+  MTP acceptance, which a single sequence cannot average away. Three runs will
+  not pin this number tightly, and they do not need to: the verdict here is a
+  margin question against 16.48, not a ranking question. If σ instead comes in
+  tight, the MTP-acceptance story has a depth dependence nobody has posited.
+
+Mutation: none. Incumbent recipe, new probe. `-o max_model_len=73728` raises the
+window from the recipe default 32768 to fit depth 65536 + pp 2048 + tg 128 with
+headroom — the same kind of probe-driven override round 1 used at 40960, not a
+tuning change. The one config risk worth naming in advance: at
+--gpu-memory-utilization 0.8 the KV cache for a 73728-token window has to fit
+alongside the weights. Ten FP8 layers make that cheap, but an engine OOM at
+startup is the failure mode to expect if the arithmetic is wrong, and it would
+be a config failure, not a box failure.
+
+Probe: -b tg=128 -b depth=65536 -b concurrency=1 -b runs=3 -o max_model_len=73728
+(pp=2048 rides along by default).
+
+## Round 3 outcome — bench_dab043abba20 (2026-08-21)
+
+| Cell | median | (mean) | σ | runs |
+|---|---:|---:|---:|---|
+| tg128 @ d65536 c1 | 108.15 | (103.62) | 10.41 | 89.23 / 108.15 / 113.49 |
+| ctx_tg128 @ d65536 c1 | 89.76 | (90.27) | 1.80 | 88.36 / 92.68 / 89.76 |
+| pp2048 @ d65536 c1 | 118.59 | (118.94) | 0.55 | 118.52 / 118.59 / 119.71 |
+| ctx_pp2048 @ d65536 c1 | 4004.76 | (4003.12) | 12.92 | 3986.53 / 4004.76 / 4018.06 |
+
+Verdict: both board cells taken, by the campaign's widest margins. The cold cell
+is 108.15 against 16.48 — 6.56x — and the prefix-caching cell is 89.76 against
+20.70 — 4.34x. Neither needs the verify repeat; the discipline requires it under
+~2x, and the WORST single run of the cold cell, 89.23, still clears its incumbent
+by 5.41x. This round also produces the campaign's first claimable `ctx_` cell:
+ctx_tg @ d65536 is the only prefix-caching cell whose board figure was ever
+scraped, so it is the one place the six ctx_ measurements taken so far can
+actually be scored.
+
+The engine came up clean. The config risk named in the hypothesis — a KV cache
+too large for the 73728-token window at --gpu-memory-utilization 0.8 — did not
+materialize and was never close: sparkrun's own VRAM estimate put the KV cache
+at 2.81 GB against 75.0 GB available, a 26.7x context multiplier. The FP8-on-ten-
+layers arithmetic in the hypothesis was right, and it was right by a much wider
+margin than the hypothesis assumed. Deep cells on this model are not memory-
+constrained anywhere near d65536, and the whole round took 150.8 s of benchmark
+time.
+
+**The headline prediction was refuted, and refuted upward — again.** The
+hypothesis said 70-85, centre ~78, reasoning that 4x the context would cost
+about 24% of decode throughput against our tg128 @ d16384 c1 figure of 102.2.
+The cell came in at 108.15: not a 24% decline but a 5.8% RISE, at four times the
+depth. The second falsifiable claim — "the decline from d16384 to d65536 is
+under 35%" — is technically satisfied only because there was no decline to
+measure.
+
+This is the third time this campaign has predicted a slowdown from first
+principles and measured the opposite. Round 1 predicted tg32 below tg128 and got
+it above at every depth. Round 1's depth sweep refused to decline monotonically.
+Now a 4x depth increase costs nothing at all. The honest synthesis of the three
+is not that deeper is faster — it is that **the depth-dependent term in this
+model's decode cost is smaller than the run-to-run noise across the entire range
+we have measured, d8192 to d65536.** The architecture argues for exactly this:
+30 of 40 layers are Gated DeltaNet with a fixed-size state that does not grow
+with context at all, and the 10 layers that do carry a KV cache carry it in FP8.
+So the depth-sensitive read is a quarter of the layers at half precision, set
+against a fixed ~1.7 GB weight read that dominates every decode step. There is
+no reason to expect a visible depth curve until the KV term approaches the
+weight term, and at 2.81 GB for a 72k window it is nowhere near.
+
+That reading makes the 5.8% "rise" a non-result rather than a discovery, and it
+should be recorded as one. Both cells sit at c1, the bimodal regime; σ here is
+10.41, and round 1 saw σ up to 22.72 at the same concurrency. A 5.8% gap between
+two three-run medians drawn from that distribution is noise, not signal. The
+claim this round supports is FLATNESS within noise from d16384 to d65536 — not
+that d65536 is faster than d16384. Distinguishing the two needs both depths under
+one engine start at runs=7, which is queued as R8.
+
+It does, however, sharpen open question 2. The -12% reproduction gap says our
+tg128 @ d16384 c1 baseline of 102.2 is depressed relative to the board's 116.03.
+If the depth term really is negligible, then 102.2 and 108.15 are two samples of
+the same underlying quantity, and the board's 116.03 sits above both — which
+means the gap is a property of the configuration or the box, not of that one
+cell, and it should be visible at every depth. R8 gets that measurement for free.
+
+**The ctx_ prediction held, and it is the round's most solid finding.** The
+prefix-caching phase came in BELOW the cold phase — 89.76 against 108.15, -17% —
+exactly as predicted, and it reproduces the inversion first seen at d32768
+(84.03 against 115.56, -27%). Two independent depths, two separate benchmark
+invocations, same direction. The inversion is real and is not the three-run
+artefact it could have been after round 1. What the prediction got wrong is the
+shape: it does not deepen with depth. -27% at d32768 and -17% at d65536 is, if
+anything, the reverse ordering, so "the inversion grows with context" is not
+supported. The pattern across all four depths measured is a sign change
+somewhere between d16384 and d32768 — ctx above cold at d8192 and d16384 (both
+c1 and c4), ctx below cold at d32768 and d65536 — and nothing in the current
+picture explains why removing prefill work should HURT decode throughput at
+depth. Open question 4 now has a reproduced effect to attack instead of a
+single suspicious number.
+
+The noise prediction held on both counts. Cold σ 10.41 is 9.6% of the median,
+above the predicted 8% floor and squarely in the c1 range rounds 1 and 2
+established. The ctx_ phase is again far quieter — σ 1.80, 2.0% of its median —
+which is now the fourth consecutive observation that removing the prefill
+removes most of the run-to-run variance. Rounds 1, 2 and 3 agree, at three
+depths and two concurrencies. That consistency is what makes the ctx_ cells the
+cheapest place in this campaign to measure a real effect, and it is why the
+inversion above deserves a round rather than a footnote.
+
+**The prefill prediction was refuted, downward.** pp2048 @ d65536 came in at
+118.59 against a predicted 140-150. The prediction extrapolated the cold-prefill
+halving-per-doubling seen at d8192/d16384/d32768 (1187.51 / 637.09 / 295.71),
+which would put d65536 near 148. The actual ratio from d32768 is 0.40x, not
+0.50x — cold prefill degrades slightly WORSE than inverse-linear in depth out
+here, which is the quadratic term of attention finally becoming visible in the
+one phase that has to process the whole context. σ 0.55 makes this the round's
+tightest measurement, so the miss is real and not a noise draw. The cached
+counterpart falls too: ctx_pp2048 4004.76 against 5086.51 at d32768, after
+sitting nearly flat across the three shallower depths (6148.56 / 5910.22 /
+5086.51). Both prefill figures are held, not claimed — their board figures have
+never been scraped, which is what R5b is for.
+
+Instrument note: the runtime epoch is unchanged. R1 and R3 both ran under the
+pinned image `ghcr.io/spark-arena/dgx-vllm-eugr-nightly:2026082102`, checked in
+their state.yaml files, so the cross-round depth comparisons above are within one
+epoch and legitimate. Also unchanged, and worth recording once: sparkrun cannot
+clear the box's page cache (no passwordless sudo), so every round in this
+campaign carries the same uncontrolled cold-read state. It is uniform across
+rounds, so it does not bias comparisons between them, but it is a floor on how
+quiet any single measurement can be.
