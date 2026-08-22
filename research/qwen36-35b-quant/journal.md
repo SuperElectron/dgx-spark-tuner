@@ -28,3 +28,22 @@ the vLLM worker during weight load. Ray is pointless at TP=1: rewrote the
 incumbent as recipe_version 1, container vllm-node, identical serve flags
 (kv fp8, flashinfer, marlin MoE, MTP spec n=3, async). max_model_len trimmed
 262144→32768 (probe needs 16384+2048; smaller KV alloc, faster boot).
+
+## Round 0 outcome — NVFP4 baseline (bench_6c1d46e5fd36)
+
+Third launch attempt succeeded (traps: vllm-ray OOM, then embeddings server
+reserving 109GB unified memory — both journaled + memorized). Target cell
+tg128 @ d16384: median 102.2 (101.1/102.2/118.2 — one high MTP-acceptance
+draw, same bimodal shape as ngram on 0.8B). pp2048@d16384 634 t/s,
+ttfr 3.2s. Leaderboard best vLLM NVFP4: 116.03 — we're -12%, consistent with
+the known ~10% clock cap plus noise. Same pattern as the 0.8B series: capped
+box ≈ their score × 0.9.
+
+Observations (sweep): MTP spec decode variance mirrors ngram (bimodal draws
+— median rule mandatory); prefill at depth is slow (634 t/s pp phase,
+3.2s ttfr) — batched-tokens/chunked-prefill knobs likely matter for the pp
+cells but not our tg target.
+
+Next: BF16 arm baseline (same flags minus quant-specific; needs its own
+recipe copy — model Qwen/Qwen3.6-35B-A3B, drop marlin moe-backend if
+NVFP4-specific), then FP8 arm, then eval runs (T4).
