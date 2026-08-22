@@ -69,7 +69,13 @@ Omit the section if there is nothing.>
    work log. No narrative. Add or update rows only, honoring the existing
    column contract, which starts with benchId and date. A pooled row lists
    every contributing benchId and the date of the latest. NEVER guess a benchId.
-3. Archive runs with `scripts/archive-round.sh` per the skill.
+3. Archive runs with `scripts/archive-round.sh` per the skill. A candidate
+   recipe belongs in the archive of the run it produced —
+   `experiments/<benchId>/recipe-<arm>.yaml`, force-added because
+   `experiments/*` is gitignored. **The series root holds `recipe.yaml` and
+   nothing else.** Do not leave a copy behind at the root: a stray
+   `recipe-<arm>.yaml` there is unreproducible, because nothing records which
+   run it belongs to.
 4. Memories via `.claude/skills/mem0/scripts/remember.sh`. A memory REPORTS
    WHAT WAS FOUND with provenance in the TEXT — date, benchId, sampling,
    configuration, and what it was compared against — because `recall.sh`
