@@ -13,6 +13,22 @@ promotion, hard rules) lives in the `spark-autoresearch` skill
 `research/*/experiments/` run data is gitignored — numbers live in the local
 exported files; journal.md and RESULTS.md carry the conclusions.
 
+## Memory
+
+The mem0 skill (`.claude/skills/mem0/SKILL.md`) gives the research loop
+recall/remember of prior findings. Standing rules:
+
+- Memory ops never block work. `remember.sh`/`recall.sh` always exit 0 on
+  failure — never retry in a loop or ask the user what to do.
+- On failure, spawn a background agent to run `memory-doctor.sh`, then
+  drain the outbox (`remember.sh --drain`).
+- journal.md/RESULTS.md files are canonical; mem0 is a rebuildable index.
+  `[VERDICT]`/`[CRASH]` rebuild from RESULTS.md via `memory-backfill.sh`;
+  `[ENV]`/`[LESSON]`/`[COST]` are best-effort index entries — canonical
+  copies live in the journal.
+- The stack lives on the box, docker compose project `sparkmem`, managed
+  via `memory.sh`.
+
 ## GitHub issues
 
 Issue body structure and closing rules live in the `gh-issues` skill

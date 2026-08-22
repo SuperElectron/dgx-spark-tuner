@@ -31,8 +31,14 @@ research/<name>/
 
 ## One round
 
-1. Read journal.md + prior `experiments/*/`. Pick ONE mutation. Journal the
-   hypothesis BEFORE running.
+1. Read journal.md + prior `experiments/*/`. Before picking a mutation, recall
+   prior findings:
+   ```
+   .claude/skills/mem0/scripts/recall.sh "prior findings <model> <cell> <lever>" experiment:<name>
+   ```
+   Best-effort — fold the digest into your hypothesis reasoning, but never
+   block on it (see the mem0 skill's guardrail). Pick ONE mutation. Journal
+   the hypothesis BEFORE running.
 2. Run (mutation = `-o key=value`; template-flag change = edit a candidate
    recipe copy, e.g. `recipe-candidate.yaml`):
    ```
@@ -58,7 +64,22 @@ research/<name>/
    recipe.yaml untouched. Crash → journal the lesson; run dir stays.
 5. Append one row to RESULTS.md:
    `| bench_<id> | <date> | <mutation> | <tg mean> | <tg σ> | <pp mean> | <pp σ> | <ttfr mean> | keep/revert/crash — note |`
-6. Journal the outcome. Commit per repo workflow rules.
+6. Journal the outcome. Write the verdict to memory (best-effort, never
+   blocking — see the mem0 skill's guardrail: on failure spawn a background
+   agent to run `memory-doctor.sh`, never gate the round on it):
+   ```
+   .claude/skills/mem0/scripts/remember.sh "[VERDICT] <one-liner>" experiment:<name>
+   ```
+   Also write `[ENV]`, `[CRASH]`, or `[LESSON]` lines the same way when the
+   round surfaced one. Commit per repo workflow rules.
+
+## Cost ledger
+
+Record harness-token spend for the round in the journal entry (canonical),
+and write a `[COST]` memory per phase (tokens-per-point accounting):
+```
+.claude/skills/mem0/scripts/remember.sh "[COST] <phase>: <tokens> tokens, <result>" experiment:<name>
+```
 
 ## Promotion
 
