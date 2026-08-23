@@ -1,44 +1,63 @@
 # Project rules
 
-## Autoresearch workflow
+Benchmark-tuning research on a DGX Spark box. The work is hypothesis-driven:
+understand what governs model performance on this hardware.
 
-The full repeatable loop (experiment layout, one-round procedure, archiving,
-promotion, hard rules) lives in the `spark-autoresearch` skill
-(`.claude/skills/spark-autoresearch/SKILL.md`). Its helper scripts:
+These are the invariants — they hold before you know which task you are doing.
+Procedures live in the skills; see `## Skills`.
 
-- `scripts/new-experiment.sh <name>` — create an experiment series from the template
-- `scripts/archive-round.sh <experiment-dir> <benchId> [suffix]` — archive a benchmark run
-- `scripts/parse-round.py <round-tmp.json>` — per-run tg/pp/ttfr with medians
+- Nothing is ever submitted to Spark Arena. There is no login and one is not
+  wanted. 
 
-`research/*/experiments/` run data is gitignored — numbers live in the local
-exported files; journal.md and RESULTS.md carry the conclusions.
+## Research Experiment setup
 
-## Memory
+To do a research experiement, an agent is used to run that isolated experiment
+- an agent must use context from .claude/skills/experiment
+- the agent is responsible to add/push code, and create a PR.
+- you are required to merge it back into staging.
 
-The mem0 skill (`.claude/skills/mem0/SKILL.md`) gives the research loop
-recall/remember of prior findings. Standing rules:
+## Folder Layout for research experiements.
 
-- Memory ops never block work. `remember.sh`/`recall.sh` always exit 0 on
-  failure — never retry in a loop or ask the user what to do.
-- On failure, spawn a background agent to run `memory-doctor.sh`, then
-  drain the outbox (`remember.sh --drain`).
-- journal.md/RESULTS.md files are canonical; mem0 is a rebuildable index.
-  `[VERDICT]`/`[CRASH]` rebuild from RESULTS.md via `memory-backfill.sh`;
-  `[ENV]`/`[LESSON]`/`[COST]` are best-effort index entries — canonical
-  copies live in the journal.
-- The stack lives on the box, docker compose project `sparkmem`, managed
-  via `memory.sh`.
+All research experiments populate a folder structure as follows:
 
-## GitHub issues
+```
+research/<series>/
+├── recipe.yaml                     the tuned config
+├── RESULTS.md                      Mat's lookup table
+├── docs/                           model-card.md, arena-recipe.md
+└── experiments/<hypothesisId>/
+    ├── EXPERIMENT.md               the claim, then its conclusion
+    └── bench_<id>-<label>/         one archive per invocation
+```
 
-Issue body structure and closing rules live in the `gh-issues` skill
-(`.claude/skills/gh-issues/SKILL.md`). Always follow it when creating or
-closing issues.
+- Do not modify these files unless a one of your skills permits it. These are read only unless a specific skill operates on them.
 
-## Workflow
-- `main` ← `staging` ← `feature/*`. One PR per feature group. Never commit directly to staging/main.
-- Review pass (code-reviewer agent) on every PR before merge.
+## The box
+
+- Never change system state autonomously: clocks, power policy, driver, kernel,
+  `apt`. Measure it, record it, leave the decision to Mat.
+- The hostname comes from `.claude/box.json` (gitignored).
+- An image or vLLM version change is a new epoch — re-measure the incumbent
+  before comparing across it.
+- Memory ops never block work. `remember.sh` / `recall.sh` always exit 0 on
+  failure; never retry in a loop or ask what to do.
+
+## Skills
+
+Invoke the skill; do not reimplement it from memory.
+
+- `spark-autoresearch` — the research loop: stating a hypothesis, running a
+  round, archiving, reading the instrument's metrics, concluding, deciding next.
+- `mem0` — the memory service: markers, entity scopes, what is derived vs
+  hand-written, reconcile.
+- `observe` — the observation pass over runs, telemetry and logs.
+- `experiment` — how an agent runs one experiment: what it is handed, what it
+  measures and archives, and the git and PR rules it follows.
+- `experiment-postrun` — after that PR is open and before it merges: check the
+  archive is complete, derive the `[EXPERIMENT]` memory from it, confirm the
+  index converged.
 
 ## Code rules
-- Minimize code comments and ensure they are friendly for a human developer to read.
-- Try to keep files small — aim under 400 lines, ~500 is a guideline not a hard cap; when a file grows, split it into smaller parts.
+
+- Minimize comments; keep them friendly for a human developer to read.
+- Keep files small — aim under 400 lines; when a file grows, split it.
