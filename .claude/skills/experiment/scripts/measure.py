@@ -151,6 +151,45 @@ def requests(out: Path) -> dict:
     }
 
 
+# A model held past its stopping point by ignore_eos tends to loop, and looping
+# text drafts easily — so a degenerate request decodes FASTER and inflates the
+# figure. Whole-output uniqueness cannot see it: unique words saturate while the
+# total grows, so long clean prose scores as high as short looping text. A
+# sliding window is length-invariant.
+REPEAT_WINDOW = 100
+REPEAT_LIMIT = 0.45
+
+
+def _repeat_windows(text: str) -> list[float]:
+    words = text.split()
+    out = []
+    for i in range(0, max(len(words) - REPEAT_WINDOW, 0) + 1, REPEAT_WINDOW):
+        w = words[i : i + REPEAT_WINDOW]
+        if len(w) >= REPEAT_WINDOW // 2:
+            out.append(1 - len(set(w)) / len(w))
+    return out
+
+
+def degeneration(out: Path) -> dict:
+    """Per request, the worst sliding-window repeat ratio in its output."""
+    path = out / "progress.jsonl"
+    if not path.is_file():
+        return {}
+    texts: dict[int, str] = {}
+    for line in path.read_text().splitlines():
+        try:
+            e = json.loads(line)
+        except ValueError:
+            continue
+        if e.get("type") == "tokens":
+            texts[e["request_id"]] = texts.get(e["request_id"], "") + (e.get("snippet") or "")
+    worst = {r: max(_repeat_windows(t), default=0.0) for r, t in texts.items() if t}
+    if not worst:
+        return {}
+    bad = sorted(r for r, v in worst.items() if v > REPEAT_LIMIT)
+    return {"n": len(worst), "worst": max(worst.values()), "bad": bad}
+
+
 def _iqr_ratio(values: list[float], median: float) -> float:
     """None below four values, where quartiles do not exist. Returning 0.0 would
     read as a perfectly tight measurement and pass any spread at all."""
@@ -253,6 +292,16 @@ def report(out: Path, state: Path, frames: int, grid: dict, box: dict, keys) -> 
         if not cacheable(grid):
             note = f"  (expected: prompt is under one {BLOCK_TOKENS}-token block)"
         print(f"cache:     hit rate max {eng['hit_max']:.1f}% over {eng['hit_samples']} samples{note}")
+
+    deg = degeneration(out)
+    if deg:
+        flag = (
+            f"  {len(deg['bad'])}/{deg['n']} LOOPING (requests {deg['bad']}) — "
+            "these decode faster and inflate tg"
+            if deg["bad"]
+            else ""
+        )
+        print(f"text:      worst repeat {deg['worst']:.2f} over {deg['n']} requests{flag}")
 
     req = requests(out)
     if req:
