@@ -44,7 +44,7 @@ you start and you never edit it.
    benchmark. Idempotent, so just assert it when a round starts.
 
 ```bash
-scripts/memory.sh stop
+../memory/scripts/memory.sh stop
 ```
 
 1. EXPERIMENTS: cycle CREATE, RUN, RECORD, once per planned row in "## Runs".
@@ -142,9 +142,9 @@ Once, when the experiment closes. The embedder wants the same card the
 benchmarks do, so it goes back down after.
 
 ```bash
-scripts/memory.sh start
-scripts/remember.sh "<text>" <entity>   # one per round, one for the experiment
-scripts/memory.sh stop
+../memory/scripts/memory.sh start
+../memory/scripts/remember.sh "<text>" <entity>   # once, when the experiment closes
+../memory/scripts/memory.sh stop
 ```
 
 Each line restates a conclusion already written, and has to stand alone —
