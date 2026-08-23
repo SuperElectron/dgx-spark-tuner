@@ -2,12 +2,27 @@
 
 ## Objective
 
-`tg` at `tg128 @ d16384 c1`, under the protocol in Held. The best figure that
-protocol has produced is 118.9 (h1 run-0005).
+Maximise `tg` at `tg128 @ d16384 c1`, and understand what governs it. There is
+no ceiling here on purpose — the standing best is 118.9 (h1 run-0005) and every
+round exists to move it or to close a lever and say why.
 
-Reached when: a recipe holds `tg` at or above **125** — 118.9 plus 5% — over a
-full `runs: 7` grid, **and** that run reads stable, `tg` max/min at or below
-1.10. A target claimed on a median while the samples scatter is not reached.
+Two figures, because one number cannot serve both purposes:
+
+- **Ours** — measured under the protocol in Held, which is what makes rounds
+  comparable to each other. A round improves it only with a stable verdict,
+  `tg` max/min at or below 1.10; a median claimed while the samples scatter is
+  not an improvement.
+- **Board-comparable** — measured by running `@official/spark-arena-v2`
+  unmodified and reading our own `d16384/c1` row out of it. This is the only
+  figure that can be set beside the board at all, and beating the board means
+  beating it *there*.
+
+Reached when both are true: no lever in Strategy remains open, and two
+consecutive rounds fail to move the standing best. Then the conclusion records
+how far `tg` moved, which mechanisms carried it, and which are closed and why.
+
+Not reached by hitting any particular number, and not closed early because a
+number looked good.
 
 This said 116.03 until 2026-08-23, the best vLLM NVFP4 entry at this cell. That
 was the wrong target — not because the figure is wrong but because it is not
@@ -21,9 +36,11 @@ documented differences, none of them ours to close.
 We read 116.2 before changing anything and 118.9 after, which is most of what
 that comparison was ever worth.
 
-Beating the board is still worth doing, and it needs its own experiment
-starting from `@official/spark-arena-v2` run unmodified, so there is a number
-measured the way theirs was. It is not this experiment's close condition.
+That does not mean the board is out of reach — it means we cannot tell from
+these numbers whether we are ahead or behind. So the board-comparable figure
+above is part of this experiment, not deferred to another one: run their
+profile, read our own row, and then a claim about beating them is checkable
+rather than asserted.
 
 ## Strategy
 
