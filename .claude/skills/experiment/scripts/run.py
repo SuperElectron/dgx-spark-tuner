@@ -116,13 +116,17 @@ class Telemetry:
                 self._stop.wait(TELEMETRY_INTERVAL)
 
 
-def run_benchmark(recipe: Path, host: str, out: Path, sctx):
+def run_benchmark(recipe: Path, host: str, out: Path, sctx, seen: list[str]):
     """Run it, returning (result, benchmark_id).
 
     The id reaches a library caller only through the progress emitter;
-    BenchmarkResult.benchmark_id comes back empty.
+    BenchmarkResult.benchmark_id comes back empty. `seen` is the caller's, so
+    the id is still in hand if this raises — a failed run needs it to find its
+    own engine log.
+
+    Errors propagate. The caller archives what the failure left behind before
+    reporting it.
     """
-    seen: list[str] = []
 
     def on_progress(event: api.ProgressEvent) -> None:
         line = event.data.get("msg") or event.data.get("line") or ""
@@ -149,15 +153,7 @@ def run_benchmark(recipe: Path, host: str, out: Path, sctx):
             "exit_on_first_fail": True,
         },
     )
-    try:
-        result = api.benchmark(options, sctx=sctx)
-    except (api.HostsUnreachable, api.InsufficientCapacity) as exc:
-        die(f"box unavailable: {type(exc).__name__}: {exc}")
-    except api.BenchmarkFailed as exc:
-        die(f"benchmark failed: {exc}")
-    except api.SparkrunError as exc:
-        die(f"{type(exc).__name__}: {exc}")
-
+    result = api.benchmark(options, sctx=sctx)
     if not seen:
         die("sparkrun never emitted a Benchmark ID")
     return result, seen[0]
@@ -182,15 +178,52 @@ def write_pointer(run_dir: Path, bench_id: str, sctx) -> Path:
     return state
 
 
-def capture_logs(cluster_id: str, out: Path, sctx) -> None:
-    """Whole log, every worker. Hosts come from the job cache under cluster_id."""
+def capture_logs(cluster_id: str, out: Path, sctx) -> int:
+    """Whole log, every worker. Hosts come from the job cache under cluster_id.
+
+    Returns the line count rather than dying on zero: on the failure path an
+    empty log is itself worth reporting, and the caller there has a more useful
+    error to raise than this one."""
     written = 0
     with out.open("w") as fh:
         for line in api.logs(cluster_id, scope="all", sctx=sctx):
             fh.write(line.text + "\n")
             written += 1
-    if not written:
-        die("sparkrun returned no engine log")
+    return written
+
+
+def rescue_logs(seen: list[str], out: Path, sctx) -> None:
+    """Archive the engine log after a failed run.
+
+    A run that dies during engine start produces no results, so the engine log
+    *is* the result — and it lives inside the workload, which the next run
+    replaces. sparkrun writes state.yaml as soon as it has an id, and that file
+    carries the cluster_id `api.logs` needs, so the id survives the failure even
+    though the BenchmarkResult does not.
+
+    Never raises: it runs while an error is already on its way up, and the
+    original failure is the one worth reporting."""
+    dest = out / "engine-capture.log"
+    if dest.is_file():
+        return
+    if not seen:
+        say("no benchmark id was emitted; engine log cannot be recovered")
+        return
+    state = Path(sctx.config.cache_dir) / "benchmarks" / seen[0]
+    doc = state / "state.yaml"
+    if not doc.is_file():
+        say(f"no state.yaml under {state}; engine log cannot be recovered")
+        return
+    cluster = (yaml.safe_load(doc.read_text()) or {}).get("cluster_id")
+    if not cluster:
+        say(f"{doc} carries no cluster_id; engine log cannot be recovered")
+        return
+    try:
+        lines = capture_logs(cluster, dest, sctx)
+    except Exception as exc:  # noqa: BLE001 - never mask the original failure
+        say(f"could not recover engine log: {type(exc).__name__}: {exc}")
+        return
+    say(f"engine log recovered: {lines} lines -> {dest}")
 
 
 def copy_to_state(out: Path, state: Path) -> None:
@@ -332,15 +365,32 @@ def main() -> None:
     sctx = api.default_sctx()
     host, ssh_kwargs = load_box(Path(__file__).resolve().parents[4])
 
-    model = (yaml.safe_load(recipe.read_text()) or {}).get("model") or ""
+    doc = yaml.safe_load(recipe.read_text()) or {}
+    model = doc.get("model") or ""
     if not model:
         die("recipe declares no model")
-    tokens = install_corpus(recipe, model)
-    say(f"fixed corpus {tokens} tokens")
 
+    # Only a recipe that asks for the fixed corpus gets one. install_corpus
+    # pins a single cell, so its one-cell guard belongs to that protocol rather
+    # than to every run: a recipe measuring a whole grid deliberately, on
+    # llama-benchy's own moving offset, is not a mistake to be caught.
+    bench = doc.get("benchmark") or {}
+    book = bench.get("book_url") or (bench.get("args") or {}).get("book_url")
+    if book == FIXED_CORPUS_URL:
+        say(f"fixed corpus {install_corpus(recipe, model)} tokens")
+    else:
+        say("no fixed corpus: the recipe does not ask for one")
+
+    seen: list[str] = []
     say(f"benchmarking {recipe} on {host}")
-    with Telemetry(host, out / "telemetry.jsonl", ssh_kwargs, sctx) as telemetry:
-        result, bench_id = run_benchmark(recipe, host, out, sctx)
+    try:
+        with Telemetry(host, out / "telemetry.jsonl", ssh_kwargs, sctx) as telemetry:
+            result, bench_id = run_benchmark(recipe, host, out, sctx, seen)
+    except (api.HostsUnreachable, api.InsufficientCapacity) as exc:
+        die(f"box unavailable: {type(exc).__name__}: {exc}")
+    except api.SparkrunError as exc:
+        rescue_logs(seen, out, sctx)
+        die(f"{type(exc).__name__}: {exc}")
     say(f"{bench_id} on {result.cluster_id}")
 
     prune_exports(result)
@@ -348,7 +398,8 @@ def main() -> None:
 
     # Must precede stop(): it takes the workload's logs with it.
     say("capturing engine log")
-    capture_logs(result.cluster_id, out / "engine-capture.log", sctx)
+    if not capture_logs(result.cluster_id, out / "engine-capture.log", sctx):
+        die("sparkrun returned no engine log")
 
     if not args.keep_alive:
         say("stopping workload")

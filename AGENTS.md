@@ -8,6 +8,7 @@ Procedures live in the skills; see `## Skills`.
 
 - Nothing is ever submitted to Spark Arena. There is no login and one is not
   wanted. 
+- Where possible, use agents to run things so that your context doesn't bloat. You can make use of jsonl files from an agent run, to pass of to another agent, so that your context is minimized. USE THIS RULE WHEN IT MAKES SENSE, ESPECIALLY FOR SIMPLE TASKS AND WHERE SKILLS ALIGN. Ensure you pass adaquate context to the agent so it is successful.
 
 ## Research
 

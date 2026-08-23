@@ -28,7 +28,10 @@ uv run --project .claude/skills/experiment \
 ```
 
 The recipe is the whole experiment, probe grid included. There are no flags to
-pass. A non-zero exit means the archive is incomplete — run it again.
+pass.
+
+Run it in the background. A healthy run is minutes; a failed one takes ~18, and
+a foreground command is killed at 10.
 
 ## 2. A crash is a result
 
@@ -37,10 +40,26 @@ If the engine will not start or dies mid-run, that is data.
 Keep the archive, say what the engine reported, and return it as a crash. Do
 not retry more than twice, and never substitute a different configuration.
 
+The container stays up after vllm dies inside it, so a running container is not
+evidence. Count vllm processes in it.
+
+`run.py` archives the engine log itself, including on the failure path. If it
+could not, it names the step that failed. Read what it said before fetching
+anything by hand.
+
+Cells that completed are in the state dir even when `results.yaml` is not. Read
+it before reporting a run as lost.
+
 ## 3. Report
 
-Read the archive and return this block, and nothing else. It is the only thing
+Read the archive and report this block, and nothing else. It is the only thing
 the caller sees — the archive stays with you.
+
+**Send it. Do not just write it.** If you were given a name you are a teammate,
+not a one-shot: your plain output reaches nobody and you will sit idle holding a
+finished report. Deliver it with `SendMessage` to `main` as the last thing you
+do. Write it as your final text too, for the case where you were spawned
+unnamed — but the send is what makes it arrive.
 
 ```
 bench     bench_c9518e3e96a3
@@ -78,8 +97,12 @@ and therefore what decode measures.
 `run.py` prints the grid it verified, peak power, and a stable/UNSTABLE verdict
 per metric. Pass its verdict through — do not recompute it.
 
-Window telemetry to the session times in `state.yaml`. Ignore `gpu_clock_mhz`:
-on this box it reads 208 in almost every frame whatever the GPU is doing.
+Window telemetry to the session times in `state.yaml`. `gpu_clock_mhz` is
+readable: under load this box reports 2359-2398 MHz against a 3003 MHz ceiling,
+and the 208s are the idle gaps between runs. A short shallow cell can read 208
+in every frame because the 0.25 s sampler misses its busy windows, so a low
+peak clock only means something when the GPU was seen busy at all.
 
-If genuinely blocked — box unreachable, engine dead after two attempts —
-return one line starting `ESCALATE:` with what was tried.
+If genuinely blocked — box unreachable, engine dead after two attempts — send
+one line starting `ESCALATE:` with what was tried. Send it the same way, and
+send it early: a blocked run reported an hour late has cost the box an hour.

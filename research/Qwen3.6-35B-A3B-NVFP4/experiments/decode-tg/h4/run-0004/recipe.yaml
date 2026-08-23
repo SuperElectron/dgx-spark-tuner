@@ -13,18 +13,18 @@ command: |
     --enable-chunked-prefill \
     --async-scheduling \
     --enable-prefix-caching \
-    --speculative-config '{{"method":"mtp","num_speculative_tokens":3,"moe_backend":"triton"}}' \
+    --speculative-config '{{"method":"mtp","num_speculative_tokens":3,"moe_backend":"flashinfer_cutlass"}}' \
     --load-format fastsafetensors \
     --reasoning-parser qwen3 \
     --tool-call-parser qwen3_xml \
     --enable-auto-tool-choice \
 benchmark:
   framework: llama-benchy
-  pp: [128]
-  tg: [8192]
-  depth: [0]
+  pp: [2048]
+  tg: [128]
+  depth: [16384]
   concurrency: [1]
-  runs: 3
+  runs: 7
   prefix_caching: true
   book_url: spark-tuner://fixed-corpus
   exact_tg: true

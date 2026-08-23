@@ -32,6 +32,23 @@ carries pp 2048 and tg 128, so 30592 is the deepest legal context. The board's
 d65535 and d100000 cells cannot run here without raising `max_model_len`, which
 is a new epoch and out of scope for this experiment.
 
+Memory already holds two readings of this question and **they contradict each
+other**, both scoped `family:qwen3.6-35b-a3b`:
+
+    Depth is NOT flat for Qwen3.6-35B-A3B-NVFP4 tg128 c1: under ONE engine
+    start at runs=7, d16384 reads 113.06 and d65536 reads 94.10, a 16% gap
+
+    Decode throughput at c1 is FLAT within noise from d16384 to d65536:
+    102.2 at d16384 vs 108.15 at d65536, a 5.8% gap against sigma of 10-
+
+Same model, same cell, opposite conclusions — and the second one names its own
+weakness, a sigma of 10 against a 5.8% gap. Neither was measured with a pinned
+prompt, per-cell corpus offsets, or an interquartile verdict, and the earlier
+epochs had the memory embedder resident on the card. That is the case for
+running this experiment rather than reading the answer off memory: the question
+has been asked twice and answered both ways on an instrument that could not
+separate a 6% effect from its own noise.
+
 Rungs must not contaminate each other, and our own instrument was worse than
 the board's at this until recently. Sliced from token zero, a shallow rung's
 prompt is a leading substring of a deeper one's, so the rungs would donate

@@ -143,6 +143,10 @@ constant it says in its own Method.
 | round | hypothesis | outcome |
 |-------|------------|---------|
 | h1 | The three numeric fields the reference recipe differs on are the whole gap | lever spent |
+| h2 | A flag is disabling the prefix cache | premise wrong — our own reset was |
+| h3 | `tg128` measures a transient | refuted — no transient; the effect is KV growth |
+| h4 | The draft's MoE backend is untuned and one alternative beats it | lever spent |
+| h5 | Our recipe on the board's own grid reads above 116.03 | open |
 
 h1 is spent: its three fields moved `tg` 2.0 against a larger IQR of 11.3, and
 `pp` moved 0.5% — inside this cell's own 1.02 max/min — which killed the
@@ -160,9 +164,12 @@ attention with no KV, and only 10 are full attention.
    and MTP acceptance is a running statistic. If the metric the board scores is
    partly warm-up, that reframes every figure here. Cheap, and it can invalidate
    what everything else is measured in. h3.
-3. **The draft path** — the MTP module is BF16 and unquantized, and re-reads the
-   286 MB `lm_head` on every draft step: 30% of the spec cycle to produce ~2
-   extra tokens. The one exposed flag is the draft's `moe_backend`.
+3. ~~**The draft path**~~ — closed by h4. The one exposed flag is the draft's
+   `moe_backend`, and on SM121 `triton` is very nearly the only option that
+   works: `batched_triton` cannot be constructed by vLLM's own factory,
+   `flashinfer_trtllm` is refused by the kernel, and `flashinfer_cutlass` runs
+   but lands inside the control's spread. What remains of the draft's cost is
+   the 286 MB `lm_head` re-read, which is architectural and reaches no flag.
 4. **The board-comparable figure** — `@official/spark-arena-v2` unmodified. Not
    a lever; it is the second figure the Objective asks for. Costs one long run,
    and needs their `max_model_len` to reach the deep cells, so it is an epoch
