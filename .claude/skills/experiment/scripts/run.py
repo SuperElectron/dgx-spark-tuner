@@ -303,10 +303,22 @@ def install_corpus(recipe: Path, model: str) -> int:
     if len(ids) < need + 1:
         die(f"corpus has {len(ids)} tokens, needs {need + 1} for this grid")
 
-    text = tok.decode(ids[: need + 1], skip_special_tokens=False)
+    # Slice from a per-cell offset rather than always from token zero. Sliced
+    # from zero, a shallow cell's prompt is a leading substring of a deeper
+    # one's, so in a depth sweep the rungs donate prefix-cache blocks to each
+    # other and the deeper rungs read faster than they should. The offset is
+    # derived from the cell, so a rung still gets the same text every time it
+    # runs — deterministic within a cell, disjoint across cells.
+    room = len(ids) - need - 1
+    off = 0
+    if room > 0:
+        seed = f"{max(grid.get('pp') or [0])}:{max(grid.get('depth') or [0])}"
+        off = int(md5(seed.encode()).hexdigest(), 16) % room // 1024 * 1024
+
+    text = tok.decode(ids[off : off + need + 1], skip_special_tokens=False)
     got = len(tok.encode(text, add_special_tokens=False).ids)
     if got != need + 1:
-        die(f"corpus slice round-tripped to {got} tokens, not {need + 1}")
+        die(f"corpus slice round-tripped to {got} tokens, not {need + 1} (offset {off})")
 
     (BENCHY_CACHE / dest_name).write_text(text, encoding="utf-8")
     return got
