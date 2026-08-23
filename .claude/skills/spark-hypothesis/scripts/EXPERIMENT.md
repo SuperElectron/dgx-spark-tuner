@@ -1,72 +1,36 @@
-# <hypothesis-id> — <one line: what is under test>
+# <experiment-id> — <one line: what this experiment is trying to win>
 
-Every `<...>` is a slot to fill. Claim, method and decision rule are written
-before the first run and never edited after. Runs gains a row per run. The
-conclusion is written last.
+## Objective
 
-## Claim
+<the metric, its cell, where it stands now, and the number it must reach>
 
-<one falsifiable sentence, and why you expect it>
+Reached when: <the condition that closes this experiment>
 
-## Method
+## Strategy
 
-Each run starts from `recipe.yaml`, this hypothesis's baseline, and changes
-what the next question needs — one field, several, or a sweep whose winner
-later runs hold.
+<what we know about the machine that makes the target look reachable: which
+phase is bandwidth-bound and which is compute-bound, what the architecture
+spends its time on, what the box can and cannot do>
 
-### Variables to test
+Measured scatter, per cell — what a decision rule here has to clear:
 
-One line per recipe field this hypothesis may move, with the values it may
-take. Anything not listed is held.
+    <cell>: <metric> ±<n>%, <metric> ±<n>%   (<where it was measured>)
 
-    <recipe field>: <value>, <value>, <value>
-    <recipe field>: <value>, <value>
+## Held
 
-Order: <which varies first, and what decides when to move to the next>
+<the invariants every round shares: box, container image, checkpoint, the cell
+we are scored in, anything we refuse to change for reasons outside this
+experiment>
 
-### Held
+Not "every field not under test" — a round holds its own fields constant, and
+says so in its own Method. Anything named here is closed to every round.
 
-The probe grid, the container image, the box, and every recipe field not listed
-above.
+## Rounds
 
-Grid, from the recipe's `benchmark:` block:
-
-    pp <n> · tg <n> · depth <n> · concurrency <n> · runs <n>
-
-## Decision rule
-
-- The claim survives if <condition, with a number>.
-- The claim fails if <condition, with a number>.
-
-## Runs
-
-One row per run, appended when the run returns.
-
-- **changed** — this run's recipe against `recipe.yaml`, as `field: old → new`;
-  comma-separated when a run moves more than one.
-- **why** — the prior result that prompted it. `baseline` for the first run.
-- **figures** — from the run's `out/results.yaml`.
-
-| run | changed | why | pp t/s | tg t/s | ttfr ms | bench |
-|-----|---------|-----|--------|--------|---------|-------|
-| run-0001 | <field: old → new> | baseline | <n> | <n> | <n> | <bench_...> |
-
-A crashed run keeps its row: `—` for the figures, the failure in **why**.
+| round | hypothesis | outcome |
+|-------|------------|---------|
+| h1 | <one line> | <pending> |
 
 ## Conclusion
 
-Pending — written once every run is in, against the decision rule as written.
-If the rule was wrong, say so here; do not edit it.
-
-## Memory
-
-One line, written with `remember.sh` when the conclusion is. Recall prints the
-line and nothing else, so anything not in it cannot be weighed later.
-
-    [OBSERVATION] <date> <hypothesis>: <what varied> over <values> — <what held or did not>, <evidence>
-
-    [OBSERVATION] 2026-08-22 test-runtime: max_num_seqs 4→64 at d0 c1 — tg flat within ±3% across all five, so single-stream decode does not use the extra slots (runs=5, bench_2ebcb63db398..bench_9f1)
-
-Entity: the widest scope it is actually true for — `experiment:<name>`,
-`model:<hf-id>`, `family:<name>`, `stack:<runtime>`, `box:<alias>`,
-`flag:<vllm-flag>`.
+<pending — written when the objective is reached or the levers are exhausted>

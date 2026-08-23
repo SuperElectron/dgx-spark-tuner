@@ -1,17 +1,27 @@
 #!/usr/bin/env bash
 # Create the next run directory, seeded with a recipe.
 #
-#   new-run.sh <hypothesis-dir>                 seeds from recipe.yaml
-#   new-run.sh <hypothesis-dir> recipe-new.yaml seeds from the proposed config
+#   new-run.sh <round-dir>                 seeds from the experiment's recipe.yaml
+#   new-run.sh <dir> recipe-new.yaml       seeds from the proposed config
 #
 # Default is the baseline, never the previous run: a run inherits nothing it
 # was not given deliberately. What this run changes is the caller's decision,
-# from the claim and from every result so far.
+# from the hypothesis and from every result so far.
 set -euo pipefail
 
-dir="${1:?usage: new-run.sh <hypothesis-dir> [source-recipe]}"
+dir="${1:?usage: new-run.sh <round-dir> [source-recipe]}"
 dir="${dir%/}"
 source="${2:-recipe.yaml}"
+
+# A round dir holds no recipe of its own; the baseline lives in the experiment.
+if [ -f "$dir/$source" ]; then
+  src="$dir/$source"
+elif [ -f "$dir/../$source" ]; then
+  src="$dir/../$source"
+else
+  echo "no $source in $dir or its experiment" >&2
+  exit 1
+fi
 
 last="$(find "$dir" -maxdepth 1 -type d -name 'run-*' | sort | tail -1)"
 if [ -n "$last" ]; then
@@ -21,7 +31,7 @@ else
 fi
 
 mkdir "$dir/$next"
-cp "$dir/$source" "$dir/$next/recipe.yaml"
+cp "$src" "$dir/$next/recipe.yaml"
 
 echo "created $dir/$next (from $source)"
 echo "next: edit $dir/$next/recipe.yaml for this run, then dispatch it"
