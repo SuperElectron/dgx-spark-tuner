@@ -18,7 +18,7 @@ these skills:
 rounds. You work inside one round:
 
 ```
-qwen36-35b-nvfp4/experiments/decode-tg
+Qwen3.6-35B-A3B-NVFP4/experiments/decode-tg
 
 ├── EXPERIMENT.md           // objective, strategy, held — frozen
 ├── recipe.yaml             // the baseline, we start with this.
