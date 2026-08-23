@@ -3,15 +3,17 @@
 ## Objective
 
 Maximise `tg` at `tg128 @ d16384 c1`, and understand what governs it. There is
-no ceiling here on purpose — the standing best is 118.9 (h1 run-0005) and every
+no ceiling here on purpose — the standing best is 119.6 (h1 run-0008) and every
 round exists to move it or to close a lever and say why.
 
 Two figures, because one number cannot serve both purposes:
 
 - **Ours** — measured under the protocol in Held, which is what makes rounds
   comparable to each other. A round improves it only with a stable verdict,
-  `tg` max/min at or below 1.10; a median claimed while the samples scatter is
-  not an improvement.
+  `tg` interquartile spread at or below 5%; a median claimed while the samples
+  scatter is not an improvement. (Until 2026-08-23 this was stated on max/min
+  at 1.10 — an extreme-value gate drawn from two of seven samples, which drifts
+  upward as `runs` grows and so punishes longer runs.)
 - **Board-comparable** — measured by running `@official/spark-arena-v2`
   unmodified and reading our own `d16384/c1` row out of it. This is the only
   figure that can be set beside the board at all, and beating the board means
@@ -146,18 +148,34 @@ h1 is spent: its three fields moved `tg` 2.0 against a larger IQR of 11.3, and
 `pp` moved 0.5% — inside this cell's own 1.02 max/min — which killed the
 prefill-chunking mechanism behind them.
 
-Levers still open, in the order to take them:
+Levers still open, in the order to take them. Reordered 2026-08-23 after the
+architecture was read: this is a hybrid, 30 of its 40 layers are linear
+attention with no KV, and only 10 are full attention.
 
-1. **Attention backend** — flashinfer ships in the baseline and has never been
-   varied on this box, here or in the archived campaign. The only lever with no
-   measured bound at all. vLLM #37754 documents flashinfer with MTP
-   `num_speculative_tokens >= 2` crashing on SM121 at GQA=16, `triton_attn` as
-   the workaround — so a crash here is a result, not a surprise.
-2. **Speculative depth** — `num_speculative_tokens: 2` is untested at c1. The
-   archive tried 3→4→5 and all were worse, so the untried direction is down.
-3. **The board-comparable figure** — `@official/spark-arena-v2` unmodified,
-   reading our own `d16384/c1` row out of its 28-cell sweep. Not a lever; it is
-   the second figure the Objective asks for, and it costs one long run.
+1. **The prefix cache never hits** — 0.0% on every sample of every run, while
+   the recipe asks for it. Phase 2 recomputes all 18446 tokens instead of
+   reusing phase 1's 16400. A defect, not a tuning knob, and the largest single
+   thing this experiment has found. h2.
+2. **Is `tg128` a transient?** — 128 tokens is ~41 speculative cycles in ~1.1 s,
+   and MTP acceptance is a running statistic. If the metric the board scores is
+   partly warm-up, that reframes every figure here. Cheap, and it can invalidate
+   what everything else is measured in. h3.
+3. **The draft path** — the MTP module is BF16 and unquantized, and re-reads the
+   286 MB `lm_head` on every draft step: 30% of the spec cycle to produce ~2
+   extra tokens. The one exposed flag is the draft's `moe_backend`.
+4. **The board-comparable figure** — `@official/spark-arena-v2` unmodified. Not
+   a lever; it is the second figure the Objective asks for. Costs one long run,
+   and needs their `max_model_len` to reach the deep cells, so it is an epoch
+   break run once.
+
+Demoted, with reasons:
+
+- **Attention backend** — reaches 10 of 40 layers, and this build offers only
+  FLASHINFER and TRITON_ATTN. Decode is also nearly flat with depth on the
+  board, and depth is what attention governs. The vLLM #37754 crash report cites
+  GQA=16; this checkpoint is GQA 8, so it does not transfer unchecked.
+- **Speculative depth** — settled. Measured per-position acceptance
+  0.87/0.76/0.61 makes N=3 optimal by ~2% over N=2, and N=4 loses.
 
 The sampling config is no longer a lever — the protocol pins `temperature 0`
 itself.
