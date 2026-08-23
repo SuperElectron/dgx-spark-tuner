@@ -14,26 +14,16 @@ from pathlib import Path
 
 import yaml
 
-# NVIDIA has confirmed two power-delivery faults on GB10 that pin the GPU at
-# 513 or 721 MHz with an all-clear throttle bitmask — the numbers look
-# plausible and are ~3x wrong.
-#
-# An earlier note here claimed `gpu_clock_mhz` reads 208 whatever the GPU is
-# doing and so could not be the signal. The archives refute it: under load this
-# box reports 2359-2398 MHz against a 3003 MHz ceiling, and the 208s are the
-# idle gaps between runs (44-70% of frames, depending on how much of the run is
-# actually busy). So the clock IS readable — but absence of a high clock is not
-# evidence of a fault, because a short shallow cell can miss every busy window
-# at a 0.25 s sampling interval. Only the fault's own signature is conclusive.
+# Two GB10 power-delivery faults pin the GPU at 513 or 721 MHz with an all-clear
+# throttle bitmask: plausible-looking numbers, ~3x wrong. A healthy run here
+# clocks 2359-2398 MHz and peaks near 100 W.
 POWER_FLOOR_W = 60.0
-CLOCK_FAULT_BAND = (400, 900)   # the 513/721 MHz pinning, with room either side
+CLOCK_FAULT_BAND = (400, 900)
 
-# max/min is an extreme-value statistic: it is drawn from two of the samples
-# and drifts upward as `runs` grows, so a fixed gate on it gets harder to pass
-# the more evidence we collect. The verdict is on the interquartile spread,
-# which uses every value; max/min is still printed because it is what the
-# earlier rounds were judged on. 5% separates the cases we have measured:
-# run-0008 (prompt pinned) 2.7%, run-0006 (prompt jittering) 12.2%.
+# The verdict is on interquartile spread, which uses every value. max/min is
+# drawn from two samples and widens as `runs` grows, so it punishes longer runs;
+# it is still printed because earlier rounds were judged on it. 5% separates a
+# pinned prompt (2.7%) from a jittering one (12.2%).
 STABLE_IQR = 0.05
 STABLE_RATIO = 1.10
 
@@ -76,8 +66,8 @@ def box_state(out: Path) -> dict:
 def check_box(out: Path) -> dict:
     box = box_state(out)
     lo, hi = CLOCK_FAULT_BAND
-    # The fault pins the clock inside the band and never leaves it. A run that
-    # only ever idles is not a fault, so require that the GPU was seen busy.
+    # A short cell can miss every busy window at this sampling interval, so a
+    # low clock only means something once the GPU has been seen busy.
     if box["busy_frames"] and lo <= box["peak_clock_mhz"] <= hi:
         die(
             f"GPU never clocked above {box['peak_clock_mhz']:.0f} MHz while busy "
@@ -94,10 +84,8 @@ def check_box(out: Path) -> dict:
     return box
 
 
-# vLLM grants prefix-cache hits per whole block, and this model forces the
-# attention block to 2144 tokens so its pages align with the mamba pages. A
-# prompt shorter than one block therefore cannot hit, by construction — so a
-# 0% rate at depth 0 is arithmetic, not a defect.
+# Hits are granted per whole block, and this model forces a 2144-token attention
+# block so its pages align with the mamba pages. A shorter prompt cannot hit.
 BLOCK_TOKENS = 2144
 
 
@@ -122,9 +110,8 @@ def engine_state(out: Path, wants_cache: bool) -> dict:
         "kv_max": max(kv) if kv else 0,
         "preemptions": int(max(preempt)) if preempt else 0,
     }
-    # A recipe that asks for prefix caching and never gets a hit is measuring
-    # something other than what it declared. It is not fatal — the cause is
-    # upstream of the recipe — but it must not pass silently.
+    # Asking for prefix caching and never getting a hit means measuring
+    # something other than what the recipe declared. Not fatal, but not silent.
     state["cache_suspect"] = bool(wants_cache and hits and state["hit_max"] == 0.0)
     return state
 
@@ -165,18 +152,16 @@ def requests(out: Path) -> dict:
 
 
 def _iqr_ratio(values: list[float], median: float) -> float:
-    """None when there are too few values to have quartiles. Returning 0.0 here
-    would read as a perfectly tight measurement and print `stable` for any
-    spread at all — at `runs: 3` a 20% range would pass."""
+    """None below four values, where quartiles do not exist. Returning 0.0 would
+    read as a perfectly tight measurement and pass any spread at all."""
     if len(values) < 4 or not median:
         return None
     q1, _, q3 = statistics.quantiles(values, n=4, method="inclusive")
     return (q3 - q1) / median
 
 
-# The aggregate metrics are batch-level. Their per-request twins exist and
-# differ by roughly the concurrency, so printing only the aggregate beside a
-# c=1 baseline invites a comparison that is wrong by that factor.
+# These are batch-level. Their per-request twins differ by roughly the
+# concurrency, so printing only the aggregate invites a comparison off by it.
 AGGREGATE = ("pp_throughput", "tg_throughput")
 PER_REQUEST = ("pp_req_throughput", "tg_req_throughput")
 
@@ -291,6 +276,5 @@ def report(out: Path, state: Path, frames: int, grid: dict, box: dict, keys) -> 
             f"median {row['median']:8.1f}  {spread}  "
             f"max/min {row['ratio']:.2f}  n={row['n']}  {verdict}"
         )
-        # Raw execution order, never sorted: the ordering is evidence. A sorted
-        # list once made a warm-up effect look real that the real order refuted.
+        # Raw execution order, never sorted — the ordering is evidence.
         print("            " + " ".join(f"{v:.1f}" for v in row["values"]))
