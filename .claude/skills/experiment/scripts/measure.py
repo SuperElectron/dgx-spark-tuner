@@ -267,13 +267,13 @@ def report(out: Path, state: Path, frames: int, grid: dict, box: dict, keys) -> 
             print(f"{row['label']} {row['phase']:<4} prefill*  {row['median']:8.1f} t/s  (true rate)")
             continue
         if row["iqr"] is None:
-            spread, verdict = "iqr   n/a", f"n={row['n']}, too few for quartiles"
+            spread_txt, verdict = "iqr   n/a", f"n={row['n']}, too few for quartiles"
         else:
-            spread = f"iqr {row['iqr'] * 100:4.1f}%"
+            spread_txt = f"iqr {row['iqr'] * 100:4.1f}%"
             verdict = "stable" if row["iqr"] <= STABLE_IQR else "UNSTABLE"
         print(
             f"{row['label']} {row['phase']:<4} {row['metric']:<8} "
-            f"median {row['median']:8.1f}  {spread}  "
+            f"median {row['median']:8.1f}  {spread_txt}  "
             f"max/min {row['ratio']:.2f}  n={row['n']}  {verdict}"
         )
         # Raw execution order, never sorted — the ordering is evidence.

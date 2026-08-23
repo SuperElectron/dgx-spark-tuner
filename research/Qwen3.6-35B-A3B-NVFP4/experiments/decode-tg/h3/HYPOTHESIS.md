@@ -172,7 +172,7 @@ One row per planned run. Figures blank until it is run.
 | run | tg | runs | why | tg t/s | iqr | trace shape | bench |
 |-----|----|------|-----|--------|-----|-------------|-------|
 | run-0001 | 128 | 7 | the short cell at d0 — the baseline this round needs | 127.3 | 3.0% | varied, no repetition | bench (see id.txt) |
-| run-0002 | 2048 | 7 | 16x longer: is steady state different? | | | | |
+| run-0002 | 2048 | 7 | 16x longer: is steady state different? | 120.6 | 2.4% | 4 of 7 degenerate | bench_02f9548d80da |
 | run-0003 | 8192 | 3 | 64x longer, corroboration and drift check | | | | |
 
 ## Runs so far
@@ -198,6 +198,60 @@ same greedy-with-occasional-divergence shape h1 measured at depth.
 
 That is the baseline. The confound only bites if run-0002 and run-0003 show the
 repeat-ratio climbing toward 1.0 while throughput rises.
+
+**It bit.** run-0002 reads `tg` 120.6 at 2.4% IQR — 6.7 below run-0001, against
+a larger IQR of 3.8, so by the round's test the two differ. But four of its seven
+requests degenerate, and the degenerate ones are the fast ones.
+
+The whole-output repeat-ratio cannot see this: it is length-dependent, since
+unique words saturate while the total keeps growing, so 2048 tokens of good
+prose scores ~0.7 against 128 tokens' 0.12-0.20. A **100-word sliding window** is
+length-invariant and comparable:
+
+    rid 0/1/2   0.13-0.33 throughout          clean prose, start to finish
+    rid 3       breaks at ~token 433          then 0.62-0.63 sustained
+    rid 4       breaks at ~token 283
+    rid 5       breaks at ~token 738
+    rid 6       breaks at ~token 286
+
+The failure is always the same: the model reaches for a story title, fails, and
+loops guessing — `"The Adventure of the Blanched Soldier" is not it. How about
+"The...`. Onset is 15-35% into the generation, not at the tail, so it is not an
+end-of-budget artifact.
+
+And the correlation runs the way the confound predicted. rid 3 is both the most
+degenerate and the fastest at 132.3 t/s, the outlier inflating the spread.
+Restricting to the three clean requests gives 118.2 / 120.8 / 117.3 — median
+~118.2, **below** the 120.6 that includes the degenerate ones. So degeneration
+inflates the figure, and the honest tg2048 is further below tg128 than the
+headline says. The direction holds; the magnitude is understated.
+
+Two instrument findings from this run, both of which change how the round is
+read:
+
+- **The throughput timeseries is a trailing 1-second token count, not an
+  instantaneous rate.** Below t=1.0 it is exactly the cumulative token index.
+  Any "the first second is slow" read off it is the window filling, not a
+  transient. Recomputed properly from raw token timestamps in 1-second bins,
+  rid 0 runs 101-141 tok/s with no trend, no sag and no saw-tooth — and its
+  first bin is 128 against 118 for the remainder, marginally **faster**.
+  **There is no warm-up transient within a generation.**
+- **`exact_tg` did not hold.** rid 0 and rid 2 returned 2046 tokens, not 2048,
+  and the streamed token counts agree, so it is a real short generation rather
+  than a bookkeeping gap. Both are in the clean group. The effect on `tg` is
+  ~0.1%, but the flag is supposed to make this exact and did not.
+
+So the round's own mechanism — acceptance drifting over a long generation — is
+**not** what produces the difference. Throughput is flat within a generation.
+What differs is the average over 2048 tokens against the average over 128, and
+the KV read grows with every token generated: at d0 a 2048-token generation
+takes the context from 138 to ~2186 tokens. That is the same mechanism as depth,
+sourced from the model's own output rather than the prompt.
+
+`run.py` crashed in its reporting stage on this run — a local variable in
+`report()` shadowed the module-level `spread()`. The benchmark and archive are
+unaffected and every figure above was computed from the archive; the bug is
+fixed and `report()` now replays this run cleanly.
 
 ## Conclusion
 
