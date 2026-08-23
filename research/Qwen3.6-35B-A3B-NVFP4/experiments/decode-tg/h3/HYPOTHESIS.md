@@ -136,7 +136,9 @@ Cells:
 
     run-0001   pp 128 · tg 128  · d0 · c1 · runs 7    the short cell, at d0
     run-0002   pp 128 · tg 2048 · d0 · c1 · runs 7    16x longer
-    run-0003   pp 128 · tg 8192 · d0 · c1 · runs 3    64x longer, corroboration
+
+A third cell at tg 8192 was planned as corroboration and abandoned once
+run-0002 degenerated — see the Conclusion.
 
 run-0001 is not redundant with anything measured so far. Every previous run in
 this tree is at `d16384`, so we have no `tg128` figure at `d0` to compare
@@ -173,7 +175,6 @@ One row per planned run. Figures blank until it is run.
 |-----|----|------|-----|--------|-----|-------------|-------|
 | run-0001 | 128 | 7 | the short cell at d0 — the baseline this round needs | 127.3 | 3.0% | varied, no repetition | bench (see id.txt) |
 | run-0002 | 2048 | 7 | 16x longer: is steady state different? | 120.6 | 2.4% | 4 of 7 degenerate | bench_02f9548d80da |
-| run-0003 | 8192 | 3 | 64x longer, corroboration and drift check | not run — see Conclusion | | | |
 
 ## Runs so far
 
