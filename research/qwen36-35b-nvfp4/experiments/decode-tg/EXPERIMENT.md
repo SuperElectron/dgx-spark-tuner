@@ -124,11 +124,11 @@ constant it says in its own Method.
 
 | round | hypothesis | outcome |
 |-------|------------|---------|
-| h1 | The three numeric fields the reference recipe differs on are the whole gap | pending |
+| h1 | The three numeric fields the reference recipe differs on are the whole gap | lever spent |
 
 h1 is spent: its three fields moved `tg` 2.0 against a larger IQR of 11.3, and
-`pp` did not move at all, which killed the prefill-chunking mechanism behind
-them. Its conclusion is still to be written.
+`pp` moved 0.5% — inside this cell's own 1.02 max/min — which killed the
+prefill-chunking mechanism behind them.
 
 Levers still open, in the order to take them:
 

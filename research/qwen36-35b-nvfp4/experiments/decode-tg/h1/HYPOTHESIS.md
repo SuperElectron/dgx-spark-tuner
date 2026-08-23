@@ -110,4 +110,40 @@ at a 3.1% spread, so 25% is not what MTP costs by necessity.
 
 ## Conclusion
 
-Pending.
+**Lever spent.** The three fields are not the gap.
+
+The combined arm (run-0002) read `tg` 111.3 against the control's 109.3 — 2.0
+apart, against interquartile ranges of 11.3 and 9.8. The rule as written calls
+that spent: a difference smaller than the larger IQR is not a result. Nothing
+gets split, because there is nothing to attribute.
+
+`pp` is the stronger finding and it points the same way. The mechanism argued in
+the Hypothesis ran through prefill: halving `max_num_batched_tokens` should
+change how a 16384-token prompt is chunked, and the reference recipe's 2.25x
+prefill advantage was the evidence it mattered. `pp` moved 633.1 → 636.1. Half a
+percent, inside the 1.02 max/min this cell shows with the field untouched. The
+chunking mechanism did not fire, so the prefill gap is not made of these three
+numbers and no decode win was ever going to arrive downstream of it.
+
+Two things this round settled that outlast it:
+
+- **The spread is speculation.** run-0003 removed `--speculative-config` and
+  `tg` standard deviation fell 8.6 → 0.24 while `pp` did not move. Triton JIT
+  was the earlier suspect and is ruled out — the compilations fire inside
+  llama-benchy's warmup requests, before the timed runs. Every `tg` figure this
+  experiment records is a sample from a distribution MTP widens, and MTP stays
+  because it is worth 36% of decode and 3.8x on prefill and ttfr.
+- **The 116.03 target was the wrong quantity**, not the wrong number. Seven
+  documented protocol differences, and its `±` is a population standard
+  deviation over three requests inside one invocation against our across-
+  invocation spread. The Objective now carries a board-comparable figure
+  instead, measured by running their profile.
+
+run-0004 through run-0006 are harness verification, not arms. They belong to
+this round only because it was open while the measurement protocol was built.
+The standing best they leave behind — 118.9 at run-0005 — is not a claim this
+round earned; it is what the baseline reads under a protocol that pins output
+length, sampling and cache state.
+
+What follows is not a split of these three fields. It is the attention backend,
+which has never been varied on this box.
