@@ -24,8 +24,6 @@ Procedures live in the skills; see `## Skills`.
 - The hostname comes from `.claude/box.json` (gitignored).
 - An image or vLLM version change is a new epoch — re-measure the incumbent
   before comparing across it.
-- Memory ops never block work. `remember.sh` / `recall.sh` always exit 0 on
-  failure; never retry in a loop or ask what to do.
 
 ## Skills
 

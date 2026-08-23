@@ -14,7 +14,7 @@ hypothesis, the claim, or the expected result — an agent that can see the
 expected answer can steer toward it.
 
 Never edit `EXPERIMENT.md`, `RESULTS.md`, `recipe.yaml`, or another run's
-archive. Never write a memory.
+archive.
 
 ## How to use this skill
 

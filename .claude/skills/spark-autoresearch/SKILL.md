@@ -40,6 +40,13 @@ you start and you never edit it.
 
 ## How to use this skill
 
+0. Free the card — the embedder is a vLLM instance sharing it with every
+   benchmark. Idempotent, so just assert it when a round starts.
+
+```bash
+scripts/memory.sh stop
+```
+
 1. EXPERIMENTS: cycle CREATE, RUN, RECORD, once per planned row in "## Runs".
 2. VALIDATE: when no row is left to run.
 
@@ -128,3 +135,24 @@ scripts/new-run.sh research/<model>/experiments/<experiment> recipe-new.yaml
 
     PASS: it reaches the target. The experiment is closed.
     FAIL: it doesn't. Hand back to `spark-hypothesis` — the round is not done.
+
+## MEMORY
+
+Once, when the experiment closes. The embedder wants the same card the
+benchmarks do, so it goes back down after.
+
+```bash
+scripts/memory.sh start
+scripts/remember.sh "<text>" <entity>   # one per round, one for the experiment
+scripts/memory.sh stop
+```
+
+Each line restates a conclusion already written, and has to stand alone —
+recall prints the line and nothing else.
+
+```
+[OBSERVATION] 2026-08-22 decode-tg/h1: max_num_seqs 4→64 at d0 c1 — tg flat within ±3% across all five, so single-stream decode does not use the extra slots (runs=5, bench_2ebcb63db398..bench_9f1)
+```
+
+Entity: the widest scope it is true for — `experiment:`, `model:`, `family:`,
+`stack:`, `box:`, `flag:`.

@@ -118,20 +118,10 @@ things worth saying; say whatever else you found.
 1. The Conclusion in `h<N>/HYPOTHESIS.md`, against that round's decision rule
    as written. Wrong rule? Say so; do not edit the rule. Then its row in
    `EXPERIMENT.md`'s rounds table.
-2. `scripts/remember.sh "<text>" <entity>` — one memory per round. Recall
-   prints the line and nothing else, so anything not in it cannot be weighed
-   later.
+   Write it so it stands on its own: what varied, over what values, what held
+   or did not, and the evidence.
 
-```
-[OBSERVATION] <date> <experiment>/<round>: <what varied> over <values> — <what held or did not>, <evidence>
-
-[OBSERVATION] 2026-08-22 decode-tg/h1: max_num_seqs 4→64 at d0 c1 — tg flat within ±3% across all five, so single-stream decode does not use the extra slots (runs=5, bench_2ebcb63db398..bench_9f1)
-```
-
-   Entity: the widest scope it is actually true for — `experiment:<name>`,
-   `model:<hf-id>`, `family:<name>`, `stack:<runtime>`, `box:<alias>`,
-   `flag:<vllm-flag>`.
-3. Then one of three, from the round's decision rule:
+2. Then one of three, from the round's decision rule:
 
     **Target met** — close the experiment. Conclusion in `EXPERIMENT.md`,
     `recipe-new.yaml` beside `recipe.yaml`, one row in `RESULTS.md`, one PR
@@ -143,8 +133,8 @@ things worth saying; say whatever else you found.
     **Lever spent** — `scripts/new-round.sh <experiment-dir>`, and write the
     next hypothesis. It must aim at the same Objective, respect Held, and be
     motivated by a row already measured. If no such hypothesis exists, close
-    the experiment as exhausted: same four artifacts, saying what it cost and
-    what is now known to be closed.
+    the experiment as exhausted: same artifacts, saying what it cost and what
+    is now known to be closed.
 
 `RESULTS.md` gets one row per experiment, never per round.
 
