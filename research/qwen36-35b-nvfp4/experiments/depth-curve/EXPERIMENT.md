@@ -32,35 +32,19 @@ carries pp 2048 and tg 128, so 30592 is the deepest legal context. The board's
 d65535 and d100000 cells cannot run here without raising `max_model_len`, which
 is a new epoch and out of scope for this experiment.
 
-One run directory per rung rather than one grid, for two reasons. The fixed
-corpus is sized from the largest cell in a grid, so a multi-rung grid would pin
-only the deepest and let every shallower rung jitter — `run.py` now refuses such
-a grid outright. And a separate run means a separate server, so no rung can
-leave state for another.
+Rungs must not contaminate each other, and our own instrument was worse than
+the board's at this until recently. Sliced from token zero, a shallow rung's
+prompt is a leading substring of a deeper one's, so the rungs would donate
+prefix-cache blocks to each other. As of `4530cb3` each cell slices from an
+offset derived from `(pp, depth)`, so rungs are disjoint while each stays
+reproducible. That re-bases d16384: decode-tg's runs 0001-0008 sliced from
+token zero and this rung does not, so its figure replaces 119.6 rather than
+continuing it.
 
-Contamination is the thing to get right here, because our own instrument made
-it worse than the board's before this experiment existed. Sliced from token
-zero, a shallow rung's prompt is a leading substring of a deeper one's, so the
-rungs would donate prefix-cache blocks to each other and the deeper rungs would
-prefill faster than they should. Arena does not have this problem: its
-`adapt_prompt` and random offsets leave its cells sharing nothing. As of
-`4530cb3` each cell slices from an offset derived from `(pp, depth)`, so rungs
-are disjoint by construction while each stays reproducible.
-
-That change re-bases d16384: runs 0001-0008 of decode-tg sliced from token
-zero, this rung does not, so its figure replaces 119.6 as the incumbent rather
-than continuing it.
-
-What the shape would mean:
-
-- **Flat, like theirs.** Decode is bound by something depth-independent —
-  weight-read bandwidth and per-step overhead, not KV. Consistent with the
-  roofline: 30 of 40 layers are linear attention whose recurrent state is
-  constant in context length, and KV at d16384 is only ~168 MB against 2.25 GB
-  of weights read per forward.
-- **Sloped.** KV read is a real term at depth and `--kv-cache-dtype` and the
-  attention backend matter more than the flat reading suggests — they touch the
-  10 full-attention layers, which are exactly the depth-dependent ones.
+The levers this experiment can open, once the shape is known: `--kv-cache-dtype`
+and `--attention-backend` both act on the 10 full-attention layers, which are
+exactly the depth-dependent ones. What the curve does decides whether either is
+worth a round.
 
 ## Held
 

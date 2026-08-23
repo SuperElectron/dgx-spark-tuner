@@ -37,6 +37,13 @@ attention levers are live and worth rounds.
 
 One run directory per rung, run in that order. Nothing else moves.
 
+One run per rung rather than one grid, for two reasons. The fixed corpus is
+sized from the largest cell in a grid, so a multi-rung grid would pin only the
+deepest and let every shallower rung jitter — `run.py` refuses such a grid
+outright. And a separate run means a separate server, so no rung can leave
+state for another. It costs ~17 minutes against ~7 for a single schedule, and
+the whole reason our `tg` is readable is the pinned prompt.
+
 d0 is the important rung and the cheapest. It is the only one with no KV term
 at all, so it is the intercept the whole curve is read against, and llama-benchy
 skips the context-load phase there entirely — a d0 run is single-phase, which
