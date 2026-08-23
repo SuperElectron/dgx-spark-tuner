@@ -86,124 +86,59 @@ One row per planned run. Figures blank until it is run.
 |-----|---------|-----|--------|--------|---------|-------|
 | run-0001 | none — the baseline as shipped | control, and this epoch's spread | 633.1 | 109.3 | 3246.4 | bench_c9518e3e96a3 |
 | run-0002 | `gpu_memory_utilization: 0.8 → 0.65`, `max_model_len: 32768 → 262144`, `max_num_batched_tokens: 65536 → 32768` | the whole diff at once: is it the gap? | 636.1 | 111.3 | 3231.2 | bench_00f6e273f26c |
-
 | run-0003 | `--speculative-config` removed | diagnostic: what is the 25% `tg` spread made of? | 2420.2 | 70.3 | 858.0 | bench_0a988a464b5a |
 | run-0004 | `exact_tg`, `temperature 0`, cache reset added | harness verification, not an arm | 635.9 | 116.2 | 3232.1 | bench_7d27a25ac7f2 |
 | run-0005 | `post_run_cmd` fixed, `emit_progress` added | harness verification, not an arm | 632.7 | 118.9 | 3248.7 | bench_c77f38339d26 |
 | run-0006 | fixed corpus installed | harness verification, not an arm | 633.2 | 115.8 | 3246.0 | bench_7e811800d715 |
 | run-0007 | `seed=42` added | discriminator: is decode greedy? | 635.0 | 122.8 | 3244.9 | bench_26c64e5c27b8 |
-| run-0008 | `no_adapt_prompt: true` | pin the prompt for real | 635.4 | 119.6 | 3234.9 | (see out/results.yaml) |
+| run-0008 | `no_adapt_prompt: true` | pin the prompt for real | 635.4 | 119.6 | 3234.9 | bench_ff46b9fac055 |
 
 Figures are medians of the seven values from the `tg128 @ d16384` phase. The
 result carries two phases; the other is `ctx_tg`, a different cell.
 
-run-0006 installed the fixed corpus and it did not work as a stability fix, which
-is a finding rather than a failure. `tg` max/min read 1.24, no better than
-run-0005's 1.19, and the per-request decode times spanned the same range
-(0.900–1.179 s against 0.931–1.244 s).
+The harness runs are 0003 to 0008. They belong to this round only because it
+was open while the measurement protocol was built, and between them they took
+`tg` max/min from 1.31 to 1.11. What each established, once:
 
-The corpus did do what it was built to do. llama-benchy computes
-`total_needed = prompt_tokens + context_tokens` = 18432 for this cell, against a
-corpus of 18433, so `max_start` is 1 and `np.random.randint(0, 1)` is always 0.
-Every cell prompt is the same slice. Six of seven reported 18433 prompt tokens
-and one reported 18432 — a decode/re-encode boundary artifact, not a different
-slice.
+- **run-0003** — removing `--speculative-config` collapsed `tg` sd from 8.6 to
+  0.24 while `pp` did not move. The scatter is MTP, not Triton JIT (whose
+  compilations fire inside llama-benchy's warmup, before the timed runs). MTP
+  costs 36% of decode and returns 3.8x on prefill and ttfr, so it stays — but
+  every `tg` figure here is drawn from a distribution it widens.
+- **run-0006** — the fixed corpus landed and did not fix the spread. Both
+  `tokenizers` and `transformers` count the installed file at exactly 18433, so
+  the slice was correct; max/min still read 1.24.
+- **run-0007** — `seed=42` changed nothing, ruling out sampling. Its tell was
+  `prompt_tokens` varying *within* the run, four at 18432 and three at 18433. A
+  fixed slice cannot do that, so the prompt was never actually fixed.
+- **run-0008** — `no_adapt_prompt: true` pinned it. `prompt_tokens` became a
+  single value and max/min fell to 1.108.
 
-That turns the spread into a much sharper question, because the seven generated
-outputs are all different — seven distinct md5s over the reconstructed text, and
-lengths from 497 to 531 characters for exactly 128 tokens each. Identical prompt,
-`temperature: 0` merged into the request payload
-(`client.py:_build_generation_payload` does `payload.update(self.extra_body)`),
-and still seven different generations.
-
-run-0007 added `seed=42` and changed nothing — seven different md5s again, `tg`
-max/min 1.18. It also produced the tell that cracked this open: `prompt_tokens`
-varied *within* the run, four requests at 18432 and three at 18433. A fixed slice
-cannot do that, so the prompt was never actually fixed.
-
-The reason is `adapt_prompt`, and it is on by default — llama-benchy exposes only
-`--no-adapt-prompt` as `store_false`. It rewrites the grid before the prompt is
+The cause was `adapt_prompt`, on by default and exposed only as
+`--no-adapt-prompt` (`store_false`). It rewrites the grid before the prompt is
 built:
 
     current_depth = max(1, depth - self.delta_context)
-    total_needed  = current_pp + current_depth
-    max_start     = len(corpus) - total_needed
+    max_start     = len(corpus) - (current_pp + current_depth)
 
-`delta_context` is the chat-template overhead measured during warmup. It shrinks
-`total_needed` from 18432 to `18432 - delta`, so `max_start` becomes `1 + delta`
-rather than 1, and `np.random.randint` picks a fresh start each run. The corpus
-fix was sound and did land — both `tokenizers` and `transformers` count the
-installed file at exactly 18433 — it just closed a window that adaptation
-immediately reopened. That is why sizing the corpus moved the spread from
-enormous to merely large instead of removing it.
+`delta_context` is chat-template overhead measured at warmup, so `max_start`
+becomes `1 + delta` rather than 1 and `np.random.randint` draws a fresh start
+every run. The corpus fix closed a window adaptation reopened one line later.
 
-So the ordering of the last three runs is: prompt content was ruled out on a
-false premise, seeding ruled out sampling for real, and the prompt turns out to
-have been varying the whole time.
+Pinning the prompt did not make decoding deterministic. With identical prompt,
+`temperature 0` and a seed, four of seven generations are byte-identical and
+three diverge — greedy decoding occasionally taking a different branch under
+MTP, not sampling. run-0003 bounds that residue at max/min 1.01 with
+speculation off. That is the instrument's floor, and it has a known cause we
+are choosing to keep.
 
-run-0008 sets `no_adapt_prompt: true`, which restores `total_needed` to 18432 and
-`max_start` to 1. The prediction is sharp enough to fail: seven byte-identical
-generations, constant `prompt_tokens`, and `tg` max/min at or below 1.10. If the
-outputs go identical and `tg` still scatters, the residue is hardware or
-scheduler and the decision rule has to be written against it rather than
-engineered away.
-
-run-0008 confirms the diagnosis and stops short of a clean instrument.
-
-    prompt_tokens   18446 on all seven cell requests — CONSTANT
-    generations     4 of 7 byte-identical (md5 8cc71a1497), 3 diverge
-    cell tg         [119.9, 126.4, 119.4, 119.6, 117.5, 114.0, 123.5]
-                    median 119.6  max/min 1.108
-    cell pp         median 635.4  max/min 1.028
-    ctx tg          max/min 1.243 — still random slices, as designed
-
-The prompt is pinned. `prompt_tokens` was 4x18432/3x18433 in run-0007 and is a
-single value now, which is what `max_start` returning to 1 looks like from
-outside. Cell `tg` max/min fell from 1.24 (run-0006) and 1.18 (run-0007) to
-1.108, so prompt variation was most of the residual scatter.
-
-What it did not do is make decoding deterministic. Identical prompt, identical
-`prompt_tokens`, `temperature 0`, `seed 42` — and three of seven generations
-still diverge. Four land on the same md5, which is the shape of greedy decoding
-that occasionally takes a different branch, not of sampling. That residue is
-engine-level: MTP plus batch-dependent numerics, and run-0003 already bounds it —
-with speculation off this cell reads max/min 1.01.
-
-So the instrument now has a floor, and the floor has a known cause we are
-choosing to keep. 1.108 sits just above run.py's 1.10 threshold, which means the
-verdict still prints UNSTABLE by a hair.
-
-That threshold is worth challenging on its own terms, and this is the place to
-say so rather than in a round that wants a result. max/min is an extreme-value
-statistic: it is computed from exactly two of the seven samples and it drifts
-upward as `runs` grows, so a fixed 1.10 gate gets harder to pass the more
-evidence we collect. A rule stated on the median with an interquartile spread
-would use all seven values and would not punish longer runs. Changing it is a
-protocol decision for Mat, not something a round should quietly adopt.
-
-One consequence to record rather than bury: with adaptation off the request
-carries 18432 corpus tokens *plus* the template, so the served prompt runs a few
-tokens longer than the nominal `pp 2048 + depth 16384`. The cell is pinned and
-reproducible either way; adaptation traded that reproducibility for hitting the
-nominal size exactly. This experiment wants the reproducibility.
-
-The ctx phase is a separate matter and stays unstable by construction: it needs
-only 16384 tokens from the same 18433-token corpus, leaving `max_start` 2049, so
-its prompts really are random slices. The Objective's cell is unaffected.
-
-run-0003 is a diagnostic, not an arm of this round's variable. It answers a
-question the decision rule depends on — whether the spread it is sized against
-is reducible — and the answer is that the spread is almost entirely MTP.
-
-    with MTP     tg 109.3   sd 8.6    pp  633.1   ttfr 3246.4
-    without MTP  tg  70.3   sd 0.24   pp 2420.2   ttfr  858.0
-
-Removing speculation collapses `tg` scatter 36-fold, to 0.3% of the median. It
-also costs 36% of decode throughput and returns 3.8x on both prefill and
-time-to-first-token. So MTP earns its place for this Objective and is not
-removable, but every `tg` figure this experiment records is a sample from a
-distribution MTP widens — and the reference recipe runs the same MTP settings
-at a 3.1% spread, so 25% is not what MTP costs by necessity.
+Two consequences worth keeping. With adaptation off the request carries 18432
+corpus tokens *plus* the template, so the served prompt runs a few tokens past
+the nominal `pp + depth`; adaptation traded reproducibility for hitting the
+nominal size, and this experiment wants the reproducibility. And the ctx phase
+stays unstable by construction — it needs only 16384 tokens from an
+18433-token corpus, leaving `max_start` 2049, so its prompts really are random
+slices. The Objective's cell is unaffected.
 
 ## Conclusion
 
@@ -242,5 +177,5 @@ The standing best they leave behind — 118.9 at run-0005 — is not a claim thi
 round earned; it is what the baseline reads under a protocol that pins output
 length, sampling and cache state.
 
-What follows is not a split of these three fields. It is the attention backend,
-which has never been varied on this box.
+What follows is not a split of these three fields. h2 takes the prefix cache,
+which the harness runs showed never hits at all.
