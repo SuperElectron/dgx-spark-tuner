@@ -26,9 +26,6 @@ benchmark:
   concurrency: [1]
   runs: 7
   prefix_caching: true
-  exact_tg: true
-  extra_body: temperature=0
-  post_run_cmd: curl -sS -X POST http://spark-6f0e.tailae2b1.ts.net:8000/reset_prefix_cache -o /dev/null
 recipe_version: '1'
 model: nvidia/Qwen3.6-35B-A3B-NVFP4
 solo_only: false
@@ -36,13 +33,12 @@ container: vllm-node
 cluster_only: false
 env:
   VLLM_MARLIN_USE_ATOMIC_ADD: '1'
-  VLLM_SERVER_DEV_MODE: '1'
 description: Qwen3.6-35B-A3B-NVFP4 single-node (de-rayed from @eugr recipe)
 name: Qwen3.6-35B-A3B-NVFP4-solo
 defaults:
   port: 8000
-  max_num_batched_tokens: 65536
-  max_model_len: 32768
-  gpu_memory_utilization: 0.8
+  max_num_batched_tokens: 32768
+  max_model_len: 262144
+  gpu_memory_utilization: 0.65
   max_num_seqs: 4
   host: 0.0.0.0

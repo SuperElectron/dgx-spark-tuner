@@ -30,6 +30,7 @@ from dataclasses import asdict
 from pathlib import Path
 
 import sparkrun.api as api
+import yaml
 
 TELEMETRY_INTERVAL = 0.25
 REQUIRED = ("results.yaml", "telemetry.jsonl", "engine-capture.log")
@@ -134,6 +135,12 @@ def run_benchmark(recipe: Path, host: str, out: Path, sctx):
         resume=api.ResumeMode.FRESH,
         output_file=str(out / "results.yaml"),
         progress_callback=on_progress,
+        # Per-request arrival and completion times, with the token count each
+        # one actually generated. The results JSON reports the *requested* tg,
+        # so a short generation is invisible there. llama-benchy runs from this
+        # process's working directory, so the path has to be absolute — and
+        # only here is the run's own out/ known.
+        bench_args={"emit_progress": str(out / "progress.jsonl")},
     )
     try:
         result = api.benchmark(options, sctx=sctx)
@@ -192,11 +199,115 @@ def validate(out: Path) -> None:
             die(f"incomplete: {name} missing or empty")
 
 
-def report(out: Path, state: Path, frames: int) -> None:
+# sparkrun sweeps every key it does not recognise out of the recipe's
+# `benchmark:` block and into llama-benchy's argv. A misspelling becomes an
+# unknown flag and fails loudly, but a real flag does not: it changes how the
+# measurement is taken while the grid still looks right. `--no-warmup` is the
+# one that matters — warmup is what absorbs the Triton JIT compilation, so
+# without it the compile lands on the measurements instead.
+GRID_KEYS = ("pp", "tg", "depth", "concurrency", "runs")
+BENCHMARK_META = {"framework", "args", "metadata", "timeout", "schedule", "category"}
+# Set by this script rather than the recipe, so the recipe is not expected to
+# declare them and the check below must not treat them as drift.
+INJECTED = {"emit_progress"}
+
+
+def served_grid(state: Path) -> dict:
+    """What llama-benchy was actually handed, as sparkrun resolved it."""
+    data = yaml.safe_load((state / "state.yaml").read_text()) or {}
+    return data.get("base_args") or {}
+
+
+def check_grid(recipe: Path, state: Path) -> dict:
+    """The recipe declares the grid; state.yaml records what ran. A difference
+    means the run answered a question the recipe did not ask."""
+    declared = (yaml.safe_load(recipe.read_text()) or {}).get("benchmark") or {}
+    declared = {k: v for k, v in declared.items() if k not in BENCHMARK_META}
+    served = served_grid(state)
+    if not served:
+        die("state.yaml has no base_args — cannot tell what grid ran")
+
+    for key in sorted((set(declared) | set(served)) - INJECTED):
+        want, got = declared.get(key), served.get(key)
+        if want != got:
+            die(f"grid differs from the recipe: {key} declared {want!r}, ran {got!r}")
+    return served
+
+
+# NVIDIA has confirmed two power-delivery faults on GB10 that pin the GPU at
+# 513 or 721 MHz with an all-clear throttle bitmask — the numbers look
+# plausible and are ~3x wrong. It is only visible under load, and this box's
+# `gpu_clock_mhz` reads 208 in almost every frame whatever the GPU is doing, so
+# the clock cannot be the signal. Power can: a healthy run peaks near 100 W and
+# a capped one cannot leave the 20-30 W band.
+POWER_FLOOR_W = 60.0
+
+# perf_analyzer calls a measurement stable when max/min across recent windows
+# is within 10%. Ours is not a convergence gate — we take what the grid gives —
+# but a run whose samples spread wider than this is saying so out loud.
+STABLE_RATIO = 1.10
+
+
+def box_state(out: Path) -> dict:
+    """Peak GPU power over the run. The frames are a nested per-host shape and
+    some carry no telemetry at all."""
+    peak = 0.0
+    for line in (out / "telemetry.jsonl").read_text().splitlines():
+        try:
+            frame = json.loads(line)
+        except ValueError:
+            continue
+        for host in frame.get("hosts", []):
+            tel = host.get("telemetry") or {}
+            watts = tel.get("gpu_power_w")
+            if watts is not None:
+                peak = max(peak, float(watts))
+    return {"peak_power_w": peak}
+
+
+def check_box(out: Path) -> dict:
+    box = box_state(out)
+    if box["peak_power_w"] < POWER_FLOOR_W:
+        die(
+            f"GPU never drew more than {box['peak_power_w']:.1f} W "
+            f"(floor {POWER_FLOOR_W:.0f} W) — the box was power-capped, "
+            "so these figures measure the cap, not the recipe"
+        )
+    return box
+
+
+def spread(out: Path) -> list[tuple[str, str, float, float, float]]:
+    """Per metric: median, max/min ratio, and the values behind them. Reads the
+    named cell and the context-prefill phase separately — they are different
+    measurements and only one answers the recipe's question."""
+    data = yaml.safe_load((out / "results.yaml").read_text()) or {}
+    results = (data.get("sparkrun_benchmark") or {}).get("results") or {}
+    rows = []
+    for entry in (results.get("json") or {}).get("benchmarks", []):
+        phase = "ctx" if entry.get("is_context_prefill_phase") else "cell"
+        for metric in ("pp_throughput", "tg_throughput"):
+            vals = (entry.get(metric) or {}).get("values") or []
+            if len(vals) < 2:
+                continue
+            ordered = sorted(vals)
+            median = ordered[len(ordered) // 2]
+            rows.append((phase, metric[:2], median, max(vals) / min(vals), len(vals)))
+    return rows
+
+
+def report(out: Path, state: Path, frames: int, grid: dict, box: dict) -> None:
     print(f"\nout:       {out}")
     print(f"state:     {state}")
     print(f"engine:    {len((out / 'engine-capture.log').read_text().splitlines())} lines")
     print(f"telemetry: {frames} frames")
+    print("grid:      " + "  ".join(f"{k} {grid[k]}" for k in GRID_KEYS if k in grid))
+    extra = sorted(k for k in grid if k not in GRID_KEYS)
+    if extra:
+        print("           also " + ", ".join(f"{k}={grid[k]}" for k in extra))
+    print(f"box:       peak {box['peak_power_w']:.1f} W")
+    for phase, metric, median, ratio, n in spread(out):
+        verdict = "stable" if ratio <= STABLE_RATIO else "UNSTABLE"
+        print(f"{phase + ' ' + metric:<11}median {median:8.1f}  max/min {ratio:.2f}  n={n}  {verdict}")
 
 
 def main() -> None:
@@ -224,8 +335,10 @@ def main() -> None:
         api.stop(cluster_id=result.cluster_id, hosts=[host], sctx=sctx)
 
     validate(out)
+    grid = check_grid(recipe, state)
+    box = check_box(out)
     copy_to_state(out, state)
-    report(out, state, telemetry.frames)
+    report(out, state, telemetry.frames, grid, box)
 
 
 if __name__ == "__main__":

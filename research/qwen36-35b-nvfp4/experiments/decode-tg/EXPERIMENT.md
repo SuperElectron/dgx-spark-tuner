@@ -54,13 +54,25 @@ never been varied on this box.
 
 Measured scatter, per cell — what a decision rule here has to clear:
 
-    tg128 @ d16384 c1: tg ±20%, pp ±2%   (ours, pilot, discarded, runs=7)
-    tg128 @ d16384 c1: tg ±3.1%, pp ±0.5% (@luis raw log, same cell)
+    tg128 @ d16384 c1: tg max/min 1.31, pp 1.02   (h1 run-0001, MTP on)
+    tg128 @ d16384 c1: tg max/min 1.01, pp 1.02   (h1 run-0003, MTP off)
 
-Ours is the number a rule here must clear, and the difference between the two
-is itself a finding: the spread is not intrinsic to the cell. Triton JIT
-compilations firing inside the measured window and MTP acceptance drifting
-62-82% are the named suspects.
+Speculation is the scatter. Removing it collapses `tg` standard deviation from
+8.6 to 0.24 — a 36-fold drop — while `pp` does not move. It also costs 36% of
+decode and returns 3.8x on prefill and time-to-first-token, so MTP stays; but
+every `tg` figure here is drawn from a distribution it widens. Triton JIT was
+the earlier suspect and is ruled out: the compilations fire inside llama-benchy's
+warmup requests, before the timed runs.
+
+The reference recipe runs the same MTP settings at a much tighter spread, so
+25% is not what MTP costs by necessity. What differs is the protocol — see
+Held. That comparison is also weaker than it looks: the board's figure is a
+population standard deviation over three requests *within* one invocation,
+while ours is across invocations. They are not the same quantity.
+
+Everything measured before 2026-08-23 sits on the far side of two epoch breaks:
+the memory embedder was resident on the card, and the measurement protocol in
+Held did not exist.
 
 ## Held
 
@@ -72,6 +84,11 @@ compilations firing inside the measured window and MTP acceptance drifting
   Objective is stated in. The experiment's `recipe.yaml` narrows the model
   baseline's grid to it — c1 only, and `runs: 7`, because a rule stated on
   interquartile range needs more than three values to evaluate.
+- The measurement protocol, which is part of the recipe and therefore part of
+  the epoch: `exact_tg` pins every request to exactly 128 generated tokens,
+  `extra_body temperature=0` removes sampling variance, and `post_run_cmd`
+  resets the prefix cache between runs. The memory stack's embedder is down for
+  every run — it is a vLLM instance on the same card.
 - Nothing is submitted to Spark Arena.
 
 Everything else in the recipe is open to some round. What a given round holds

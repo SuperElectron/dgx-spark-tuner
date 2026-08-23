@@ -84,11 +84,27 @@ One row per planned run. Figures blank until it is run.
 
 | run | changed | why | pp t/s | tg t/s | ttfr ms | bench |
 |-----|---------|-----|--------|--------|---------|-------|
-| run-0001 | none — the baseline as shipped | control, and this epoch's spread | | | | |
-| run-0002 | `gpu_memory_utilization: 0.8 → 0.65`, `max_model_len: 32768 → 262144`, `max_num_batched_tokens: 65536 → 32768` | the whole diff at once: is it the gap? | | | | |
+| run-0001 | none — the baseline as shipped | control, and this epoch's spread | 633.1 | 109.3 | 3246.4 | bench_c9518e3e96a3 |
+| run-0002 | `gpu_memory_utilization: 0.8 → 0.65`, `max_model_len: 32768 → 262144`, `max_num_batched_tokens: 65536 → 32768` | the whole diff at once: is it the gap? | 636.1 | 111.3 | 3231.2 | bench_00f6e273f26c |
+
+| run-0003 | `--speculative-config` removed | diagnostic: what is the 25% `tg` spread made of? | 2420.2 | 70.3 | 858.0 | bench_0a988a464b5a |
 
 Figures are medians of the seven values from the `tg128 @ d16384` phase. The
 result carries two phases; the other is `ctx_tg`, a different cell.
+
+run-0003 is a diagnostic, not an arm of this round's variable. It answers a
+question the decision rule depends on — whether the spread it is sized against
+is reducible — and the answer is that the spread is almost entirely MTP.
+
+    with MTP     tg 109.3   sd 8.6    pp  633.1   ttfr 3246.4
+    without MTP  tg  70.3   sd 0.24   pp 2420.2   ttfr  858.0
+
+Removing speculation collapses `tg` scatter 36-fold, to 0.3% of the median. It
+also costs 36% of decode throughput and returns 3.8x on both prefill and
+time-to-first-token. So MTP earns its place for this Objective and is not
+removable, but every `tg` figure this experiment records is a sample from a
+distribution MTP widens — and the reference recipe runs the same MTP settings
+at a 3.1% spread, so 25% is not what MTP costs by necessity.
 
 ## Conclusion
 
