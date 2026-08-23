@@ -91,6 +91,7 @@ One row per planned run. Figures blank until it is run.
 | run-0004 | `exact_tg`, `temperature 0`, cache reset added | harness verification, not an arm | 635.9 | 116.2 | 3232.1 | bench_7d27a25ac7f2 |
 | run-0005 | `post_run_cmd` fixed, `emit_progress` added | harness verification, not an arm | 632.7 | 118.9 | 3248.7 | bench_c77f38339d26 |
 | run-0006 | fixed corpus installed | harness verification, not an arm | 633.2 | 115.8 | 3246.0 | bench_7e811800d715 |
+| run-0007 | `seed=42` added | discriminator: is decode greedy? | 635.0 | 122.8 | 3244.9 | bench_26c64e5c27b8 |
 
 Figures are medians of the seven values from the `tg128 @ d16384` phase. The
 result carries two phases; the other is `ctx_tg`, a different cell.
@@ -112,10 +113,45 @@ outputs are all different — seven distinct md5s over the reconstructed text, a
 lengths from 497 to 531 characters for exactly 128 tokens each. Identical prompt,
 `temperature: 0` merged into the request payload
 (`client.py:_build_generation_payload` does `payload.update(self.extra_body)`),
-and still seven different generations. So the nondeterminism is not prompt
-content and not the sampling parameters we control from the recipe. run-0007
-discriminates what is left: adding `seed` alongside `temperature 0` is a no-op if
-decoding is genuinely greedy, and pins the output if it is not.
+and still seven different generations.
+
+run-0007 added `seed=42` and changed nothing — seven different md5s again, `tg`
+max/min 1.18. It also produced the tell that cracked this open: `prompt_tokens`
+varied *within* the run, four requests at 18432 and three at 18433. A fixed slice
+cannot do that, so the prompt was never actually fixed.
+
+The reason is `adapt_prompt`, and it is on by default — llama-benchy exposes only
+`--no-adapt-prompt` as `store_false`. It rewrites the grid before the prompt is
+built:
+
+    current_depth = max(1, depth - self.delta_context)
+    total_needed  = current_pp + current_depth
+    max_start     = len(corpus) - total_needed
+
+`delta_context` is the chat-template overhead measured during warmup. It shrinks
+`total_needed` from 18432 to `18432 - delta`, so `max_start` becomes `1 + delta`
+rather than 1, and `np.random.randint` picks a fresh start each run. The corpus
+fix was sound and did land — both `tokenizers` and `transformers` count the
+installed file at exactly 18433 — it just closed a window that adaptation
+immediately reopened. That is why sizing the corpus moved the spread from
+enormous to merely large instead of removing it.
+
+So the ordering of the last three runs is: prompt content was ruled out on a
+false premise, seeding ruled out sampling for real, and the prompt turns out to
+have been varying the whole time.
+
+run-0008 sets `no_adapt_prompt: true`, which restores `total_needed` to 18432 and
+`max_start` to 1. The prediction is sharp enough to fail: seven byte-identical
+generations, constant `prompt_tokens`, and `tg` max/min at or below 1.10. If the
+outputs go identical and `tg` still scatters, the residue is hardware or
+scheduler and the decision rule has to be written against it rather than
+engineered away.
+
+One consequence to record rather than bury: with adaptation off the request
+carries 18432 corpus tokens *plus* the template, so the served prompt runs a few
+tokens longer than the nominal `pp 2048 + depth 16384`. The cell is pinned and
+reproducible either way; adaptation traded that reproducibility for hitting the
+nominal size exactly. This experiment wants the reproducibility.
 
 The ctx phase is a separate matter and stays unstable by construction: it needs
 only 16384 tokens from the same 18433-token corpus, leaving `max_start` 2049, so
