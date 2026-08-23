@@ -90,9 +90,36 @@ One row per planned run. Figures blank until it is run.
 | run-0003 | `--speculative-config` removed | diagnostic: what is the 25% `tg` spread made of? | 2420.2 | 70.3 | 858.0 | bench_0a988a464b5a |
 | run-0004 | `exact_tg`, `temperature 0`, cache reset added | harness verification, not an arm | 635.9 | 116.2 | 3232.1 | bench_7d27a25ac7f2 |
 | run-0005 | `post_run_cmd` fixed, `emit_progress` added | harness verification, not an arm | 632.7 | 118.9 | 3248.7 | bench_c77f38339d26 |
+| run-0006 | fixed corpus installed | harness verification, not an arm | 633.2 | 115.8 | 3246.0 | bench_7e811800d715 |
 
 Figures are medians of the seven values from the `tg128 @ d16384` phase. The
 result carries two phases; the other is `ctx_tg`, a different cell.
+
+run-0006 installed the fixed corpus and it did not work as a stability fix, which
+is a finding rather than a failure. `tg` max/min read 1.24, no better than
+run-0005's 1.19, and the per-request decode times spanned the same range
+(0.900–1.179 s against 0.931–1.244 s).
+
+The corpus did do what it was built to do. llama-benchy computes
+`total_needed = prompt_tokens + context_tokens` = 18432 for this cell, against a
+corpus of 18433, so `max_start` is 1 and `np.random.randint(0, 1)` is always 0.
+Every cell prompt is the same slice. Six of seven reported 18433 prompt tokens
+and one reported 18432 — a decode/re-encode boundary artifact, not a different
+slice.
+
+That turns the spread into a much sharper question, because the seven generated
+outputs are all different — seven distinct md5s over the reconstructed text, and
+lengths from 497 to 531 characters for exactly 128 tokens each. Identical prompt,
+`temperature: 0` merged into the request payload
+(`client.py:_build_generation_payload` does `payload.update(self.extra_body)`),
+and still seven different generations. So the nondeterminism is not prompt
+content and not the sampling parameters we control from the recipe. run-0007
+discriminates what is left: adding `seed` alongside `temperature 0` is a no-op if
+decoding is genuinely greedy, and pins the output if it is not.
+
+The ctx phase is a separate matter and stays unstable by construction: it needs
+only 16384 tokens from the same 18433-token corpus, leaving `max_start` 2049, so
+its prompts really are random slices. The Objective's cell is unaffected.
 
 run-0003 is a diagnostic, not an arm of this round's variable. It answers a
 question the decision rule depends on — whether the spread it is sized against
