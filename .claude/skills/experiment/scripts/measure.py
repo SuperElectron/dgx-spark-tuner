@@ -67,6 +67,13 @@ def check_box(out: Path) -> dict:
     return box
 
 
+# vLLM grants prefix-cache hits per whole block, and this model forces the
+# attention block to 2144 tokens so its pages align with the mamba pages. A
+# prompt shorter than one block therefore cannot hit, by construction — so a
+# 0% rate at depth 0 is arithmetic, not a defect.
+BLOCK_TOKENS = 2144
+
+
 def engine_state(out: Path, wants_cache: bool) -> dict:
     """What the engine said about itself while it served.
 
@@ -93,6 +100,12 @@ def engine_state(out: Path, wants_cache: bool) -> dict:
     # upstream of the recipe — but it must not pass silently.
     state["cache_suspect"] = bool(wants_cache and hits and state["hit_max"] == 0.0)
     return state
+
+
+def cacheable(grid: dict) -> bool:
+    """Whether this grid's prompt is long enough for a hit to be possible."""
+    tokens = max(grid.get("pp") or [0]) + max(grid.get("depth") or [0])
+    return tokens >= BLOCK_TOKENS
 
 
 def requests(out: Path) -> dict:
@@ -125,8 +138,11 @@ def requests(out: Path) -> dict:
 
 
 def _iqr_ratio(values: list[float], median: float) -> float:
+    """None when there are too few values to have quartiles. Returning 0.0 here
+    would read as a perfectly tight measurement and print `stable` for any
+    spread at all — at `runs: 3` a 20% range would pass."""
     if len(values) < 4 or not median:
-        return 0.0
+        return None
     q1, _, q3 = statistics.quantiles(values, n=4, method="inclusive")
     return (q3 - q1) / median
 
@@ -209,13 +225,16 @@ def report(out: Path, state: Path, frames: int, grid: dict, box: dict, keys) -> 
         print("           also " + ", ".join(f"{k}={grid[k]}" for k in extra))
     print(f"box:       peak {box['peak_power_w']:.1f} W")
 
-    eng = engine_state(out, bool(grid.get("prefix_caching") or grid.get("enable_prefix_caching")))
+    wants = bool(grid.get("prefix_caching") or grid.get("enable_prefix_caching"))
+    eng = engine_state(out, wants and cacheable(grid))
     print(
         f"engine:    running max {eng['running_max']:.0f}  waiting max {eng['waiting_max']:.0f}  "
         f"kv max {eng['kv_max']:.1f}%  preemptions {eng['preemptions']}"
     )
     if eng["hit_samples"]:
         note = "  SUSPECT: recipe asks for prefix caching" if eng["cache_suspect"] else ""
+        if not cacheable(grid):
+            note = f"  (expected: prompt is under one {BLOCK_TOKENS}-token block)"
         print(f"cache:     hit rate max {eng['hit_max']:.1f}% over {eng['hit_samples']} samples{note}")
 
     req = requests(out)
@@ -230,10 +249,14 @@ def report(out: Path, state: Path, frames: int, grid: dict, box: dict, keys) -> 
         if row["metric"] == "prefill*":
             print(f"{row['label']} {row['phase']:<4} prefill*  {row['median']:8.1f} t/s  (true rate)")
             continue
-        verdict = "stable" if row["iqr"] <= STABLE_IQR else "UNSTABLE"
+        if row["iqr"] is None:
+            spread, verdict = "iqr   n/a", f"n={row['n']}, too few for quartiles"
+        else:
+            spread = f"iqr {row['iqr'] * 100:4.1f}%"
+            verdict = "stable" if row["iqr"] <= STABLE_IQR else "UNSTABLE"
         print(
             f"{row['label']} {row['phase']:<4} {row['metric']:<8} "
-            f"median {row['median']:8.1f}  iqr {row['iqr'] * 100:4.1f}%  "
+            f"median {row['median']:8.1f}  {spread}  "
             f"max/min {row['ratio']:.2f}  n={row['n']}  {verdict}"
         )
         # Raw execution order, never sorted: the ordering is evidence. A sorted
