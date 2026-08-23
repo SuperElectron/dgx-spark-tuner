@@ -16,11 +16,17 @@ import yaml
 
 # NVIDIA has confirmed two power-delivery faults on GB10 that pin the GPU at
 # 513 or 721 MHz with an all-clear throttle bitmask — the numbers look
-# plausible and are ~3x wrong. It is only visible under load, and this box's
-# `gpu_clock_mhz` reads 208 in almost every frame whatever the GPU is doing, so
-# the clock cannot be the signal. Power can: a healthy run peaks near 100 W and
-# a capped one cannot leave the 20-30 W band.
+# plausible and are ~3x wrong.
+#
+# An earlier note here claimed `gpu_clock_mhz` reads 208 whatever the GPU is
+# doing and so could not be the signal. The archives refute it: under load this
+# box reports 2359-2398 MHz against a 3003 MHz ceiling, and the 208s are the
+# idle gaps between runs (44-70% of frames, depending on how much of the run is
+# actually busy). So the clock IS readable — but absence of a high clock is not
+# evidence of a fault, because a short shallow cell can miss every busy window
+# at a 0.25 s sampling interval. Only the fault's own signature is conclusive.
 POWER_FLOOR_W = 60.0
+CLOCK_FAULT_BAND = (400, 900)   # the 513/721 MHz pinning, with room either side
 
 # max/min is an extreme-value statistic: it is drawn from two of the samples
 # and drifts upward as `runs` grows, so a fixed gate on it gets harder to pass
@@ -44,20 +50,41 @@ def box_state(out: Path) -> dict:
     """Peak GPU power over the run. The frames are a nested per-host shape and
     some carry no telemetry at all."""
     peak = 0.0
+    clocks: list[float] = []
     for line in (out / "telemetry.jsonl").read_text().splitlines():
         try:
             frame = json.loads(line)
         except ValueError:
             continue
         for host in frame.get("hosts", []):
-            watts = (host.get("telemetry") or {}).get("gpu_power_w")
+            tel = host.get("telemetry") or {}
+            watts = tel.get("gpu_power_w")
             if watts is not None:
                 peak = max(peak, float(watts))
-    return {"peak_power_w": peak}
+            mhz = tel.get("gpu_clock_mhz")
+            if mhz is not None:
+                clocks.append(float(mhz))
+    busy = [c for c in clocks if c > 300]        # anything above the idle floor
+    return {
+        "peak_power_w": peak,
+        "peak_clock_mhz": max(clocks) if clocks else 0.0,
+        "busy_frames": len(busy),
+        "frames": len(clocks),
+    }
 
 
 def check_box(out: Path) -> dict:
     box = box_state(out)
+    lo, hi = CLOCK_FAULT_BAND
+    # The fault pins the clock inside the band and never leaves it. A run that
+    # only ever idles is not a fault, so require that the GPU was seen busy.
+    if box["busy_frames"] and lo <= box["peak_clock_mhz"] <= hi:
+        die(
+            f"GPU never clocked above {box['peak_clock_mhz']:.0f} MHz while busy "
+            f"— that is the GB10 power-delivery fault signature (513/721 MHz "
+            "pinned with an all-clear throttle bitmask), so these figures "
+            "measure the fault, not the recipe"
+        )
     if box["peak_power_w"] < POWER_FLOOR_W:
         die(
             f"GPU never drew more than {box['peak_power_w']:.1f} W "
@@ -223,7 +250,12 @@ def report(out: Path, state: Path, frames: int, grid: dict, box: dict, keys) -> 
     extra = sorted(k for k in grid if k not in keys)
     if extra:
         print("           also " + ", ".join(f"{k}={grid[k]}" for k in extra))
-    print(f"box:       peak {box['peak_power_w']:.1f} W")
+    clock = (
+        f"peak clock {box['peak_clock_mhz']:.0f} MHz"
+        if box["busy_frames"]
+        else "clock idle in every frame (run too short to sample)"
+    )
+    print(f"box:       peak {box['peak_power_w']:.1f} W, {clock}")
 
     wants = bool(grid.get("prefix_caching") or grid.get("enable_prefix_caching"))
     eng = engine_state(out, wants and cacheable(grid))

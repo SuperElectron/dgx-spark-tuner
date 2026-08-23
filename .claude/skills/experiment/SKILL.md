@@ -78,8 +78,11 @@ and therefore what decode measures.
 `run.py` prints the grid it verified, peak power, and a stable/UNSTABLE verdict
 per metric. Pass its verdict through — do not recompute it.
 
-Window telemetry to the session times in `state.yaml`. Ignore `gpu_clock_mhz`:
-on this box it reads 208 in almost every frame whatever the GPU is doing.
+Window telemetry to the session times in `state.yaml`. `gpu_clock_mhz` is
+readable: under load this box reports 2359-2398 MHz against a 3003 MHz ceiling,
+and the 208s are the idle gaps between runs. A short shallow cell can read 208
+in every frame because the 0.25 s sampler misses its busy windows, so a low
+peak clock only means something when the GPU was seen busy at all.
 
 If genuinely blocked — box unreachable, engine dead after two attempts —
 return one line starting `ESCALATE:` with what was tried.

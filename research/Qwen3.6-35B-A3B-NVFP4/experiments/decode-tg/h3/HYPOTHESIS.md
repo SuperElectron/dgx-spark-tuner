@@ -171,9 +171,33 @@ One row per planned run. Figures blank until it is run.
 
 | run | tg | runs | why | tg t/s | iqr | trace shape | bench |
 |-----|----|------|-----|--------|-----|-------------|-------|
-| run-0001 | 128 | 7 | the short cell at d0 — the baseline this round needs | | | | |
+| run-0001 | 128 | 7 | the short cell at d0 — the baseline this round needs | 127.3 | 3.0% | varied, no repetition | bench (see id.txt) |
 | run-0002 | 2048 | 7 | 16x longer: is steady state different? | | | | |
 | run-0003 | 8192 | 3 | 64x longer, corroboration and drift check | | | | |
+
+## Runs so far
+
+run-0001 gives the baseline this round is measured against, and one result that
+belongs to depth-curve rather than here:
+
+    d0     tg 127.3  sd 3.0%  [131.1, 127.3, 120.5, 131.7, 123.5, 123.5, 127.8]
+    d16384 tg 119.6  sd 3.1%  (h1 run-0008, the pinned-prompt incumbent)
+
+A 6.4% gap at ~3% sigma is about 2 sigma, so decode is measurably higher at d0
+than at d16384. That is depth-curve's question and it now has a real answer
+waiting rather than a formality.
+
+Prefill at d0 reads 1569.7 t/s against ttfr 104.7 ms, both honest — d0 has no
+context phase and no numerator artifact.
+
+On the degeneration confound: at 128 tokens the text does not degenerate. The
+outputs are ordinary prose with a repeat-ratio of 0.12-0.20, and the sample
+opens `Here's a thinking process:` — the model is answering, not looping. Four
+distinct md5s across seven requests, with three pairs identical, which is the
+same greedy-with-occasional-divergence shape h1 measured at depth.
+
+That is the baseline. The confound only bites if run-0002 and run-0003 show the
+repeat-ratio climbing toward 1.0 while throughput rises.
 
 ## Conclusion
 
