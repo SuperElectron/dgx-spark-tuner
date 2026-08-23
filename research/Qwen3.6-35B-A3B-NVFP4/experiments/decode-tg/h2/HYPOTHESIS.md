@@ -97,7 +97,7 @@ One row per planned run. Figures blank until it is run.
 | run-0002 | `--kv-cache-dtype` removed — arm B | fp8 KV is the most-cited APC blocker | | | | | |
 | run-0003 | `--speculative-config` removed — arm C | MTP verify may bypass the cache path | | | | | |
 | run-0004 | `--async-scheduling` removed — arm D | last of the three, and the least likely | | | | | |
-| run-0005 | `post_run_cmd` removed | diagnostic: does the cache work at all? | | | | | |
+| run-0005 | `post_run_cmd` removed | diagnostic: does the cache work at all? | 69.2 | 2593.0 | 114.9 | 803.3 | bench (see id.txt) |
 
 run-0001 confirms the control: 0.0% on all seven samples, and phase 2 sends
 18447 prompt tokens on every run — a full recompute, not the ~2048 a working
@@ -131,4 +131,50 @@ not because it was ever suspected.
 
 ## Conclusion
 
-Pending.
+**The hypothesis was wrong in its premise, and the round is answered without
+arms B, C or D.** No flag was disabling the prefix cache. Our own
+`post_run_cmd` was.
+
+run-0005 removed the reset and changed nothing else. Hit rate climbed across the
+seven runs — 0.0%, 44.8%, 62.7%, 69.2% — with zero `Resetting prefix cache`
+lines in the log. The cache was working the whole time; we wiped it after every
+execution and then read the zero we had just caused.
+
+Against arm A, the same cell with the reset in place:
+
+                      arm A (reset)   run-0005 (no reset)   change
+    cell pp                  633.9              2593.0       4.1x
+    cell ttfr             3252.9 ms            803.3 ms       4.0x
+    cell est_ppt          3237.5 ms            789.8 ms       4.1x
+    ctx  pp                 5912.9             21349.5       3.6x
+    cell tg                  112.3               114.9       +2.3%
+
+The prediction in the Hypothesis holds exactly: prefill and time-to-first-token
+move hard, decode does not. `tg` moved 2.3%, inside the spread. Decode is not
+prefill-bound, so a working cache buys latency, not throughput.
+
+`prompt_tokens` stays 18447 on every cell request — the client still sends the
+whole prompt, the engine simply stops recomputing it. The first run reads
+ttfr 1225.5 ms against ~780-806 for the rest, which is the cache filling.
+
+**This corrects the board comparison, and in our favour.** We recorded a prefill
+deficit against the two vLLM entries — our 635.4 against their 1414.86 and
+1590.66 — and treated closing it as a goal. Arena does not reset between the
+three runs of a cell, so their figure is warm and ours was cold. Measured the
+same way, ours is 2593.0. **We were never behind on prefill; we were measuring a
+different quantity.** The deficit was an artifact of our own protocol.
+
+Arms B, C and D are not run. They existed to find a flag that is not there, and
+running them would spend three runs confirming a premise already refuted.
+
+What this does not settle is what the protocol should be, because the two
+choices serve different masters and the round is not entitled to pick. The reset
+makes every run independent and every prefill figure honest and cold, which is
+what makes rounds comparable to each other. Removing it matches arena and
+reports numbers four times larger. `tg` is unaffected either way, so for this
+Objective the reset can stay — but any prefill figure recorded under it must
+never be set beside a board number again without saying so.
+
+Recorded for the record: the 2144-token attention block size, forced up so
+attention pages align with mamba pages, does not prevent hits. It was a
+reasonable suspect and it is cleared.
