@@ -20,7 +20,7 @@ You help setup hypothesis, and then conclude on runs.
 
 ## START
 
-1. `git checkout -b feature/<hypothesis> staging`
+1. `git checkout -b feature/<model>-<hypothesis> staging`
 2. setup the new directory, run this:
 ```bash
 scripts/new-hypothesis.sh research/<model>/experiments/<hypothesis>
