@@ -101,11 +101,122 @@ One row per planned run. Figures blank until it is run.
 
 | run | draft moe_backend | tg t/s | iqr | pp t/s | accept | engine backend line | bench |
 |-----|-------------------|--------|-----|--------|--------|---------------------|-------|
-| run-0001 | `triton` — control | | | | | | |
-| run-0002 | `batched_triton` | | | | | | |
-| run-0003 | `flashinfer_trtllm` | | | | | | |
-| run-0004 | `flashinfer_cutlass` | | | | | | |
+| run-0001 | `triton` — control | 119.3 | 4.5% | 636.2 | 3.11–3.32 | `Using TRITON Unquantized MoE backend` | bench_bcde52479f68 |
+| run-0002 | `batched_triton` | crash at init | — | — | none served | `Using BATCHED_TRITON Unquantized MoE backend` | bench_8a8ec2d89fe9 |
+| run-0003 | `flashinfer_trtllm` | unsupported on device | — | — | none served | `ValueError: ... does not support current device cuda` | — |
+| run-0004 | `flashinfer_cutlass` | 116.5 | 2.5% | 633.9 | 3.05–3.35 | `Using FlashInfer CUTLASS Unquantized MoE backend` | bench_99d4f92d70a2 |
+
+### run-0002 — `batched_triton` crashed at init
+
+The flag was honoured, then the kernel would not construct. vLLM's own factory
+is at fault, not the recipe:
+
+    unquantized_fused_moe_method.py:158 _setup_kernel
+      -> oracle/unquantized.py:414 make_unquantized_moe_kernel
+        experts = experts_cls(...)
+    TypeError: BatchedTritonExperts.__init__() missing 2 required
+               positional arguments: 'max_num_tokens' and 'num_dispatchers'
+
+`make_unquantized_moe_kernel` builds `experts_cls` without the two arguments
+`BatchedTritonExperts` requires. No recipe field supplies them, so this backend
+is unreachable in this build — not slow, not misconfigured. The dispatcher
+offers it, the constructor rejects it.
+
+Selection is proved: non-default args carried `speculative_config
+{... 'moe_backend': 'batched_triton'}`, and `Using BATCHED_TRITON Unquantized
+MoE backend` printed one second after `Loading drafter model...`, while the
+target held `MARLIN` on the NvFp4 path. The engine never served a request, so
+there are no SpecDecoding samples and no `results.yaml`.
+
+Per the decision rule this arm was never measured and does not count toward
+"lever spent".
+
+Instrument note: `run.py` did not detect the dead engine. It polled a server
+that had already exited for ~12 minutes with no timeout, holding the box.
+`exit_on_first_fail` covers a failed request, not an engine that dies at init.
+
+### run-0003 — `flashinfer_trtllm` refused the device
+
+A cleaner failure than run-0002. The dispatcher offered the backend, the kernel
+declined the hardware:
+
+    oracle/unquantized.py:284 _return_or_raise
+    ValueError: Unquantized MoE backend FlashInfer TRTLLM does not support
+                the deployment configuration since kernel does not support
+                current device cuda.
+
+Not a bug — a supported-hardware check returning false on SM121. The engine
+never served a request. Recorded and, like run-0002, it does not count toward
+"lever spent".
+
+The dispatcher lists what it *could* build, not what this device can run. Two
+of four listed options are unreachable here for two different reasons: one the
+factory cannot construct, one the kernel refuses. That leaves
+`flashinfer_cutlass` as the only untested alternative to the `triton` default.
 
 ## Conclusion
 
-Pending.
+**Lever spent.** The draft's MoE backend is not a tuning lever on this box.
+
+Of the three alternatives the dispatcher advertises, two cannot run here at all
+and the third is not better:
+
+| arm | backend | tg | vs control |
+|-----|---------|----|-----------|
+| run-0001 | `triton` (control) | 119.3, iqr 4.5% | — |
+| run-0002 | `batched_triton` | never served | factory `TypeError` |
+| run-0003 | `flashinfer_trtllm` | never served | kernel refuses SM121 |
+| run-0004 | `flashinfer_cutlass` | 116.5, iqr 2.5% | −2.8 |
+
+run-0004 is the only measured alternative and it lands 2.8 below the control,
+against a larger control IQR of 4.5% (~5.4 tok/s). That is inside the spread:
+not a loss, not a win, no difference to read. The hypothesis — that one of the
+three beats `triton` — is refuted for the two that cannot start and unsupported
+for the one that can.
+
+Acceptance behaved exactly as the method required it to. Control steady-state
+3.11–3.32, run-0004 3.05–3.35, first-sample 3.81 in both from the same
+low-volume startup window. The backend changed how the draft is computed and
+left what is drafted alone, so the `tg` figures are comparable and the null
+result is a real null rather than an artifact of drafting something different.
+
+### What this closes, and what it points at
+
+The dispatcher lists what it *could* build, not what this device can run. Two
+of four options are unreachable for two unrelated reasons — one a defect in
+vLLM's own factory, one an explicit hardware check. `triton` is not the default
+because it was chosen; it is the default because on SM121 it is very nearly the
+only thing that works.
+
+So h4's own fallback reading is the one that survives: the draft's cost is its
+`lm_head` re-read, not its expert GEMM. That is architectural — 286 MB read
+once per draft step, three steps per cycle, ~30% of the speculative cycle — and
+no recipe flag reaches it. h4 was the last recipe-level lever in decode-tg.
+
+### Where the decision rule contradicted itself
+
+The rule says "**Lever spent** if all three alternatives land within the spread
+of the control, *or fail to initialise*", and then says "an arm that crashes at
+init ... does not count toward 'spent' — it was never measured." Those cannot
+both hold for run-0002 and run-0003.
+
+Recorded, not edited. The practical reading is that the second clause guards
+against calling a lever spent on a transient failure — a flaky start, a bad
+build — and neither of these is that. A constructor missing required arguments
+and a kernel declining the device are permanent properties of this image, not
+runs that failed to happen. They are closed for this epoch and reopen only if
+the image changes.
+
+### Notes for the next round
+
+- Cache hit rate was 0.0% on every arm, by design: `post_run_cmd` resets it
+  between runs and h4 held that constant. So every figure here is cold, and
+  none of them is comparable to the warm standing best of 119.6.
+- run-0004 logged seven Triton JIT compilations during the first request, and
+  its first-request latency spiked accordingly. Warmup is supposed to absorb
+  these. Not chased here; it is a property of the instrument, not the lever.
+- `run.py` did not notice a dead engine on run-0002 and polled it for ~12
+  minutes, and its engine-log capture sits only on the success path, so
+  run-0002 and run-0003 both had to have their crash logs recovered by hand
+  from the container. Both are instrument defects, both are now scheduled for
+  repair before the next round runs.
