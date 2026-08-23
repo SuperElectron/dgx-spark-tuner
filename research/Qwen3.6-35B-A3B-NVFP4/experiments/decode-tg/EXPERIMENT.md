@@ -143,6 +143,9 @@ constant it says in its own Method.
 | round | hypothesis | outcome |
 |-------|------------|---------|
 | h1 | The three numeric fields the reference recipe differs on are the whole gap | lever spent |
+| h2 | A flag is disabling the prefix cache | premise wrong — our own reset was |
+| h3 | `tg128` measures a transient | refuted — no transient; the effect is KV growth |
+| h4 | The draft's MoE backend is untuned and one alternative beats it | open |
 
 h1 is spent: its three fields moved `tg` 2.0 against a larger IQR of 11.3, and
 `pp` moved 0.5% — inside this cell's own 1.02 max/min — which killed the
