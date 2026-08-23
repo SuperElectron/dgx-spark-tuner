@@ -1,48 +1,78 @@
 ---
 name: spark-hypothesis
-description: Open a hypothesis — its claim, its decision rule, its baseline recipe — and close it once every run is in, with the conclusion, the memory and the winning config. Use when starting a hypothesis or finishing one.
+description: Open an experiment — its objective, strategy and held — and the rounds that chase it, then conclude each round and decide whether the target is met, the lever has more to give, or the next hypothesis is needed. Use when starting an experiment or finishing a round.
 ---
 
 # spark-hypothesis
 
 ## Role
 
-Owns `EXPERIMENT.md` and `recipe.yaml` in
-`research/<model>/experiments/<hypothesis>/`.
+Owns the experiment and its rounds:
 
-Reads `run-*/` but never writes to it, and never writes the runs table.
-You help setup hypothesis, and then conclude on runs.
+```
+research/<model>/experiments/<experiment>/
+├── EXPERIMENT.md       objective, strategy, held — frozen once agreed
+├── recipe.yaml         the baseline every round starts from
+├── recipe-new.yaml     written when the objective closes
+└── h1/, h2/, ...       one per round
+    └── HYPOTHESIS.md   hypothesis, method, decision rule, runs
+```
+
+Reads `run-*/` but never writes to it, and never writes a runs table.
+
+An experiment has one objective and as many rounds as it takes. A round that
+fails does not end the experiment — it ends that lever.
 
 ## How to use this skill
 
-1. START: You are here to setup a hypothesis for the user.
-2. END: Then after the runs, you are here to analyze the runs, update EXPERIMENTS.md with conclusion and then write a memory to capture your observations.
+1. START: setup an experiment and its first round for the user.
+2. END: after a round's runs, conclude it and decide what follows.
 
 ## START
 
-1. `git checkout -b feature/<model>-<hypothesis> staging`
+1. `git checkout -b feature/<model>-<experiment> staging`
 2. setup the new directory, run this:
 ```bash
-scripts/new-hypothesis.sh research/<model>/experiments/<hypothesis>
+scripts/new-experiment.sh research/<model>/experiments/<experiment>
 ```
-- Fill every `<...>` in `EXPERIMENT.md` with the user.
-- The decision rule is written before any number exists, and never edited again.
-- Match the rule to `runs`. A bare ±% threshold needs `runs` of 5 or more to be
-  evaluable at all; at `runs: 3` state the rule as a difference larger than the
-  spread within a single run instead.
+
+Fill every `<...>` with the user. `EXPERIMENT.md` first — it is frozen once
+agreed, and every round is judged against it.
+
+- **Objective** — a metric, its cell, where it stands, and the number it must
+  reach. Something a run can hit or miss.
+- **Strategy** — what we know about the machine that makes the target look
+  reachable, and the measured scatter for the cell. Rounds are sized against
+  this, so a cell with no scatter figure needs one measuring first.
+- **Held** — the invariants every round shares. Be sparing: anything named
+  here is closed to every future round. "Every field not under test" belongs in
+  a round's Method, not here.
+
+Then `h1/HYPOTHESIS.md`:
+
+- **Hypothesis** — one falsifiable sentence and the mechanism behind it, argued
+  from the machine. Its *worth* is the load-bearing part: the arithmetic saying
+  how big a win this mechanism can buy. If that is smaller than the Objective
+  needs, the round is wrong before it runs.
+- **Variables to test** — one line per recipe field this round may move.
+- **Runs** — one planned row each, figures blank. That is what tells the loop
+  when the round is done.
+- **Decision rule** — written before any number exists, never edited. Three
+  outcomes: target met, lever alive, lever spent. Size it against Strategy's
+  scatter, never against this round's own runs.
 
 3. Create `recipe.yaml` with the user
-- `recipe.yaml` is the config every run of this hypothesis starts from. It is this hypothesis's baseline — the model's `recipe.yaml`, or an earlier hypothesis's `recipe-new.yaml`. The user must agree on which.
+- `recipe.yaml` is the config every round of this experiment starts from — the model's `recipe.yaml`, or an earlier experiment's `recipe-new.yaml`. The user must agree on which.
 
 Done when a run could be dispatched without asking anything further.
 
 ## END
 
-After the run-* (e.g. run-0001, run-0002, ..., run-000N), you are used to analyze the runs.
+After a round's runs are in, analyze them and decide what follows.
 
 ### 1. Read
 
-Read `EXPERIMENT.md`, then run this script:
+Read `EXPERIMENT.md` and the round's `HYPOTHESIS.md`, then run this script:
 
 ```bash
 scripts/show-run.sh <run-dir>
@@ -59,24 +89,20 @@ things worth saying; say whatever else you found.
 - do all the runs share a container digest and the same vllm and flashinfer commits? A change in any of them is a new epoch, and figures either side of it are not the same measurement.
 - do the recipe hashes differ between runs that were meant to differ? Two runs sharing a hash ran identical configurations, so one of them tested nothing.
 
-2. Was your original hypothesis true? What did you learn from the runs?
-- consider our objective from the hytpothesis.
-- over the runs, where did you see improvements?
-- what parameters resulted in improvements?
-- are there constraints outside the hypothesis that we could have changed to get better results?
-- did all the runs succeeed? if no, reason on why and what could be modified (if possible) to correct this.
+2. Was the hypothesis true? What did you learn from the runs?
+- did the Objective move? by how much, against the number it named?
+- which parameters moved it, and is there room left in them?
+- did all the runs succeed? if no, why, and what would correct it?
 
 3. Read into the data
 
 - did you find errors? what things can we learn from the errors that we should tune, modify, or improve?
-- when creating the hypothesis, did you get sufficient data to prove out your hypothesis? 
-- what learnings can you deduce from the numbers you have?
-- is there something that can be changed with the box, the hardware on which the experiments were run, that would improve the data?
+- could the decision rule resolve against the data you actually got? if not, say what grid would have.
 
 4. What shape is the measurement, not just where is its centre?
 - Read the individual values behind each reported mean. Are they clustered, or split into two groups with nothing between them? 
 - The reported `pp t/s` and `tg t/s` are arithmetic means of a rate, which overweights the fast samples. Compare medians of the underlying values, not the means.
-- How wide is the spread compared to the difference between runs you are about to call meaningful? A difference smaller than the spread within a single run is not a result. If it recurs across runs it is the next hypothesis, not this one's finding.
+- How wide is the spread against the difference you are about to call meaningful? Smaller than the spread within one run is not a result. If the spread differs from Strategy's figure, say so — that figure sizes every later round.
 
 5. What state was the box in while it measured?
 -  Over the benchmark window only — the model load either side of it will skew anything you compute across the whole file. 
@@ -84,18 +110,32 @@ things worth saying; say whatever else you found.
 - Was GPU utilisation sustained or intermittent, and did the clocks hold? A run measured on a box that ran out of memory measured that, and no figure in the results will tell you.
 
 6. Based on the data, what are your observations?
-- after crunching data, looking at errors, and reasoning, what is your conclusion?
-- was the hytpothesis useful, and did its runs help prove or disprove?
-- what are the major learnings from this hypothesis test?
+- what is your conclusion, and what are the major learnings?
+- was the hypothesis worth running — did it move the Objective, or only settle a question?
 
 ### 3. Write
 
-1. The Conclusion in `EXPERIMENT.md`, against the decision rule as written.
-   Wrong rule? Say so in the conclusion; do not edit the rule.
-2. `scripts/remember.sh "<text>" <entity>` — one memory per hypothesis. Format
-   and entity scopes are in `EXPERIMENT.md`.
-3. Create a `recipe-new.yaml` beside `recipe.yaml` that would give the best scores based on our hytpothesis and conclusion.
-4. One row in `RESULTS.md`: what varied, what won, the benchIds.
-5. One PR into `staging`.
+1. The Conclusion in `h<N>/HYPOTHESIS.md`, against that round's decision rule
+   as written. Wrong rule? Say so; do not edit the rule. Then its row in
+   `EXPERIMENT.md`'s rounds table.
+   Write it so it stands on its own: what varied, over what values, what held
+   or did not, and the evidence.
+
+2. Then one of three, from the round's decision rule:
+
+    **Target met** — close the experiment. Conclusion in `EXPERIMENT.md`,
+    `recipe-new.yaml` beside `recipe.yaml`, one row in `RESULTS.md`, one PR
+    into `staging`.
+
+    **Lever alive** — the target is not met but this mechanism has more to
+    give. Add rows to the round and hand back; do not open a new round.
+
+    **Lever spent** — `scripts/new-round.sh <experiment-dir>`, and write the
+    next hypothesis. It must aim at the same Objective, respect Held, and be
+    motivated by a row already measured. If no such hypothesis exists, close
+    the experiment as exhausted: same artifacts, saying what it cost and what
+    is now known to be closed.
+
+`RESULTS.md` gets one row per experiment, never per round.
 
 Done when the branch is up for review.

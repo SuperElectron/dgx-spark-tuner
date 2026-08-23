@@ -7,10 +7,17 @@ description: Set up a model for tuning — its docs, its baseline recipe, its re
 
 ## Role
 
-Owns `research/<model>/` and the four files at its root: `docs/model-card.md`,
-`docs/arena-recipe.md`, `recipe.yaml`, `RESULTS.md`.
+Owns `research/<model>/` and the four files at its root:
 
-Never touches `experiments/`. Runs nothing.
+```
+research/<model>/
+├── recipe.yaml         the baseline experiments start from
+├── RESULTS.md          Mat's lookup table — one row per closed experiment
+├── docs/               model-card.md, arena-recipe.md
+└── experiments/        owned by `spark-hypothesis`; you never touch it
+```
+
+Runs nothing.
 
 ## How to use this skill
 
@@ -38,7 +45,13 @@ name substituted, and empty `docs/` and `experiments/`. Steps 2 to 4 fill it.
 https://huggingface.co/<id>/blob/<sha>/README.md
 ```
 
-- `arena-recipe.md` — the url to the yaml file we use as `recipe.yaml`.
+- `arena-recipe.md` — the board entry `recipe.yaml` is measured against: its
+  page, and its raw results. The raw log is public; read it before trusting a
+  headline number, and record the cells that matter.
+```md
+https://spark-arena.com/benchmark/<uuid>
+https://spark-arena.com/api/benchmarks/<uuid>/raw
+```
 
 ## 3. Write `recipe.yaml` with the user
 

@@ -1,95 +1,158 @@
 ---
 name: spark-autoresearch
-description: Run a hypothesis's experiments — decide what the next run should test, dispatch it, record the result, then validate the proposed config and close the hypothesis or keep going. Use when a hypothesis is open.
+description: Run one round of an experiment — decide what the next run should test, dispatch it, record the result, then conclude the round and act on what it gave. Use when a round is open.
 ---
 
 # spark-autoresearch
 
 ## Role
 
-You are here to run the experiments and to decide when the hypothesis is
-answered. Use these skills:
+You run one round of an experiment and decide when its runs are done. Use
+these skills:
 
-- `spark-hypothesis`: sets up the hypothesis, and later reads your runs to
-  write the conclusion and propose `recipe-new.yaml`
+- `spark-hypothesis`: sets up the experiment and its rounds, and later reads
+  your runs to conclude the round and decide what follows
 - `experiment`: runs one run directory
 
-Here we show when `spark-model` skill has been used to setup <model> directory and `spark-hypothesis` to setup <model>/experiments/<hypothesis> as follows:
+`spark-model` set up <model>, `spark-hypothesis` set up the experiment and its
+rounds. You work inside one round:
 
 ```
-qwen36-35b-nvfp4/experiments/test-runtime
+qwen36-35b-nvfp4/experiments/decode-tg
 
-├── EXPERIMENT.md           // setup with `spark-hypothesis` skill.
+├── EXPERIMENT.md           // objective, strategy, held — frozen
 ├── recipe.yaml             // the baseline, we start with this.
-├── recipe-new.yaml         // what `spark-hypothesis` skill proposes as the conclusion.
-├── run-0001                // directory run with `experiment` skill
-│   ├── id.txt
-│   ├── out
-│   │   ├── engine-capture.log
-│   │   ├── results.yaml
-│   │   └── telemetry.jsonl
-│   └── recipe.yaml
+├── h1                      // the round you are running
+│   ├── HYPOTHESIS.md       // hypothesis, method, decision rule, runs
+│   └── run-0001            // directory run with `experiment` skill
+│       ├── id.txt
+│       ├── out
+│       │   ├── engine-capture.log
+│       │   ├── results.yaml
+│       │   └── telemetry.jsonl
+│       └── recipe.yaml
 ...
 ```
 
-You own `run-*/` and the runs table. The claim and the decision rule are frozen
-before you start and you never edit them.
+You own `run-*/` and the round's runs table. Everything else — the objective,
+the strategy, the held, the hypothesis, the decision rule — is frozen before
+you start and you never edit it.
 
 ## How to use this skill
 
-1. EXPERIMENTS: You follow the sections `CREATE, RUN, RECORD` below.
-- Repeat for as many runs as the method needs; there is no expected number. 
-- When the method is answered, hand the runs to `spark-hypothesis`.
+0. Free the card — the embedder is a vLLM instance sharing it with every
+   benchmark. Idempotent, so just assert it when a round starts.
 
-2. VALIDATE: A conclusion has been written to `EXPERIMENT.md`, so validate it!
+```bash
+scripts/memory.sh stop
+```
+
+1. EXPERIMENTS: cycle CREATE, RUN, RECORD, once per planned row in "## Runs".
+2. VALIDATE: when no row is left to run.
 
 ## THE LOOP
 
-EXPERIMENTS cycles three sections, defined below:
-- CREATE
-- RUN
-- RECORD
+Agents do the work. You hold `h<N>/HYPOTHESIS.md` — the hypothesis, the rule,
+the rows — and nothing else. Every benchmark, every read of a run archive, and
+the conclusion pass go to an agent, which returns an answer rather than a file.
 
-After all experiments from the `EXPERIMENT.md` have been run, we use VALIDATE (details below).
-- if it fails, we go back to the loop runs (EXPERIMENTS: CREATE, RUN, RECORD)
+You may add rows the method calls for; you never touch the hypothesis or rule.
 
 ### CREATE
 
-Use `EXPERIMENT.md` to do these steps:
+Use `h<N>/HYPOTHESIS.md` to do these steps:
 
 1. setup: create the next `run-000N/`.
 ```bash
-scripts/new-run.sh research/<model>/experiments/<hypothesis>
+scripts/new-run.sh research/<model>/experiments/<experiment>/h<N>
 ```
-2. Set `run-000N/recipe.yaml`; reason with `EXPERIMENT.md` and previous runs (if they exist).
+2. Set `run-000N/recipe.yaml`; reason with `HYPOTHESIS.md` and previous runs (if they exist).
+
+To read previous runs, send an agent — one run is thousands of lines and you
+only need what it concludes:
+
+```bash
+scripts/show-run.sh <run-dir>
+```
+
+Give the agent the run dirs, the question, and that command. Do not run it
+yourself.
 
 ### RUN
 
-Use the `experiment` skill to run one experiment (e.g. run-000N).
+Hand the run directory to an agent using the `experiment` skill. It runs the
+benchmark, reads the archive, and returns the report.
+
+The agent is not given the hypothesis.
 
 ### RECORD
 
-Read the contents of this run (e.g. `run-000{N}/`)
-- append one row to "## Runs" section in `EXPERIMENT.md` to record the results
-- Look at "## Runs" in `EXPERIMENT.md`: go to CREATE if not done, or VALIDATE.
+Take the agent's report and fill in that run's row in "## Runs".
+
+Rows still blank → CREATE. None → VALIDATE. If the blank rows cannot reach the
+Objective's number — the effect is smaller than the scatter in Strategy, or the
+best case left falls short of the target — stop and VALIDATE now rather than
+spend them.
+
+The columns:
+
+- **run** — the run directory, e.g. `run-0003`.
+- **changed** — this run's recipe against the experiment's baseline, as
+  `field: old → new`; comma-separated when a run moves more than one.
+- **why** — the prior result that prompted it. `baseline` for the first run.
+- **pp t/s, tg t/s, ttfr ms** — medians from the report's named cell, not its
+  context-prefill phase.
+- **bench** — the `bench_*` id.
+
+A run that crashed still gets its row: `—` for the figures, and what the engine
+reported in **why**.
+
+A report saying declared and served disagreed voids the row. Run it again.
 
 ## VALIDATE
 
-1. Make a conclusion to the hypothesis: make a proposal to validate.
-- you can only run this if all the experiment in the "## RUNS" section in `EXPERIMENT.md` are finished.
-- Use the `spark-hypothesis` skill (adds conclusion in `EXPERIMENT.md` and writes `recipe-new.yaml`).
+1. Conclude the round.
+- Only once every row in the round's "## Runs" is filled.
+- Send an agent to run the `spark-hypothesis` skill. It reads every run, writes
+  the conclusion, and returns which of three the rule gave: **target met**,
+  **lever alive**, or **lever spent**. It reads the archives so you do not.
 
-2. `recipe-new.yaml` is the hypothesis's prediction
-- Run it and validate it holds the conclusion section of `EXPERIMENT.md`.
+2. Act on it.
+
+    lever alive: it added rows to this round. Go to CREATE.
+    lever spent: it opened `h<N+1>/`, or closed the experiment as exhausted.
+                 A new round is a new loop — start it at CREATE.
+    target met:  validate it before closing.
+
+3. Validate a met target. `recipe-new.yaml` is the experiment's answer, so run
+   it and see the target hold:
 
 ```bash
-scripts/new-run.sh research/<model>/experiments/<hypothesis> recipe-new.yaml
+scripts/new-run.sh research/<model>/experiments/<experiment> recipe-new.yaml
 ```
 
-- then, run the experiment with `experiment` skill.
-- After you run, does it PASS or FAIL?
+- then hand it to an agent using the `experiment` skill, as in RUN.
 
-    PASS: the hypothesis is answered. Close it if the conclusion is true.
-    FAIL: it didn't run as expected. You need to run more experiments and continue the loop.
+    PASS: it reaches the target. The experiment is closed.
+    FAIL: it doesn't. Hand back to `spark-hypothesis` — the round is not done.
 
-If it fails, then you need to update `EXPERIMENT.md` and add new experiments to run, so the loop continues (runs `experiment` skill until end, then `spark-hypothesis` and we repeat this section).
+## MEMORY
+
+Once, when the experiment closes. The embedder wants the same card the
+benchmarks do, so it goes back down after.
+
+```bash
+scripts/memory.sh start
+scripts/remember.sh "<text>" <entity>   # one per round, one for the experiment
+scripts/memory.sh stop
+```
+
+Each line restates a conclusion already written, and has to stand alone —
+recall prints the line and nothing else.
+
+```
+[OBSERVATION] 2026-08-22 decode-tg/h1: max_num_seqs 4→64 at d0 c1 — tg flat within ±3% across all five, so single-stream decode does not use the extra slots (runs=5, bench_2ebcb63db398..bench_9f1)
+```
+
+Entity: the widest scope it is true for — `experiment:`, `model:`, `family:`,
+`stack:`, `box:`, `flag:`.

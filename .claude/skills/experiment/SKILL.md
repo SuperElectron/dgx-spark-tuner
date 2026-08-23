@@ -1,6 +1,6 @@
 ---
 name: experiment
-description: Run one benchmark from a prepared run directory and return the archive path. Use when a run-000N directory holds a recipe and needs running.
+description: Run one benchmark from a prepared run directory, read its archive, and return the figures and validity checks. Use when a run-000N directory holds a recipe and needs running.
 ---
 
 # experiment
@@ -14,11 +14,11 @@ hypothesis, the claim, or the expected result — an agent that can see the
 expected answer can steer toward it.
 
 Never edit `EXPERIMENT.md`, `RESULTS.md`, `recipe.yaml`, or another run's
-archive. Never write a memory.
+archive.
 
 ## How to use this skill
 
-Run it, check it, report the path. One run per invocation.
+Run it, read the archive, return the report. One run per invocation.
 
 ## 1. Run
 
@@ -27,23 +27,8 @@ uv run --project .claude/skills/experiment \
     .claude/skills/experiment/scripts/run.py <run-dir>
 ```
 
-`--keep-alive` leaves the workload up; default stops it.
-
-The recipe is the whole experiment — the serve config, and the probe grid in
-its `benchmark:` block. There are no flags to pass. If the grid is wrong, the
-recipe is wrong.
-
-The script writes into `<run-dir>`:
-
-```
-id.txt                  path to sparkrun's state dir
-out/results.yaml        figures, recipe text and hash, runtime fingerprint
-out/telemetry.jsonl     one frame per 0.25s
-out/engine-capture.log  vLLM's output, including the config it booted
-```
-
-It exits non-zero if any of the three `out/` files is missing or empty. That
-means the run is not reproducible — run it again.
+The recipe is the whole experiment, probe grid included. There are no flags to
+pass. A non-zero exit means the archive is incomplete — run it again.
 
 ## 2. A crash is a result
 
@@ -54,11 +39,47 @@ not retry more than twice, and never substitute a different configuration.
 
 ## 3. Report
 
-One line: the run directory, the figures the script printed, and whether it
-crashed.
+Read the archive and return this block, and nothing else. It is the only thing
+the caller sees — the archive stays with you.
 
-Everything else is in the archive. Detail in the return value is detail the
-caller has to hold in context for no reason.
+```
+bench     bench_c9518e3e96a3
+valid     crash_count 0, failed [], 7/7 completed
+served    declared == served          (or MISMATCH <field>: <declared> vs <served>)
+epoch     vllm <version>, flashinfer <sha>, image <digest>
+sampling  temperature <n>, top_p <n>, top_k <n>   (from the engine log)
+
+phase pp2048/tg128 @ d16384 c1
+  pp      median 630.0  max/min 1.02  [616.3, 632.8, 629.4, 630.0, 627.7, 635.8, 632.0]
+  tg      median 101.7  max/min 1.21  [102.5, 118.5, 100.5, 97.7, 101.6, 108.1, 101.7]
+  ttfr    median 3261.6 max/min 1.03  [...]
+
+phase ctx_pp/ctx_tg @ d16384 c1
+  pp      median 5858.5 max/min 1.03  [...]
+  tg      median 103.4  max/min 1.19  [...]
+  ttfr    median 2807.5 max/min 1.02  [...]
+
+box       peak <n> W, gpu_util <n> med, mem_avail min <n> GB, swap flat
+notes     <anything anomalous, or none>
+```
+
+**Values go in raw execution order — the order they appear in `values`, never
+sorted.** Sorting throws away when each sample happened, which is the only way
+to see warmup cost, drift, or an ordering artifact. Report every value.
+
+`results.json.benchmarks` holds two entries, one with
+`is_context_prefill_phase: true`. Report both; the caller picks.
+
+`sampling` matters because llama-benchy sends no sampling parameters, so the
+checkpoint's own `generation_config.json` silently governs. The engine logs
+what it resolved; find it and record it, because it changes what is generated
+and therefore what decode measures.
+
+`run.py` prints the grid it verified, peak power, and a stable/UNSTABLE verdict
+per metric. Pass its verdict through — do not recompute it.
+
+Window telemetry to the session times in `state.yaml`. Ignore `gpu_clock_mhz`:
+on this box it reads 208 in almost every frame whatever the GPU is doing.
 
 If genuinely blocked — box unreachable, engine dead after two attempts —
 return one line starting `ESCALATE:` with what was tried.
