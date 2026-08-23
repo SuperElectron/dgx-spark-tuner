@@ -7,7 +7,7 @@ These are the invariants — they hold before you know which task you are doing.
 Procedures live in the skills; see `## Skills`.
 
 - Nothing is ever submitted to Spark Arena. There is no login and one is not
-  wanted. Never pass `--arena`; never run `sparkrun arena` anything.
+  wanted. 
 
 ## Research Experiment setup
 

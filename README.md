@@ -9,6 +9,15 @@ leaderboard. Built on the arena's own stack: [sparkrun](https://github.com/spark
 [spark-vllm-docker](https://github.com/eugr/spark-vllm-docker) — so every number here is
 directly comparable and directly submittable.
 
+## Setup
+
+`.claude/box.json` (gitignored) holds `host` and `username` for the box. One-time,
+so benchmarks can clear the page cache without a password prompt:
+
+```
+sparkrun setup clear-cache --save-sudo -H "$(jq -r .host .claude/box.json)" -u "$(jq -r .username .claude/box.json)"
+```
+
 ## What lives here
 
 - `recipes/` — one sparkrun recipe YAML per target model; generation 0 is the current
