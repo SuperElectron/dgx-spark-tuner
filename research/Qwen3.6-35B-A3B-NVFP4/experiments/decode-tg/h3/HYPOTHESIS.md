@@ -26,6 +26,28 @@ partly a ranking of warm-up behaviour. If it is materially lower, `tg128`
 flatters everyone and our 119.6 is not a decode rate but a burst rate. Either
 answer changes how the Objective should be read; no answer leaves it unchanged.
 
+Memory carries a prior that makes this directional. From the archived
+thin-cell campaign, `family:qwen3.6-35b-a3b`:
+
+    tg32 measures FASTER than tg128 at the same depth on this model
+    (129.32 vs 102.2 @ d16384 c1), the opposite of the per-request
+    amortization argument
+
+So on this model shorter generations read faster, not slower — the opposite of
+what fixed-cost amortisation alone predicts, which means something that grows
+with generation length is eating throughput. **The prediction is therefore that
+`tg2048` reads BELOW `tg128`, and `tg8192` below that.** A result in the other
+direction refutes both this round and that prior.
+
+A second prior sharpens what to expect from the spread, `stack:vllm`:
+
+    'c1 is the noisy regime' is false. Run-to-run sigma is set by how many
+    MTP verify steps a measurement averages over and by acceptance quality
+
+If that holds, `tg2048` should not only differ in median but be markedly
+*tighter* than `tg128`, because it averages 16x more verify steps. A long cell
+that is both lower and tighter is the signature this round is looking for.
+
 This is the cheapest hypothesis available that can invalidate the metric
 everything else is measured in, which is why it runs before the concurrency
 work rather than after.
