@@ -32,6 +32,8 @@ from pathlib import Path
 import sparkrun.api as api
 import yaml
 
+from measure import check_box, report
+
 TELEMETRY_INTERVAL = 0.25
 REQUIRED = ("results.yaml", "telemetry.jsonl", "engine-capture.log")
 
@@ -140,7 +142,12 @@ def run_benchmark(recipe: Path, host: str, out: Path, sctx):
         # so a short generation is invisible there. llama-benchy runs from this
         # process's working directory, so the path has to be absolute — and
         # only here is the run's own out/ known.
-        bench_args={"emit_progress": str(out / "progress.jsonl")},
+        bench_args={
+            "emit_progress": str(out / "progress.jsonl"),
+            "save_total_throughput_timeseries": True,
+            "save_all_throughput_timeseries": True,
+            "exit_on_first_fail": True,
+        },
     )
     try:
         result = api.benchmark(options, sctx=sctx)
@@ -209,7 +216,18 @@ GRID_KEYS = ("pp", "tg", "depth", "concurrency", "runs")
 BENCHMARK_META = {"framework", "args", "metadata", "timeout", "schedule", "category"}
 # Set by this script rather than the recipe, so the recipe is not expected to
 # declare them and the check below must not treat them as drift.
-INJECTED = {"emit_progress"}
+INJECTED = {
+    "emit_progress",
+    # The sliding window that computes these already runs; the flags only keep
+    # the series instead of discarding it, so they cost no wall clock. With
+    # return_token_ids on, an accepted speculative step lands several token
+    # timestamps in one chunk — the series is MTP acceptance, made readable.
+    "save_total_throughput_timeseries",
+    "save_all_throughput_timeseries",
+    # An unattended schedule should fail loudly rather than write a plausible
+    # half-table.
+    "exit_on_first_fail",
+}
 
 
 def served_grid(state: Path) -> dict:
@@ -253,7 +271,12 @@ BENCHY_CACHE = Path.home() / ".cache" / "llama-benchy"
 def install_corpus(recipe: Path, model: str) -> int:
     """Size the corpus to this recipe's grid and write it into llama-benchy's
     cache. Regenerated every run: a corpus sized for a different grid would
-    silently start jittering again."""
+    silently start jittering again.
+
+    The pinning is sized from the largest cell, so it only holds for that one.
+    A multi-cell grid leaves every shallower rung with a nonzero offset range
+    and its decode jitters as before — which is why a grid like that has to be
+    split into one run per cell, or accept the scatter deliberately."""
     from hashlib import md5
 
     from tokenizers import Tokenizer
@@ -263,7 +286,15 @@ def install_corpus(recipe: Path, model: str) -> int:
     if need <= 0:
         die("recipe declares no pp/depth, so the corpus cannot be sized")
 
-    source = sorted(BENCHY_CACHE.glob("*.txt"))
+    cells = len(grid.get("pp") or [0]) * len(grid.get("depth") or [0])
+    if cells > 1:
+        die(
+            f"the fixed corpus pins one cell; this grid has {cells}. Only the "
+            "deepest would be deterministic. Split it into one run per cell."
+        )
+
+    dest_name = f"{md5(FIXED_CORPUS_URL.encode()).hexdigest()}.txt"
+    source = sorted(p for p in BENCHY_CACHE.glob("*.txt") if p.name != dest_name)
     if not source:
         die(f"no llama-benchy corpus cached under {BENCHY_CACHE} to slice from")
 
@@ -277,85 +308,8 @@ def install_corpus(recipe: Path, model: str) -> int:
     if got != need + 1:
         die(f"corpus slice round-tripped to {got} tokens, not {need + 1}")
 
-    dest = BENCHY_CACHE / f"{md5(FIXED_CORPUS_URL.encode()).hexdigest()}.txt"
-    dest.write_text(text, encoding="utf-8")
+    (BENCHY_CACHE / dest_name).write_text(text, encoding="utf-8")
     return got
-
-
-# NVIDIA has confirmed two power-delivery faults on GB10 that pin the GPU at
-# 513 or 721 MHz with an all-clear throttle bitmask — the numbers look
-# plausible and are ~3x wrong. It is only visible under load, and this box's
-# `gpu_clock_mhz` reads 208 in almost every frame whatever the GPU is doing, so
-# the clock cannot be the signal. Power can: a healthy run peaks near 100 W and
-# a capped one cannot leave the 20-30 W band.
-POWER_FLOOR_W = 60.0
-
-# perf_analyzer calls a measurement stable when max/min across recent windows
-# is within 10%. Ours is not a convergence gate — we take what the grid gives —
-# but a run whose samples spread wider than this is saying so out loud.
-STABLE_RATIO = 1.10
-
-
-def box_state(out: Path) -> dict:
-    """Peak GPU power over the run. The frames are a nested per-host shape and
-    some carry no telemetry at all."""
-    peak = 0.0
-    for line in (out / "telemetry.jsonl").read_text().splitlines():
-        try:
-            frame = json.loads(line)
-        except ValueError:
-            continue
-        for host in frame.get("hosts", []):
-            tel = host.get("telemetry") or {}
-            watts = tel.get("gpu_power_w")
-            if watts is not None:
-                peak = max(peak, float(watts))
-    return {"peak_power_w": peak}
-
-
-def check_box(out: Path) -> dict:
-    box = box_state(out)
-    if box["peak_power_w"] < POWER_FLOOR_W:
-        die(
-            f"GPU never drew more than {box['peak_power_w']:.1f} W "
-            f"(floor {POWER_FLOOR_W:.0f} W) — the box was power-capped, "
-            "so these figures measure the cap, not the recipe"
-        )
-    return box
-
-
-def spread(out: Path) -> list[tuple[str, str, float, float, float]]:
-    """Per metric: median, max/min ratio, and the values behind them. Reads the
-    named cell and the context-prefill phase separately — they are different
-    measurements and only one answers the recipe's question."""
-    data = yaml.safe_load((out / "results.yaml").read_text()) or {}
-    results = (data.get("sparkrun_benchmark") or {}).get("results") or {}
-    rows = []
-    for entry in (results.get("json") or {}).get("benchmarks", []):
-        phase = "ctx" if entry.get("is_context_prefill_phase") else "cell"
-        for metric in ("pp_throughput", "tg_throughput"):
-            vals = (entry.get(metric) or {}).get("values") or []
-            if len(vals) < 2:
-                continue
-            ordered = sorted(vals)
-            median = ordered[len(ordered) // 2]
-            rows.append((phase, metric[:2], median, max(vals) / min(vals), len(vals)))
-    return rows
-
-
-def report(out: Path, state: Path, frames: int, grid: dict, box: dict) -> None:
-    print(f"\nout:       {out}")
-    print(f"state:     {state}")
-    print(f"engine:    {len((out / 'engine-capture.log').read_text().splitlines())} lines")
-    print(f"telemetry: {frames} frames")
-    print("grid:      " + "  ".join(f"{k} {grid[k]}" for k in GRID_KEYS if k in grid))
-    extra = sorted(k for k in grid if k not in GRID_KEYS)
-    if extra:
-        print("           also " + ", ".join(f"{k}={grid[k]}" for k in extra))
-    print(f"box:       peak {box['peak_power_w']:.1f} W")
-    for phase, metric, median, ratio, n in spread(out):
-        verdict = "stable" if ratio <= STABLE_RATIO else "UNSTABLE"
-        print(f"{phase + ' ' + metric:<11}median {median:8.1f}  max/min {ratio:.2f}  n={n}  {verdict}")
 
 
 def main() -> None:
@@ -392,7 +346,7 @@ def main() -> None:
     grid = check_grid(recipe, state)
     box = check_box(out)
     copy_to_state(out, state)
-    report(out, state, telemetry.frames, grid, box)
+    report(out, state, telemetry.frames, grid, box, GRID_KEYS)
 
 
 if __name__ == "__main__":

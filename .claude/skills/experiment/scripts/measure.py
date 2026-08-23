@@ -1,0 +1,241 @@
+"""Read what a run produced and say whether it can be trusted.
+
+run.py orchestrates; everything that inspects the artifacts afterwards lives
+here. Nothing in this module talks to the box.
+"""
+
+from __future__ import annotations
+
+import json
+import re
+import statistics
+import sys
+from pathlib import Path
+
+import yaml
+
+# NVIDIA has confirmed two power-delivery faults on GB10 that pin the GPU at
+# 513 or 721 MHz with an all-clear throttle bitmask — the numbers look
+# plausible and are ~3x wrong. It is only visible under load, and this box's
+# `gpu_clock_mhz` reads 208 in almost every frame whatever the GPU is doing, so
+# the clock cannot be the signal. Power can: a healthy run peaks near 100 W and
+# a capped one cannot leave the 20-30 W band.
+POWER_FLOOR_W = 60.0
+
+# max/min is an extreme-value statistic: it is drawn from two of the samples
+# and drifts upward as `runs` grows, so a fixed gate on it gets harder to pass
+# the more evidence we collect. The verdict is on the interquartile spread,
+# which uses every value; max/min is still printed because it is what the
+# earlier rounds were judged on. 5% separates the cases we have measured:
+# run-0008 (prompt pinned) 2.7%, run-0006 (prompt jittering) 12.2%.
+STABLE_IQR = 0.05
+STABLE_RATIO = 1.10
+
+
+def die(msg: str) -> None:
+    sys.exit(f"run: {msg}")
+
+
+def _floats(text: str, pattern: str) -> list[float]:
+    return [float(m) for m in re.findall(pattern, text)]
+
+
+def box_state(out: Path) -> dict:
+    """Peak GPU power over the run. The frames are a nested per-host shape and
+    some carry no telemetry at all."""
+    peak = 0.0
+    for line in (out / "telemetry.jsonl").read_text().splitlines():
+        try:
+            frame = json.loads(line)
+        except ValueError:
+            continue
+        for host in frame.get("hosts", []):
+            watts = (host.get("telemetry") or {}).get("gpu_power_w")
+            if watts is not None:
+                peak = max(peak, float(watts))
+    return {"peak_power_w": peak}
+
+
+def check_box(out: Path) -> dict:
+    box = box_state(out)
+    if box["peak_power_w"] < POWER_FLOOR_W:
+        die(
+            f"GPU never drew more than {box['peak_power_w']:.1f} W "
+            f"(floor {POWER_FLOOR_W:.0f} W) — the box was power-capped, "
+            "so these figures measure the cap, not the recipe"
+        )
+    return box
+
+
+def engine_state(out: Path, wants_cache: bool) -> dict:
+    """What the engine said about itself while it served.
+
+    `Preemptions:` is only logged when the count is nonzero, so its absence is
+    the assertion of zero rather than a missing field.
+    """
+    text = (out / "engine-capture.log").read_text()
+    hits = _floats(text, r"Prefix cache hit rate: ([0-9.]+)%")
+    running = _floats(text, r"Running: ([0-9]+) reqs")
+    waiting = _floats(text, r"Waiting: ([0-9]+) reqs")
+    kv = _floats(text, r"GPU KV cache usage: ([0-9.]+)%")
+    preempt = _floats(text, r"Preemptions: ([0-9]+)")
+
+    state = {
+        "hit_samples": len(hits),
+        "hit_max": max(hits) if hits else None,
+        "running_max": max(running) if running else 0,
+        "waiting_max": max(waiting) if waiting else 0,
+        "kv_max": max(kv) if kv else 0,
+        "preemptions": int(max(preempt)) if preempt else 0,
+    }
+    # A recipe that asks for prefix caching and never gets a hit is measuring
+    # something other than what it declared. It is not fatal — the cause is
+    # upstream of the recipe — but it must not pass silently.
+    state["cache_suspect"] = bool(wants_cache and hits and state["hit_max"] == 0.0)
+    return state
+
+
+def requests(out: Path) -> dict:
+    """Per-request shape, which the aggregate figures average away. If
+    max_num_seqs is throttling, ttft clusters in waves of that width."""
+    path = out / "progress.jsonl"
+    if not path.is_file():
+        return {}
+    ttft: list[float] = []
+    rate: list[float] = []
+    for line in path.read_text().splitlines():
+        try:
+            event = json.loads(line)
+        except ValueError:
+            continue
+        if event.get("type") == "request_first_token" and event.get("ttft_s"):
+            ttft.append(float(event["ttft_s"]))
+        if event.get("type") == "request_end":
+            secs = float(event.get("decode_seconds") or 0)
+            tokens = int(event.get("total_tokens") or 0)
+            if secs > 0 and tokens:
+                rate.append(tokens / secs)
+    if not rate:
+        return {}
+    return {
+        "n": len(rate),
+        "rate": (min(rate), statistics.median(rate), max(rate)),
+        "ttft": (min(ttft), statistics.median(ttft), max(ttft)) if ttft else None,
+    }
+
+
+def _iqr_ratio(values: list[float], median: float) -> float:
+    if len(values) < 4 or not median:
+        return 0.0
+    q1, _, q3 = statistics.quantiles(values, n=4, method="inclusive")
+    return (q3 - q1) / median
+
+
+# The aggregate metrics are batch-level. Their per-request twins exist and
+# differ by roughly the concurrency, so printing only the aggregate beside a
+# c=1 baseline invites a comparison that is wrong by that factor.
+AGGREGATE = ("pp_throughput", "tg_throughput")
+PER_REQUEST = ("pp_req_throughput", "tg_req_throughput")
+
+
+def spread(out: Path) -> list[dict]:
+    """Per cell, per metric: the values in raw execution order, their median,
+    and both spread statistics. Cells are labelled by what they measured —
+    a multi-cell grid prints one row per cell, not several identical ones."""
+    data = yaml.safe_load((out / "results.yaml").read_text()) or {}
+    results = (data.get("sparkrun_benchmark") or {}).get("results") or {}
+    rows = []
+    for entry in (results.get("json") or {}).get("benchmarks", []):
+        conc = entry.get("concurrency") or 1
+        label = f"d{entry.get('context_size')} c{conc}"
+        phase = "ctx" if entry.get("is_context_prefill_phase") else "cell"
+        names = AGGREGATE + (PER_REQUEST if conc > 1 else ())
+        for metric in names:
+            vals = (entry.get(metric) or {}).get("values") or []
+            if len(vals) < 2:
+                continue
+            median = statistics.median(vals)
+            rows.append(
+                {
+                    "label": label,
+                    "phase": phase,
+                    "metric": metric.replace("_throughput", "").replace("_req", "/req"),
+                    "values": vals,
+                    "median": median,
+                    "ratio": max(vals) / min(vals),
+                    "iqr": _iqr_ratio(vals, median),
+                    "n": len(vals),
+                }
+            )
+        rows.append(_prefill(entry, label))
+    return [r for r in rows if r]
+
+
+def _prefill(entry: dict, label: str) -> dict | None:
+    """`pp_throughput` credits only the user prompt but is timed over the whole
+    prefill, so at depth it reads ~8x lower than the rate actually achieved.
+    It is a sound proxy at fixed (pp, depth) and a misleading rate anywhere
+    else, so the real rate is printed beside it.
+
+    Only the inference phase is affected. The context-load phase serves just
+    the context and is credited the same tokens it sent, so its figure is
+    already a rate and needs nothing beside it."""
+    if entry.get("is_context_prefill_phase"):
+        return None
+    est = (entry.get("est_ppt") or {}).get("mean")
+    tokens = (entry.get("context_size") or 0) + (entry.get("prompt_size") or 0)
+    if not est or not tokens:
+        return None
+    return {
+        "label": label,
+        "phase": "cell",
+        "metric": "prefill*",
+        "values": [],
+        "median": tokens / (est / 1000.0),
+        "ratio": 1.0,
+        "iqr": 0.0,
+        "n": 0,
+    }
+
+
+def report(out: Path, state: Path, frames: int, grid: dict, box: dict, keys) -> None:
+    print(f"\nout:       {out}")
+    print(f"state:     {state}")
+    print(f"engine:    {len((out / 'engine-capture.log').read_text().splitlines())} lines")
+    print(f"telemetry: {frames} frames")
+    print("grid:      " + "  ".join(f"{k} {grid[k]}" for k in keys if k in grid))
+    extra = sorted(k for k in grid if k not in keys)
+    if extra:
+        print("           also " + ", ".join(f"{k}={grid[k]}" for k in extra))
+    print(f"box:       peak {box['peak_power_w']:.1f} W")
+
+    eng = engine_state(out, bool(grid.get("prefix_caching") or grid.get("enable_prefix_caching")))
+    print(
+        f"engine:    running max {eng['running_max']:.0f}  waiting max {eng['waiting_max']:.0f}  "
+        f"kv max {eng['kv_max']:.1f}%  preemptions {eng['preemptions']}"
+    )
+    if eng["hit_samples"]:
+        note = "  SUSPECT: recipe asks for prefix caching" if eng["cache_suspect"] else ""
+        print(f"cache:     hit rate max {eng['hit_max']:.1f}% over {eng['hit_samples']} samples{note}")
+
+    req = requests(out)
+    if req:
+        lo, mid, hi = req["rate"]
+        print(f"per-req:   decode {lo:.1f} / {mid:.1f} / {hi:.1f} tok/s over {req['n']} requests")
+        if req["ttft"]:
+            lo, mid, hi = req["ttft"]
+            print(f"           ttft   {lo:.2f} / {mid:.2f} / {hi:.2f} s  (min/median/max)")
+
+    for row in spread(out):
+        if row["metric"] == "prefill*":
+            print(f"{row['label']} {row['phase']:<4} prefill*  {row['median']:8.1f} t/s  (true rate)")
+            continue
+        verdict = "stable" if row["iqr"] <= STABLE_IQR else "UNSTABLE"
+        print(
+            f"{row['label']} {row['phase']:<4} {row['metric']:<8} "
+            f"median {row['median']:8.1f}  iqr {row['iqr'] * 100:4.1f}%  "
+            f"max/min {row['ratio']:.2f}  n={row['n']}  {verdict}"
+        )
+        # Raw execution order, never sorted: the ordering is evidence. A sorted
+        # list once made a warm-up effect look real that the real order refuted.
+        print("            " + " ".join(f"{v:.1f}" for v in row["values"]))
