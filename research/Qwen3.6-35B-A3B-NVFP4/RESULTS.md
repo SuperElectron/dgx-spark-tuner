@@ -1,4 +1,4 @@
-# Results — qwen36-35b-nvfp4
+# Results — Qwen3.6-35B-A3B-NVFP4
 
 ## reference
 Model: `nvidia/Qwen3.6-35B-A3B-NVFP4`. Baseline: `recipe.yaml`, copied from
