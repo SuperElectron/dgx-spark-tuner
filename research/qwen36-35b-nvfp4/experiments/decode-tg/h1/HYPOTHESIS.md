@@ -92,6 +92,7 @@ One row per planned run. Figures blank until it is run.
 | run-0005 | `post_run_cmd` fixed, `emit_progress` added | harness verification, not an arm | 632.7 | 118.9 | 3248.7 | bench_c77f38339d26 |
 | run-0006 | fixed corpus installed | harness verification, not an arm | 633.2 | 115.8 | 3246.0 | bench_7e811800d715 |
 | run-0007 | `seed=42` added | discriminator: is decode greedy? | 635.0 | 122.8 | 3244.9 | bench_26c64e5c27b8 |
+| run-0008 | `no_adapt_prompt: true` | pin the prompt for real | 635.4 | 119.6 | 3234.9 | (see out/results.yaml) |
 
 Figures are medians of the seven values from the `tg128 @ d16384` phase. The
 result carries two phases; the other is `ctx_tg`, a different cell.
@@ -146,6 +147,39 @@ generations, constant `prompt_tokens`, and `tg` max/min at or below 1.10. If the
 outputs go identical and `tg` still scatters, the residue is hardware or
 scheduler and the decision rule has to be written against it rather than
 engineered away.
+
+run-0008 confirms the diagnosis and stops short of a clean instrument.
+
+    prompt_tokens   18446 on all seven cell requests — CONSTANT
+    generations     4 of 7 byte-identical (md5 8cc71a1497), 3 diverge
+    cell tg         [119.9, 126.4, 119.4, 119.6, 117.5, 114.0, 123.5]
+                    median 119.6  max/min 1.108
+    cell pp         median 635.4  max/min 1.028
+    ctx tg          max/min 1.243 — still random slices, as designed
+
+The prompt is pinned. `prompt_tokens` was 4x18432/3x18433 in run-0007 and is a
+single value now, which is what `max_start` returning to 1 looks like from
+outside. Cell `tg` max/min fell from 1.24 (run-0006) and 1.18 (run-0007) to
+1.108, so prompt variation was most of the residual scatter.
+
+What it did not do is make decoding deterministic. Identical prompt, identical
+`prompt_tokens`, `temperature 0`, `seed 42` — and three of seven generations
+still diverge. Four land on the same md5, which is the shape of greedy decoding
+that occasionally takes a different branch, not of sampling. That residue is
+engine-level: MTP plus batch-dependent numerics, and run-0003 already bounds it —
+with speculation off this cell reads max/min 1.01.
+
+So the instrument now has a floor, and the floor has a known cause we are
+choosing to keep. 1.108 sits just above run.py's 1.10 threshold, which means the
+verdict still prints UNSTABLE by a hair.
+
+That threshold is worth challenging on its own terms, and this is the place to
+say so rather than in a round that wants a result. max/min is an extreme-value
+statistic: it is computed from exactly two of the seven samples and it drifts
+upward as `runs` grows, so a fixed 1.10 gate gets harder to pass the more
+evidence we collect. A rule stated on the median with an interquartile spread
+would use all seven values and would not punish longer runs. Changing it is a
+protocol decision for Mat, not something a round should quietly adopt.
 
 One consequence to record rather than bury: with adaptation off the request
 carries 18432 corpus tokens *plus* the template, so the served prompt runs a few

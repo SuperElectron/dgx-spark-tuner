@@ -29,6 +29,7 @@ benchmark:
   book_url: spark-tuner://fixed-corpus
   exact_tg: true
   extra_body: temperature=0
+  no_adapt_prompt: true
   post_run_cmd: /Users/mat/code/dgx-spark-tuner/.claude/skills/experiment/scripts/reset-cache.sh
 recipe_version: '1'
 model: nvidia/Qwen3.6-35B-A3B-NVFP4

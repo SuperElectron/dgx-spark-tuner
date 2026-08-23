@@ -82,6 +82,16 @@ Measured scatter, per cell — what a decision rule here has to clear:
 
     tg128 @ d16384 c1: tg max/min 1.31, pp 1.02   (h1 run-0001, MTP on)
     tg128 @ d16384 c1: tg max/min 1.01, pp 1.02   (h1 run-0003, MTP off)
+    tg128 @ d16384 c1: tg max/min 1.11, pp 1.03   (h1 run-0008, prompt pinned)
+
+Most of that scatter was the instrument, not the box. llama-benchy's
+`adapt_prompt` defaults on and shrinks the grid by the measured template
+overhead, which reopens the random prompt start that the fixed corpus was meant
+to close. Pinning it (run-0008) took `tg` max/min from 1.24 to 1.108 and made
+`prompt_tokens` constant. What survives is engine-level: with an identical
+prompt, `temperature 0` and a seed, four of seven generations are byte-identical
+and three diverge — greedy decoding occasionally taking a different branch under
+MTP. run-0003 bounds that residue at 1.01 with speculation off.
 
 Speculation is the scatter. Removing it collapses `tg` standard deviation from
 8.6 to 0.24 — a 36-fold drop — while `pp` does not move. It also costs 36% of
@@ -112,9 +122,15 @@ Held did not exist.
   interquartile range needs more than three values to evaluate.
 - The measurement protocol, which is part of the recipe and therefore part of
   the epoch: `exact_tg` pins every request to exactly 128 generated tokens,
-  `extra_body temperature=0` removes sampling variance, and `post_run_cmd`
-  resets the prefix cache between runs. The memory stack's embedder is down for
-  every run — it is a vLLM instance on the same card.
+  `extra_body temperature=0` removes sampling variance, `post_run_cmd` resets
+  the prefix cache between runs, and `no_adapt_prompt: true` stops llama-benchy
+  rewriting the grid at warmup — without it `total_needed` shrinks by the
+  template overhead, `max_start` becomes `1 + delta` instead of 1, and every run
+  draws a different prompt. The trade is that the served prompt carries the
+  template on top of the 18432 corpus tokens rather than hitting the nominal
+  size exactly; this experiment wants reproducibility over nominal exactness.
+  The memory stack's embedder is down for every run — it is a vLLM instance on
+  the same card.
 - Nothing is submitted to Spark Arena.
 
 Everything else in the recipe is open to some round. What a given round holds
