@@ -48,6 +48,53 @@ If that holds, `tg2048` should not only differ in median but be markedly
 *tighter* than `tg128`, because it averages 16x more verify steps. A long cell
 that is both lower and tighter is the signature this round is looking for.
 
+### Reasons the prior may not apply here
+
+The `tg32` prior was measured at **d16384**, and this round runs at **d0**. That
+difference may be the whole of it. At d16384 a 128-token generation grows KV
+from 16384 to 16512 while a 32-token one grows it to 16416, so every extra
+generated token is read back by every subsequent step — longer generation at
+depth costs more KV traffic, with no transient needed to explain it. At d0 the
+same 2048 tokens grow KV to ~2193, which is ~22 MB against 2.25 GB of weights
+read per forward: negligible.
+
+So the prior may be a KV-growth measurement wearing a generation-length label,
+and this round is built where that mechanism is absent. That makes it a cleaner
+test than it looks:
+
+- `tg2048` below `tg128` **at d0** cannot be KV growth, so it is a genuine
+  transient or acceptance effect.
+- `tg2048` equal to `tg128` at d0, given the prior holds at depth, would say the
+  prior is KV growth and there is no transient at all.
+
+Either way the prior is not evidence for this cell, only a reason to look. Its
+figures are also a different epoch — 102.2 at d16384 c1 against the 112-119 we
+read there now, measured before `exact_tg`, `temperature 0`, `no_adapt_prompt`
+and the fixed corpus existed, and possibly with the memory embedder resident on
+the card.
+
+### The confound that could dominate this round
+
+`exact_tg` sets `ignore_eos`, so a `tg 8192` request generates 8192 tokens
+whether or not the model wanted to stop. At `temperature 0` a model driven far
+past its natural stopping point tends to degenerate into repetition — and
+repetitive text is *easy to draft*, so MTP acceptance should **rise**. That
+would push the long cells faster, opposite to the prior's direction, for a
+reason that has nothing to do with steady-state decode.
+
+This is not hypothetical enough to ignore: it predicts the same observable
+(`tg` changing with generation length) by a mechanism that would make the long
+figure meaningless as a decode rate.
+
+**So the generated text must be inspected, not just the throughput.** Record for
+run-0002 and run-0003 whether the output degenerates — repeated n-grams, a
+collapsing vocabulary, the same sentence cycling — and where in the generation it
+starts. A long cell that is faster *and* repetitive is measuring degeneration. A
+long cell that is slower while the text stays varied is the transient this round
+is looking for. If the text degenerates, the round cannot answer its question at
+that length and the answer has to come from the shorter cells plus the
+timeseries.
+
 This is the cheapest hypothesis available that can invalidate the metric
 everything else is measured in, which is why it runs before the concurrency
 work rather than after.
