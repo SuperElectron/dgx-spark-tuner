@@ -26,7 +26,6 @@ benchmark:
   concurrency: [1]
   runs: 7
   prefix_caching: true
-  book_url: spark-tuner://fixed-corpus
   exact_tg: true
   extra_body: temperature=0
   post_run_cmd: /Users/mat/code/dgx-spark-tuner/.claude/skills/experiment/scripts/reset-cache.sh

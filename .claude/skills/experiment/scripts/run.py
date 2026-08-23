@@ -234,6 +234,54 @@ def check_grid(recipe: Path, state: Path) -> dict:
     return served
 
 
+# llama-benchy draws each prompt from a random offset into a corpus and seeds
+# nothing, so every request measures different text — and MTP acceptance is
+# content-dependent, which is why decode scatters while prefill does not. It
+# has no seed flag. But `prompts.py` picks its offset with
+# `randint(0, len(corpus) - (pp + depth))`, so a corpus exactly one token
+# longer than the prompt needs collapses that to `randint(0, 1)`, which is
+# always 0. Same text every time.
+#
+# `book_url` is only ever an md5 cache key (`corpus.py`): if the cache file
+# exists llama-benchy reads it and never fetches. So the fixed corpus is
+# installed, not hosted. It is a slice of llama-benchy's own default text, so
+# the prose is what it always was — only the offset stops moving.
+FIXED_CORPUS_URL = "spark-tuner://fixed-corpus"
+BENCHY_CACHE = Path.home() / ".cache" / "llama-benchy"
+
+
+def install_corpus(recipe: Path, model: str) -> int:
+    """Size the corpus to this recipe's grid and write it into llama-benchy's
+    cache. Regenerated every run: a corpus sized for a different grid would
+    silently start jittering again."""
+    from hashlib import md5
+
+    from tokenizers import Tokenizer
+
+    grid = (yaml.safe_load(recipe.read_text()) or {}).get("benchmark") or {}
+    need = max(grid.get("pp") or [0]) + max(grid.get("depth") or [0])
+    if need <= 0:
+        die("recipe declares no pp/depth, so the corpus cannot be sized")
+
+    source = sorted(BENCHY_CACHE.glob("*.txt"))
+    if not source:
+        die(f"no llama-benchy corpus cached under {BENCHY_CACHE} to slice from")
+
+    tok = Tokenizer.from_pretrained(model)
+    ids = tok.encode(source[0].read_text(encoding="utf-8"), add_special_tokens=False).ids
+    if len(ids) < need + 1:
+        die(f"corpus has {len(ids)} tokens, needs {need + 1} for this grid")
+
+    text = tok.decode(ids[: need + 1], skip_special_tokens=False)
+    got = len(tok.encode(text, add_special_tokens=False).ids)
+    if got != need + 1:
+        die(f"corpus slice round-tripped to {got} tokens, not {need + 1}")
+
+    dest = BENCHY_CACHE / f"{md5(FIXED_CORPUS_URL.encode()).hexdigest()}.txt"
+    dest.write_text(text, encoding="utf-8")
+    return got
+
+
 # NVIDIA has confirmed two power-delivery faults on GB10 that pin the GPU at
 # 513 or 721 MHz with an all-clear throttle bitmask — the numbers look
 # plausible and are ~3x wrong. It is only visible under load, and this box's
@@ -317,6 +365,12 @@ def main() -> None:
 
     sctx = api.default_sctx()
     host, ssh_kwargs = load_box(Path(__file__).resolve().parents[4])
+
+    model = (yaml.safe_load(recipe.read_text()) or {}).get("model") or ""
+    if not model:
+        die("recipe declares no model")
+    tokens = install_corpus(recipe, model)
+    say(f"fixed corpus {tokens} tokens")
 
     say(f"benchmarking {recipe} on {host}")
     with Telemetry(host, out / "telemetry.jsonl", ssh_kwargs, sctx) as telemetry:

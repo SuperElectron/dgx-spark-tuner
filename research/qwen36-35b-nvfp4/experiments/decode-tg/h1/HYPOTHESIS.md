@@ -88,6 +88,8 @@ One row per planned run. Figures blank until it is run.
 | run-0002 | `gpu_memory_utilization: 0.8 → 0.65`, `max_model_len: 32768 → 262144`, `max_num_batched_tokens: 65536 → 32768` | the whole diff at once: is it the gap? | 636.1 | 111.3 | 3231.2 | bench_00f6e273f26c |
 
 | run-0003 | `--speculative-config` removed | diagnostic: what is the 25% `tg` spread made of? | 2420.2 | 70.3 | 858.0 | bench_0a988a464b5a |
+| run-0004 | `exact_tg`, `temperature 0`, cache reset added | harness verification, not an arm | 635.9 | 116.2 | 3232.1 | bench_7d27a25ac7f2 |
+| run-0005 | `post_run_cmd` fixed, `emit_progress` added | harness verification, not an arm | 632.7 | 118.9 | 3248.7 | bench_c77f38339d26 |
 
 Figures are medians of the seven values from the `tg128 @ d16384` phase. The
 result carries two phases; the other is `ctx_tg`, a different cell.
