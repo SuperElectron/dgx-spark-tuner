@@ -1,20 +1,29 @@
-# decode-tg — close the gap to the best vLLM entry at our own cell
+# decode-tg — raise single-stream decode, measured against ourselves
 
 ## Objective
 
-`tg` at `tg128 @ d16384 c1`. Our baseline serves ~102 t/s. The best vLLM NVFP4
-entry at this cell serves 116.03 — a gap of +13.7%.
+`tg` at `tg128 @ d16384 c1`, under the protocol in Held. The best figure that
+protocol has produced is 118.9 (h1 run-0005).
 
-Reached when: a recipe holds `tg` at or above 116.03 at this cell, on this box
-and image, over a full `runs: 7` grid.
+Reached when: a recipe holds `tg` at or above **125** — 118.9 plus 5% — over a
+full `runs: 7` grid, **and** that run reads stable, `tg` max/min at or below
+1.10. A target claimed on a median while the samples scatter is not reached.
 
-116.03 ± 3.61 is `@luis`, same checkpoint, vLLM, single node — the entry in
-`docs/arena-recipe.md`, read from its raw log on 2026-08-23. A 3.1% spread is
-tight enough for the number to mean something.
+This said 116.03 until 2026-08-23, the best vLLM NVFP4 entry at this cell. That
+was the wrong target — not because the figure is wrong but because it is not
+the same quantity. Its `±` is a population standard deviation over three
+requests inside one invocation; ours is across invocations. It was produced at
+cell 14 of a 28-cell sweep, in one continuous server process, with warmup
+suppressed after the first cell, no fixed output length, no sampling
+parameters, and resumption across interruptions explicitly sanctioned. Seven
+documented differences, none of them ours to close.
 
-The cell's outright top is 188.47, held by LFM2.5-350M in BF16 — a different
-class of model, not a target. Ranks 2-4 are our checkpoint on Atlas, a
-different runtime and out of scope.
+We read 116.2 before changing anything and 118.9 after, which is most of what
+that comparison was ever worth.
+
+Beating the board is still worth doing, and it needs its own experiment
+starting from `@official/spark-arena-v2` run unmodified, so there is a number
+measured the way theirs was. It is not this experiment's close condition.
 
 ## Strategy
 
