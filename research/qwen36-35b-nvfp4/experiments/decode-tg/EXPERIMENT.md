@@ -126,7 +126,25 @@ constant it says in its own Method.
 |-------|------------|---------|
 | h1 | The three numeric fields the reference recipe differs on are the whole gap | pending |
 
-If h1 lands short, the sampling config is next, then the attention kernel.
+h1 is spent: its three fields moved `tg` 2.0 against a larger IQR of 11.3, and
+`pp` did not move at all, which killed the prefill-chunking mechanism behind
+them. Its conclusion is still to be written.
+
+Levers still open, in the order to take them:
+
+1. **Attention backend** — flashinfer ships in the baseline and has never been
+   varied on this box, here or in the archived campaign. The only lever with no
+   measured bound at all. vLLM #37754 documents flashinfer with MTP
+   `num_speculative_tokens >= 2` crashing on SM121 at GQA=16, `triton_attn` as
+   the workaround — so a crash here is a result, not a surprise.
+2. **Speculative depth** — `num_speculative_tokens: 2` is untested at c1. The
+   archive tried 3→4→5 and all were worse, so the untried direction is down.
+3. **The board-comparable figure** — `@official/spark-arena-v2` unmodified,
+   reading our own `d16384/c1` row out of its 28-cell sweep. Not a lever; it is
+   the second figure the Objective asks for, and it costs one long run.
+
+The sampling config is no longer a lever — the protocol pins `temperature 0`
+itself.
 
 ## Conclusion
 
