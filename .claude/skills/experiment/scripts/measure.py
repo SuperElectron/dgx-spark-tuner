@@ -20,12 +20,10 @@ import yaml
 POWER_FLOOR_W = 60.0
 CLOCK_FAULT_BAND = (400, 900)
 
-# The verdict is on interquartile spread, which uses every value. max/min is
-# drawn from two samples and widens as `runs` grows, so it punishes longer runs;
-# it is still printed because earlier rounds were judged on it. 5% separates a
-# pinned prompt (2.7%) from a jittering one (12.2%).
-STABLE_IQR = 0.05
-STABLE_RATIO = 1.10
+# Three statistics answering different questions: `iqr` is how much the samples
+# scatter, `±` is how well the median is pinned, max/min is drawn from two
+# samples and widens as `runs` grows. No verdict — a rule compares its effect
+# against `±` itself.
 
 
 def die(msg: str) -> None:
@@ -208,6 +206,15 @@ def _iqr_ratio(values: list[float], median: float) -> float:
     return (q3 - q1) / median
 
 
+def _median_se(values: list[float], median: float) -> float:
+    """How well the median is pinned, as a fraction of it. From the sample
+    deviation rather than the IQR so it exists at n=3, where quartiles do
+    not."""
+    if len(values) < 2 or not median:
+        return None
+    return 1.253 * statistics.stdev(values) / len(values) ** 0.5 / median
+
+
 # These are batch-level. Their per-request twins differ by roughly the
 # concurrency, so printing only the aggregate invites a comparison off by it.
 AGGREGATE = ("pp_throughput", "tg_throughput")
@@ -240,6 +247,7 @@ def spread(out: Path) -> list[dict]:
                     "median": median,
                     "ratio": max(vals) / min(vals),
                     "iqr": _iqr_ratio(vals, median),
+                    "se": _median_se(vals, median),
                     "n": len(vals),
                 }
             )
@@ -262,15 +270,13 @@ def _prefill(entry: dict, label: str) -> dict | None:
     tokens = (entry.get("context_size") or 0) + (entry.get("prompt_size") or 0)
     if not est or not tokens:
         return None
+    # One derived figure, not a sample set — report() prints it on its own path,
+    # so it carries no spread statistics to be mistaken for measured ones.
     return {
         "label": label,
         "phase": "cell",
         "metric": "prefill*",
-        "values": [],
         "median": tokens / (est / 1000.0),
-        "ratio": 1.0,
-        "iqr": 0.0,
-        "n": 0,
     }
 
 
@@ -325,15 +331,14 @@ def report(out: Path, state: Path, frames: int, grid: dict, box: dict, keys) -> 
         if row["metric"] == "prefill*":
             print(f"{row['label']} {row['phase']:<4} prefill*  {row['median']:8.1f} t/s  (true rate)")
             continue
-        if row["iqr"] is None:
-            spread_txt, verdict = "iqr   n/a", f"n={row['n']}, too few for quartiles"
-        else:
-            spread_txt = f"iqr {row['iqr'] * 100:4.1f}%"
-            verdict = "stable" if row["iqr"] <= STABLE_IQR else "UNSTABLE"
+        se = f"±{row['se'] * 100:4.1f}%" if row["se"] is not None else "±  n/a"
+        spread_txt = (
+            f"iqr {row['iqr'] * 100:4.1f}%" if row["iqr"] is not None else "iqr   n/a (n<4)"
+        )
         print(
             f"{row['label']} {row['phase']:<4} {row['metric']:<8} "
-            f"median {row['median']:8.1f}  {spread_txt}  "
-            f"max/min {row['ratio']:.2f}  n={row['n']}  {verdict}"
+            f"median {row['median']:8.1f}  {se}  {spread_txt}  "
+            f"max/min {row['ratio']:.2f}  n={row['n']}"
         )
         # Raw execution order, never sorted — the ordering is evidence.
         print("            " + " ".join(f"{v:.1f}" for v in row["values"]))
