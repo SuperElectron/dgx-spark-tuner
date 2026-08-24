@@ -188,7 +188,42 @@ One row per planned run. Figures blank until it is run.
 
 | run | changed | why | cell | pp t/s | tg t/s | ttfr ms | bench |
 |-----|---------|-----|------|--------|--------|---------|-------|
-| run-0001 | baseline, `max_num_seqs` 4 | the control, on this round's schedule and session | d16384 c10, guard d16384 c1 | | | | |
+| run-0001 | baseline, `max_num_seqs` 4 | the control, on this round's schedule and session | d16384 c10, guard d16384 c1 | 583.9 | 49.0 ±0.2% | 21430 | bench_270c9926d658 |
+
+Full cell menu: c1 107.0 ±4.9% (n=7), c2 136.3 ±5.1%, c5 84.2 ±1.7%,
+c10 49.0 ±0.2%. `running max 4`, `waiting max 6`, prefix cache 0.0% over 44
+samples. Integrity check passed on all four cells — `request_end` and
+`request_first_token` counts agree (14/14, 60/60, 30/30, 12/12); one c5 request
+returned 94 tokens rather than 128, which is a short generation, not the
+missing-first-token damage h1 run-0003 carried.
+
+### This control is also an unplanned replicate, and it settles h1's c1 question
+
+run-0001 here is byte-identical in the fields that matter to h1's run-0001 —
+`max_num_seqs 4`, `max_num_batched_tokens 65536`, same schedule, same epoch —
+so the pair is a direct measure of run-to-run reproducibility on this screen.
+
+    cell     h1 run-0001    h2 run-0001    delta
+    c10             49.0           49.0     0.0%
+    c5              84.3           84.2    -0.1%
+    c2             136.1          136.3    +0.1%
+    c1              96.0          107.0   +11.5%
+
+**c10, c5 and c2 reproduce to within 0.2%.** The screen is an excellent
+instrument at those cells and the h1 trend it measured is trustworthy.
+
+**c1 does not reproduce at all.** Same configuration, 11.5% apart, at n=7 both
+times. That retires h1's c1 step as a finding about the token budget: the four
+c1 medians this experiment has measured are 96.0, 107.2, 106.2 and 107.0, and
+the one that made the "step" look real is the single low draw among them. h1's
+Conclusion already declined to establish it on the drift and the anti-correlation
+evidence; this is the direct replicate that closes it.
+
+Consequence for this round, recorded before the arms run: **c1 cannot function
+as a guard at better than about ±11%**, whatever `runs` it is given, so a guard
+stated on a few percent of c1 is unreadable. The rule below reads c1 against
+this control and against that reproducibility figure, not against a tighter
+band.
 | run-0002 | `max_num_seqs` 4 → 10 | the queue disappears at exactly the primary cell's concurrency | d16384 c10, guard d16384 c1 | | | | |
 | run-0003 | `max_num_seqs` 4 → 16 | separates "the queue was the cost" from "more slots always help" | d16384 c10, guard d16384 c1 | | | | |
 
