@@ -137,7 +137,7 @@ numbers exist rather than after.
 
 | run | changed | why | c10 tg | c1 tg | c5 tg | c2 tg | bench |
 |-----|---------|-----|--------|-------|-------|-------|-------|
-| run-0001 | baseline, `mnbt` 65536 | the control, on this screen's schedule | 49.0 ±0.3% | 96.0 ±4.1% (n=7) | 84.3 ±0.6% | 136.1 ±1.6% | bench_5f5d3d0a1d05 |
+| run-0001 | baseline, `mnbt` 65536 | the control, on this screen's schedule | 49.0 ±0.3% | 96.0 ±4.1% (n=7) | 84.3 ±0.6% | 136.1 ±1.6% | bench_685e42bde522 |
 | run-0002 | `mnbt` 65536 → 32768 | the reference recipe's value | | | | | |
 | run-0003 | `mnbt` 65536 → 16384 | is the mechanism monotone | | | | | |
 
