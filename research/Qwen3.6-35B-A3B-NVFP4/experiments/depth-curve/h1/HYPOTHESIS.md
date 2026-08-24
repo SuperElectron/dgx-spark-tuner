@@ -122,9 +122,9 @@ One row per planned run. Figures blank until it is run.
 | run | depth | runs | why | tg t/s | iqr | pp t/s | prefill t/s | ttfr ms | hit % | bench |
 |-----|-------|------|-----|--------|-----|--------|-------------|---------|-------|-------|
 | run-0001 | 0 | 9 | the intercept: no KV term, single phase, and the rule reads it | 114.6 | 5.1% UNSTABLE | 5695.1 | 5610.5 | 377.0 | 0.0 | bench_594c47d62013 |
-| run-0002 | 4096 | 7 | first rung with a context | | | | | | | |
-| run-0003 | 8192 | 7 | witnesses monotonicity | | | | | | | |
-| run-0004 | 16384 | 7 | re-bases the incumbent under the new corpus offset | | | | | | | |
+| run-0002 | 4096 | 7 | first rung with a context | 110.1 | 4.2% | 1995.5 | 5933.4 | 1049.4 | 0.0 | bench_a0c409874de1 |
+| run-0003 | 8192 | 7 | witnesses monotonicity | 127.0 | 5.6% UNSTABLE | 1165.8 | 5796.0 | 1779.2 | 0.0 | bench_fa59c397c082 |
+| run-0004 | 16384 | 7 | re-bases the incumbent under the new corpus offset | 117.8 | 2.6% | 628.6 | 5639.4 | 3279.0 | 0.0 | bench_c003c48ede71 |
 | run-0005 | 30592 | 9 | the deepest legal context at max_model_len 32768; the rule reads it | | | | | | | |
 
 run-0001 is also the first end-to-end run of the harness rewritten on
