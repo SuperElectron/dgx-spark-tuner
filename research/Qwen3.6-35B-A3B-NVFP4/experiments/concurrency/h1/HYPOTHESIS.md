@@ -139,7 +139,7 @@ numbers exist rather than after.
 |-----|---------|-----|--------|-------|-------|-------|-------|
 | run-0001 | baseline, `mnbt` 65536 | the control, on this screen's schedule | 49.0 ±0.3% | 96.0 ±4.1% (n=7) | 84.3 ±0.6% | 136.1 ±1.6% | bench_685e42bde522 |
 | run-0002 | `mnbt` 65536 → 32768 | the reference recipe's value | 48.0 ±0.6% | 107.2 ±4.1% (n=7) | 80.8 ±0.5% | 131.3 ±2.9% | bench_da8989775690 |
-| run-0003 | `mnbt` 65536 → 16384 | is the mechanism monotone | | | | | |
+| run-0003 | `mnbt` 65536 → 16384 | is the mechanism monotone | 44.2 ±0.5% | 106.2 ±2.9% (n=7) | 61.3 ±3.5% | 130.5 ±1.6% | bench_fbb28a3df00f |
 
 Epoch, recorded per arm because the recipe names a floating tag: image
 `ghcr.io/spark-arena/dgx-vllm-eugr-nightly:latest`, which resolves today to
@@ -203,6 +203,53 @@ roughly 2 SE. run-0003 at 16384 is the discriminator: monotone continuation
 says the effect is real, a fall back to ~96 says it was scatter. Whichever it
 is, it is a finding about the *guard*, and the Objective's primary is
 unmoved — a round can be interesting and still spend its lever.
+
+### run-0003, and the direction settled
+
+    mnbt      c1      c2     c5     c10
+    65536   96.0   136.1   84.3    49.0
+    32768  107.2   131.3   80.8    48.0
+    16384  106.2   130.5   61.3    44.2
+
+**c10 is monotone, and the hypothesis had the sign backwards.** 49.0 -> 48.0
+-> 44.2, a 9.8% loss at the lowest arm. Lowering the token budget does not free
+decode under queueing; it costs it. c5 falls harder, 84.3 -> 61.3. The control
+is the best arm for the primary cell, so `max_num_batched_tokens` 65536 is
+already the better setting of the three for what this experiment is chasing,
+and the reference recipe's 32768 is not the source of its c10 advantage.
+
+Refuted, not merely unproven — a monotone response in the opposite direction is
+a stronger result than no response, and it says the prefill-hogs-the-budget
+mechanism is not what governs this cell. It also carries a forward implication:
+if c10 rises with the budget over the range measured, the untested direction is
+*upward* from 65536, which no arm here reached.
+
+**c1 reads as a step, not a slope.** 96.0 at 65536; 107.2 and 106.2 at the two
+lower arms, agreeing within 1%. Two independent arms agreeing is better evidence
+than run-0002's lone 2-SE difference, so something real separates 65536 from
+the values below it at c1.
+
+**A confound that must be resolved before that c1 number is used.** run-0003's
+seven c1 values in execution order are
+
+    95.5  102.0  101.2  106.2  108.8  111.6  114.1
+
+which drifts upward across the cell, lowest first and highest last — a 19%
+span. run-0001's c1 drifts the same way, roughly 90 to 108. These are not
+stationary measurements: the cell is warming up while it is being measured, and
+`runs: 7` at c1 was chosen to beat scatter, not drift. Part of the 96-vs-107
+gap may be where each arm's c1 cell sat in its own warm-up rather than the
+field under test, and c1 runs FIRST in this schedule, so it is the cell most
+exposed to a cold start. Any later round resting on c1 must handle this —
+discard a warm-up run, or read the second half of the series, or run c1 last.
+
+Two further observations from the arms:
+
+- `waiting max` rises as the budget falls: 6, 6, 8. Consistent with smaller
+  batches admitting less work per step.
+- c10 carried LOOPING requests in every arm (0, 2/60, 1/60), which run.py says
+  decode faster and inflate `tg`. The arm with the most looping is the middle
+  one, so this does not explain the monotone trend.
 
 run-0001 is not h5's number and does not inherit it: h5 ran the full 28-cell
 sweep and this is a four-cell screen, so the control must be measured on the
