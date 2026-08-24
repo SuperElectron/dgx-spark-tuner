@@ -1,44 +1,45 @@
 # Project rules
 
-## Autoresearch workflow
+Benchmark-tuning research on a DGX Spark box. The work is hypothesis-driven:
+understand what governs model performance on this hardware.
 
-The full repeatable loop (experiment layout, one-round procedure, archiving,
-promotion, hard rules) lives in the `spark-autoresearch` skill
-(`.claude/skills/spark-autoresearch/SKILL.md`). Its helper scripts:
+These are the invariants — they hold before you know which task you are doing.
+Procedures live in the skills; see `## Skills`.
 
-- `scripts/new-experiment.sh <name>` — create an experiment series from the template
-- `scripts/archive-round.sh <experiment-dir> <benchId> [suffix]` — archive a benchmark run
-- `scripts/parse-round.py <round-tmp.json>` — per-run tg/pp/ttfr with medians
+- Nothing is ever submitted to Spark Arena. There is no login and one is not
+  wanted. 
+- Where possible, use agents to run things so that your context doesn't bloat. You can make use of jsonl files from an agent run, to pass of to another agent, so that your context is minimized. USE THIS RULE WHEN IT MAKES SENSE, ESPECIALLY FOR SIMPLE TASKS AND WHERE SKILLS ALIGN. Ensure you pass adaquate context to the agent so it is successful.
 
-`research/*/experiments/` run data is gitignored — numbers live in the local
-exported files; journal.md and RESULTS.md carry the conclusions.
+## Research
 
-## Memory
+- Benchmarks are run by an agent using the `experiment` skill, never inline.
+- Everything under `research/` is read-only unless a skill you are running
+  operates on it. Each skill defines the layout it owns.
+- One PR into `staging` per experiment, opened when the experiment closes. Mat
+  merges it.
 
-The mem0 skill (`.claude/skills/mem0/SKILL.md`) gives the research loop
-recall/remember of prior findings. Standing rules:
+## The box
 
-- Memory ops never block work. `remember.sh`/`recall.sh` always exit 0 on
-  failure — never retry in a loop or ask the user what to do.
-- On failure, spawn a background agent to run `memory-doctor.sh`, then
-  drain the outbox (`remember.sh --drain`).
-- journal.md/RESULTS.md files are canonical; mem0 is a rebuildable index.
-  `[VERDICT]`/`[CRASH]` rebuild from RESULTS.md via `memory-backfill.sh`;
-  `[ENV]`/`[LESSON]`/`[COST]` are best-effort index entries — canonical
-  copies live in the journal.
-- The stack lives on the box, docker compose project `sparkmem`, managed
-  via `memory.sh`.
+- Never change system state autonomously: clocks, power policy, driver, kernel,
+  `apt`. Measure it, record it, leave the decision to Mat.
+- The hostname comes from `.claude/box.json` (gitignored).
+- An image or vLLM version change is a new epoch — re-measure the incumbent
+  before comparing across it.
 
-## GitHub issues
+## Skills
 
-Issue body structure and closing rules live in the `gh-issues` skill
-(`.claude/skills/gh-issues/SKILL.md`). Always follow it when creating or
-closing issues.
+Invoke the skill; do not reimplement it from memory.
 
-## Workflow
-- `main` ← `staging` ← `feature/*`. One PR per feature group. Never commit directly to staging/main.
-- Review pass (code-reviewer agent) on every PR before merge.
+- `spark-model` — brings a model into the research tree: its docs, its baseline
+  recipe, its results table.
+- `spark-hypothesis` — opens an experiment (objective, strategy, held) and the
+  rounds that chase it; concludes each round and decides what follows.
+- `spark-autoresearch` — the loop inside one round: create a run, dispatch it,
+  record it, then conclude and act.
+- `experiment` — runs one run directory and reports the figures. Sees no
+  hypothesis.
 
 ## Code rules
-- Minimize code comments and ensure they are friendly for a human developer to read.
-- Try to keep files small — aim under 400 lines, ~500 is a guideline not a hard cap; when a file grows, split it into smaller parts.
+
+- Minimize comments; keep them friendly for a human developer to read.
+- Keep files small — aim under 400 lines; when a file grows, split it.

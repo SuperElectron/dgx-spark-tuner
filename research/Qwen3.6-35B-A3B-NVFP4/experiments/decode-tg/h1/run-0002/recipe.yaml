@@ -1,0 +1,44 @@
+command: |
+  vllm serve nvidia/Qwen3.6-35B-A3B-NVFP4 \
+    --host {host} \
+    --port {port} \
+    --trust-remote-code \
+    --kv-cache-dtype fp8 \
+    --attention-backend flashinfer \
+    --moe-backend marlin \
+    --gpu-memory-utilization {gpu_memory_utilization} \
+    --max-model-len {max_model_len} \
+    --max-num-seqs {max_num_seqs} \
+    --max-num-batched-tokens {max_num_batched_tokens} \
+    --enable-chunked-prefill \
+    --async-scheduling \
+    --enable-prefix-caching \
+    --speculative-config '{{"method":"mtp","num_speculative_tokens":3,"moe_backend":"triton"}}' \
+    --load-format fastsafetensors \
+    --reasoning-parser qwen3 \
+    --tool-call-parser qwen3_xml \
+    --enable-auto-tool-choice \
+benchmark:
+  framework: llama-benchy
+  pp: [2048]
+  tg: [128]
+  depth: [16384]
+  concurrency: [1]
+  runs: 7
+  prefix_caching: true
+recipe_version: '1'
+model: nvidia/Qwen3.6-35B-A3B-NVFP4
+solo_only: false
+container: vllm-node
+cluster_only: false
+env:
+  VLLM_MARLIN_USE_ATOMIC_ADD: '1'
+description: Qwen3.6-35B-A3B-NVFP4 single-node (de-rayed from @eugr recipe)
+name: Qwen3.6-35B-A3B-NVFP4-solo
+defaults:
+  port: 8000
+  max_num_batched_tokens: 32768
+  max_model_len: 262144
+  gpu_memory_utilization: 0.65
+  max_num_seqs: 4
+  host: 0.0.0.0

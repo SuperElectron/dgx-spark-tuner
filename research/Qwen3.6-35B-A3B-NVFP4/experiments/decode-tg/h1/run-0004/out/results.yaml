@@ -1,0 +1,374 @@
+sparkrun_benchmark:
+  version: '1'
+  timestamp: '2026-08-23T10:45:15.539446+00:00'
+  recipe:
+    name: recipe
+    qualified_name: /Users/mat/code/dgx-spark-tuner/research/qwen36-35b-nvfp4/experiments/decode-tg/h1/run-0004/recipe.yaml
+    type: sparkrun
+    model: nvidia/Qwen3.6-35B-A3B-NVFP4
+    container: vllm-node
+    runtime: vllm-distributed
+    registry: null
+    registry_git: ''
+    text: "recipe_version: '1'\nmodel: nvidia/Qwen3.6-35B-A3B-NVFP4\nruntime: vllm-distributed\n\
+      builder: eugr\ncontainer: vllm-node\nmetadata:\n  model_dtype: w4a16_nvfp4\n\
+      \  num_layers: 40\n  num_kv_heads: 2\n  head_dim: 256\n  quantization: w4a16_nvfp4\n\
+      \  kv_dtype: fp8\n  model_type: qwen3_5_moe\n  description: Qwen3.6-35B-A3B-NVFP4\
+      \ single-node (de-rayed from @eugr recipe)\ndefaults:\n  port: 8000\n  max_num_batched_tokens:\
+      \ 65536\n  max_model_len: 32768\n  gpu_memory_utilization: 0.8\n  max_num_seqs:\
+      \ 4\n  host: 0.0.0.0\nenv:\n  VLLM_MARLIN_USE_ATOMIC_ADD: '1'\n  VLLM_SERVER_DEV_MODE:\
+      \ '1'\ncommand: |\n  vllm serve nvidia/Qwen3.6-35B-A3B-NVFP4 \\\n    --host\
+      \ {host} \\\n    --port {port} \\\n    --trust-remote-code \\\n    --kv-cache-dtype\
+      \ fp8 \\\n    --attention-backend flashinfer \\\n    --moe-backend marlin \\\
+      \n    --gpu-memory-utilization {gpu_memory_utilization} \\\n    --max-model-len\
+      \ {max_model_len} \\\n    --max-num-seqs {max_num_seqs} \\\n    --max-num-batched-tokens\
+      \ {max_num_batched_tokens} \\\n    --enable-chunked-prefill \\\n    --async-scheduling\
+      \ \\\n    --enable-prefix-caching \\\n    --speculative-config '{{\"method\"\
+      :\"mtp\",\"num_speculative_tokens\":3,\"moe_backend\":\"triton\"}}' \\\n   \
+      \ --load-format fastsafetensors \\\n    --reasoning-parser qwen3 \\\n    --tool-call-parser\
+      \ qwen3_xml \\\n    --enable-auto-tool-choice \\\n"
+    hash: 2e5790ff5604bdf429e88290765daa20f59d7cfc741c3f2a313c991400b0e43a
+  model:
+    dtype: w4a16_nvfp4
+    num_layers: 40
+    num_kv_heads: 2
+    head_dim: 256
+    quantization: w4a16_nvfp4
+    kv_dtype: fp8
+  cluster:
+    tp: 1
+    cluster_id: sparkrun_55e0583fe6b308a0_313596140c4f
+    runtime_info:
+      cuda: '13.0'
+      nccl: (2, 29, 7)
+      python: 3.12.3
+      torch: 2.13.0+cu130
+      vllm: 0.27.2rc1.dev360+ge85d1b69c.d20260821
+      build_build_date: '2026-08-21 10:10:35+00:00'
+      build_build_script_commit: 44774ef2c51ffb782ad0f35637b239be1e54c1d1
+      build_vllm_version: 0.27.2rc1.dev360+ge85d1b69c.d20260821
+      build_vllm_commit: e85d1b69cf2f1c6101cfc7c799bb0c457cacc4b3
+      build_flashinfer_commit: 4927c0e15cb63a2abb6df09019c39a172222f0eb
+      build_gpu_arch: 12.1a
+      build_base_image: ${CUDA_IMAGE}
+      build_build_args_vllm_repo: https://github.com/vllm-project/vllm.git
+      build_build_args_vllm_ref: main
+      build_build_args_torch_version: 2.13.0
+      build_build_args_torchvision_version: 0.28.0
+      build_build_args_torchaudio_version: 2.11.0
+      build_build_args_cutlass_dsl_version: 4.7.0
+      build_build_args_b12x_repo: disabled
+      build_build_args_b12x_ref: disabled
+      build_build_args_transformers_5: 'True'
+      build_build_args_exp_mxfp4: 'False'
+      build_build_args_vllm_prs: ''
+      build_build_args_build_jobs: '16'
+      container_dev_sparkrun_build_flags: ''
+      container_dev_sparkrun_flashinfer_hash: 4927c0e15cb63a2abb6df09019c39a172222f0eb
+      container_dev_sparkrun_repo_commit: 44774ef2c51ffb782ad0f35637b239be1e54c1d1
+      container_dev_sparkrun_source_digest: sha256:19d2158d320ca4c8704ebf56990de2a40b71055d6d7a5a6829a877db6a1e9125
+      container_dev_sparkrun_source_image: docker.io/eugr/spark-vllm
+      container_dev_sparkrun_source_tag: nightly-20260821
+      container_dev_sparkrun_vllm_hash: e85d1b69cf2f1c6101cfc7c799bb0c457cacc4b3
+      container_dev_sparkrun_vllm_version: 0.27.2rc1.dev360+ge85d1b69c.d20260821
+      container_maintainer: NVIDIA CORPORATION <cudatools@nvidia.com>
+      container_org_opencontainers_image_ref_name: ubuntu
+      container_org_opencontainers_image_version: '24.04'
+      container_sparkrun_cluster_id: sparkrun_55e0583fe6b308a0_313596140c4f
+      container_sparkrun_intent_id: 55e0583fe6b308a0
+      container_sparkrun_model: nvidia/Qwen3.6-35B-A3B-NVFP4
+      container_sparkrun_recipe: /Users/mat/code/dgx-spark-tuner/research/qwen36-35b-nvfp4/experiments/decode-tg/h1/run-0004/recipe.yaml
+      container_sparkrun_runtime: vllm-distributed
+      container_sparkrun_served_model_name: nvidia/Qwen3.6-35B-A3B-NVFP4
+  benchmark:
+    framework: llama-benchy
+    profile: null
+    args:
+      pp:
+      - 2048
+      depth:
+      - 16384
+      prefix_caching: true
+      tg:
+      - 128
+      concurrency:
+      - 1
+      runs: 7
+      exact_tg: true
+      extra_body: temperature=0
+      post_run_cmd: curl -sS -X POST http://spark-6f0e.tailae2b1.ts.net:8000/reset_prefix_cache
+        -o /dev/null
+  results:
+    json:
+      model: nvidia/Qwen3.6-35B-A3B-NVFP4
+      max_concurrency: 1
+      benchmarks:
+      - concurrency: 1
+        context_size: 16384
+        prompt_size: 2048
+        response_size: 128
+        is_context_prefill_phase: true
+        pp_throughput:
+          mean: 5932.743564891584
+          std: 23.512139720096112
+          values:
+          - 5959.33654529267
+          - 5924.845084743397
+          - 5937.337344573974
+          - 5883.773099442568
+          - 5923.97115406638
+          - 5952.256504116457
+          - 5947.685222005642
+        pp_req_throughput:
+          mean: 5932.743564891584
+          std: 23.512139720096112
+          values:
+          - 5959.33654529267
+          - 5924.845084743397
+          - 5937.337344573974
+          - 5883.773099442568
+          - 5923.97115406638
+          - 5952.256504116457
+          - 5947.685222005642
+        tg_throughput:
+          mean: 115.95798965234441
+          std: 7.762136019676903
+          values:
+          - 112.93272514047062
+          - 108.64116838045585
+          - 121.65374919343803
+          - 111.33383329286166
+          - 124.69063090398011
+          - 105.53020449009422
+          - 126.92361616511042
+        tg_req_throughput:
+          mean: 115.95798965234441
+          std: 7.762136019676903
+          values:
+          - 112.93272514047062
+          - 108.64116838045585
+          - 121.65374919343803
+          - 111.33383329286166
+          - 124.69063090398011
+          - 105.53020449009422
+          - 126.92361616511042
+        peak_throughput:
+          mean: 121.29758753674115
+          std: 7.063138517223258
+          values:
+          - 120.0
+          - 113.0
+          - 127.0
+          - 118.0
+          - 127.0
+          - 112.0
+          - 132.08311275718808
+        peak_req_throughput:
+          mean: 121.29758753674115
+          std: 7.063138517223258
+          values:
+          - 120.0
+          - 113.0
+          - 127.0
+          - 118.0
+          - 127.0
+          - 112.0
+          - 132.08311275718808
+        ttfr:
+          mean: 2773.4398273418524
+          std: 11.016084154237955
+          values:
+          - 2760.9274580609053
+          - 2777.1022501401603
+          - 2771.2832919787616
+          - 2796.4079580269754
+          - 2777.5102499872446
+          - 2764.3658751621842
+          - 2766.4817080367357
+        est_ppt:
+          mean: 2761.9795080252165
+          std: 11.016084154237953
+          values:
+          - 2749.46713874427
+          - 2765.641930823525
+          - 2759.822972662126
+          - 2784.94763871034
+          - 2766.0499306706092
+          - 2752.905555845549
+          - 2755.0213887201003
+        e2e_ttft:
+          mean: 2773.4398273418524
+          std: 11.016084154237955
+          values:
+          - 2760.9274580609053
+          - 2777.1022501401603
+          - 2771.2832919787616
+          - 2796.4079580269754
+          - 2777.5102499872446
+          - 2764.3658751621842
+          - 2766.4817080367357
+        throughput_over_time: null
+        requests_throughput_over_time: null
+      - concurrency: 1
+        context_size: 16384
+        prompt_size: 2048
+        response_size: 128
+        is_context_prefill_phase: false
+        pp_throughput:
+          mean: 635.0531427190618
+          std: 2.765751793027576
+          values:
+          - 638.2464150181398
+          - 637.307150525249
+          - 632.1441575561747
+          - 631.5998102055653
+          - 638.0201575378017
+          - 632.1600762548323
+          - 635.8942319356701
+        pp_req_throughput:
+          mean: 635.0531427190618
+          std: 2.765751793027576
+          values:
+          - 638.2464150181398
+          - 637.307150525249
+          - 632.1441575561747
+          - 631.5998102055653
+          - 638.0201575378017
+          - 632.1600762548323
+          - 635.8942319356701
+        tg_throughput:
+          mean: 113.73621412703766
+          std: 9.010517297793633
+          values:
+          - 103.66289617087467
+          - 110.27072022445189
+          - 126.79526173807723
+          - 117.16517381461351
+          - 99.80274085749245
+          - 122.23494788178472
+          - 116.22175820196911
+        tg_req_throughput:
+          mean: 113.73621412703766
+          std: 9.010517297793633
+          values:
+          - 103.66289617087467
+          - 110.27072022445189
+          - 126.79526173807723
+          - 117.16517381461351
+          - 99.80274085749245
+          - 122.23494788178472
+          - 116.22175820196911
+        peak_throughput:
+          mean: 121.40920387916246
+          std: 9.756629331917992
+          values:
+          - 113.0
+          - 117.0
+          - 136.38481934852004
+          - 125.0
+          - 106.0
+          - 131.47960780561718
+          - 121.0
+        peak_req_throughput:
+          mean: 121.40920387916246
+          std: 9.756629331917992
+          values:
+          - 113.0
+          - 117.0
+          - 136.38481934852004
+          - 125.0
+          - 106.0
+          - 131.47960780561718
+          - 121.0
+        ttfr:
+          mean: 3236.4484821113624
+          std: 14.05335145341438
+          values:
+          - 3220.252334140241
+          - 3224.981457926333
+          - 3251.2276659253985
+          - 3254.0198750793934
+          - 3221.390249906108
+          - 3251.1460839305073
+          - 3232.1217078715563
+        est_ppt:
+          mean: 3224.9881627947266
+          std: 14.05335145341438
+          values:
+          - 3208.7920148236058
+          - 3213.5211386096976
+          - 3239.767346608763
+          - 3242.559555762758
+          - 3209.9299305894724
+          - 3239.685764613872
+          - 3220.661388554921
+        e2e_ttft:
+          mean: 3236.4484821113624
+          std: 14.05335145341438
+          values:
+          - 3220.252334140241
+          - 3224.981457926333
+          - 3251.2276659253985
+          - 3254.0198750793934
+          - 3221.390249906108
+          - 3251.1460839305073
+          - 3232.1217078715563
+        throughput_over_time: null
+        requests_throughput_over_time: null
+    csv: "model,test_name,t_s_mean,t_s_std,t_s_req_mean,t_s_req_std,peak_ts_mean,peak_ts_std,peak_ts_req_mean,peak_ts_req_std,ttfr_mean,ttfr_std,est_ppt_mean,est_ppt_std,e2e_ttft_mean,e2e_ttft_std\r\
+      \nnvidia/Qwen3.6-35B-A3B-NVFP4,ctx_pp @ d16384,5932.743564891584,23.512139720096112,5932.743564891584,23.512139720096112,,,,,2773.4398273418524,11.016084154237955,2761.9795080252165,11.016084154237953,2773.4398273418524,11.016084154237955\r\
+      \nnvidia/Qwen3.6-35B-A3B-NVFP4,ctx_tg @ d16384,115.95798965234441,7.762136019676903,115.95798965234441,7.762136019676903,121.29758753674115,7.063138517223258,121.29758753674115,7.063138517223258,,,,,,\r\
+      \nnvidia/Qwen3.6-35B-A3B-NVFP4,pp2048 @ d16384,635.0531427190618,2.765751793027576,635.0531427190618,2.765751793027576,,,,,3236.4484821113624,14.05335145341438,3224.9881627947266,14.05335145341438,3236.4484821113624,14.05335145341438\r\
+      \nnvidia/Qwen3.6-35B-A3B-NVFP4,tg128 @ d16384,113.73621412703766,9.010517297793633,113.73621412703766,9.010517297793633,121.40920387916246,9.756629331917992,121.40920387916246,9.756629331917992,,,,,,\r\
+      \n"
+    stdout: '{"model": "nvidia/Qwen3.6-35B-A3B-NVFP4", "max_concurrency": 1, "benchmarks":
+      [{"concurrency": 1, "context_size": 16384, "prompt_size": 2048, "response_size":
+      128, "is_context_prefill_phase": true, "pp_throughput": {"mean": 5932.743564891584,
+      "std": 23.512139720096112, "values": [5959.33654529267, 5924.845084743397, 5937.337344573974,
+      5883.773099442568, 5923.97115406638, 5952.256504116457, 5947.685222005642]},
+      "pp_req_throughput": {"mean": 5932.743564891584, "std": 23.512139720096112,
+      "values": [5959.33654529267, 5924.845084743397, 5937.337344573974, 5883.773099442568,
+      5923.97115406638, 5952.256504116457, 5947.685222005642]}, "tg_throughput": {"mean":
+      115.95798965234441, "std": 7.762136019676903, "values": [112.93272514047062,
+      108.64116838045585, 121.65374919343803, 111.33383329286166, 124.69063090398011,
+      105.53020449009422, 126.92361616511042]}, "tg_req_throughput": {"mean": 115.95798965234441,
+      "std": 7.762136019676903, "values": [112.93272514047062, 108.64116838045585,
+      121.65374919343803, 111.33383329286166, 124.69063090398011, 105.53020449009422,
+      126.92361616511042]}, "peak_throughput": {"mean": 121.29758753674115, "std":
+      7.063138517223258, "values": [120.0, 113.0, 127.0, 118.0, 127.0, 112.0, 132.08311275718808]},
+      "peak_req_throughput": {"mean": 121.29758753674115, "std": 7.063138517223258,
+      "values": [120.0, 113.0, 127.0, 118.0, 127.0, 112.0, 132.08311275718808]}, "ttfr":
+      {"mean": 2773.4398273418524, "std": 11.016084154237955, "values": [2760.9274580609053,
+      2777.1022501401603, 2771.2832919787616, 2796.4079580269754, 2777.5102499872446,
+      2764.3658751621842, 2766.4817080367357]}, "est_ppt": {"mean": 2761.9795080252165,
+      "std": 11.016084154237953, "values": [2749.46713874427, 2765.641930823525, 2759.822972662126,
+      2784.94763871034, 2766.0499306706092, 2752.905555845549, 2755.0213887201003]},
+      "e2e_ttft": {"mean": 2773.4398273418524, "std": 11.016084154237955, "values":
+      [2760.9274580609053, 2777.1022501401603, 2771.2832919787616, 2796.4079580269754,
+      2777.5102499872446, 2764.3658751621842, 2766.4817080367357]}, "throughput_over_time":
+      null, "requests_throughput_over_time": null}, {"concurrency": 1, "context_size":
+      16384, "prompt_size": 2048, "response_size": 128, "is_context_prefill_phase":
+      false, "pp_throughput": {"mean": 635.0531427190618, "std": 2.765751793027576,
+      "values": [638.2464150181398, 637.307150525249, 632.1441575561747, 631.5998102055653,
+      638.0201575378017, 632.1600762548323, 635.8942319356701]}, "pp_req_throughput":
+      {"mean": 635.0531427190618, "std": 2.765751793027576, "values": [638.2464150181398,
+      637.307150525249, 632.1441575561747, 631.5998102055653, 638.0201575378017, 632.1600762548323,
+      635.8942319356701]}, "tg_throughput": {"mean": 113.73621412703766, "std": 9.010517297793633,
+      "values": [103.66289617087467, 110.27072022445189, 126.79526173807723, 117.16517381461351,
+      99.80274085749245, 122.23494788178472, 116.22175820196911]}, "tg_req_throughput":
+      {"mean": 113.73621412703766, "std": 9.010517297793633, "values": [103.66289617087467,
+      110.27072022445189, 126.79526173807723, 117.16517381461351, 99.80274085749245,
+      122.23494788178472, 116.22175820196911]}, "peak_throughput": {"mean": 121.40920387916246,
+      "std": 9.756629331917992, "values": [113.0, 117.0, 136.38481934852004, 125.0,
+      106.0, 131.47960780561718, 121.0]}, "peak_req_throughput": {"mean": 121.40920387916246,
+      "std": 9.756629331917992, "values": [113.0, 117.0, 136.38481934852004, 125.0,
+      106.0, 131.47960780561718, 121.0]}, "ttfr": {"mean": 3236.4484821113624, "std":
+      14.05335145341438, "values": [3220.252334140241, 3224.981457926333, 3251.2276659253985,
+      3254.0198750793934, 3221.390249906108, 3251.1460839305073, 3232.1217078715563]},
+      "est_ppt": {"mean": 3224.9881627947266, "std": 14.05335145341438, "values":
+      [3208.7920148236058, 3213.5211386096976, 3239.767346608763, 3242.559555762758,
+      3209.9299305894724, 3239.685764613872, 3220.661388554921]}, "e2e_ttft": {"mean":
+      3236.4484821113624, "std": 14.05335145341438, "values": [3220.252334140241,
+      3224.981457926333, 3251.2276659253985, 3254.0198750793934, 3221.390249906108,
+      3251.1460839305073, 3232.1217078715563]}, "throughput_over_time": null, "requests_throughput_over_time":
+      null}]}'

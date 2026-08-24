@@ -1,173 +1,172 @@
 ---
 name: spark-autoresearch
-description: Run the DGX Spark benchmark-tuning research loop — create experiment series, run single-mutation sparkrun benchmark rounds, archive runs, keep/revert verdicts, and promote to arena. Use when creating an experiment, running or resuming a tuning round, archiving a benchmark, or interpreting round results in research/.
+description: Run one round of an experiment — decide what the next run should test, dispatch it, record the result, then conclude the round and act on what it gave. Use when a round is open.
 ---
 
-# Spark autoresearch loop
+# spark-autoresearch
 
-The stack is the spark-arena community's, not ours: `sparkrun` (laptop CLI, via
-`uvx sparkrun`), their recipe YAML format, `llama-benchy` measurement. We add
-only the research loop around it. The box hostname comes from `.claude/box.json`
-(gitignored); SSH config carries the user + key.
+## Role
 
-## Create an experiment series
+You run one round of an experiment and decide when its runs are done. Use
+these skills:
 
-```
-.claude/skills/spark-autoresearch/scripts/new-experiment.sh <model>-<cell>
-```
+- `spark-hypothesis`: sets up the experiment and its rounds, and later reads
+  your runs to conclude the round and decide what follows
+- `experiment`: runs one run directory
 
-Copies `research/_template/` to `research/<model>-<cell>/`:
-
-```
-research/<name>/
-├── recipe.yaml                  # the incumbent config — the ONLY tuned artifact
-├── journal.md                   # hypothesis before each run, keep/revert after,
-│                                #   synthesis every ~5 rounds (decisions only)
-├── RESULTS.md                   # one table row per run (human comparison view)
-├── docs/                        # model-card.md, arena-recipe.md (source URL + scrape date)
-└── experiments/<benchId>/      # one dir per benchmark run: exported YAML/JSON/CSV
-                                 #   + full sparkrun state dir contents
-```
-
-## One round
-
-1. Read journal.md + prior `experiments/*/`. Before picking a mutation, recall
-   prior findings:
-   ```
-   .claude/skills/mem0/scripts/recall.sh "prior findings <model> <cell> <lever>" experiment:<name>
-   ```
-   Best-effort — fold the digest into your hypothesis reasoning, but never
-   block on it (see the mem0 skill's guardrail). Pick ONE mutation. Journal
-   the hypothesis BEFORE running.
-2. Run (mutation = `-o key=value`; template-flag change = edit a candidate
-   recipe copy, e.g. `recipe-candidate.yaml`):
-   ```
-   uvx sparkrun benchmark perf ./recipe.yaml --solo -H <box-host> \
-     -b pp=2048 -b tg=128 -b concurrency=1 -b runs=3 \
-     [-o key=value] --fresh --output round-tmp.yaml
-   ```
-   Bare hostname only in `-H` (no user@). Fixed `-b` probe args per series —
-   never vary them mid-series.
-3. sparkrun prints `Benchmark ID: bench_<id>`. Archive:
-   ```
-   .claude/skills/spark-autoresearch/scripts/archive-round.sh <experiment-dir> bench_<id> [suffix]
-   ```
-   sparkrun reuses the benchId for identical recipe+params — pass a suffix
-   (`rebaseline`, `verify`, `crash`) on collision; never overwrite a past dir.
-4. Read metrics:
-   ```
-   .claude/skills/spark-autoresearch/scripts/parse-round.py <experiments-dir-or-cwd>/round-tmp.json
-   ```
-   Compare MEDIANS, not means — prompt draws are bimodal (occasional
-   high-ngram-acceptance runs). At `concurrency > 1`, read the metrics
-   section below BEFORE quoting any throughput. Verify any apparent win
-   with a repeat run before keeping. Keep → fold the mutation into recipe.yaml. Revert →
-   recipe.yaml untouched. Crash → journal the lesson; run dir stays.
-5. Append one row to RESULTS.md. Per-run table (the default — the recipe
-   moves, the probe is fixed):
-   `| bench_<id> | <date> | <mutation> | <tg mean> | <tg σ> | <pp mean> | <pp σ> | <ttfr mean> | keep/revert/crash — note |`
-
-   A campaign that varies the PROBE instead of the recipe (depth,
-   concurrency, tg length) may use a per-cell table instead — one row per
-   measured cell, carrying the configuration it was measured under:
-   `| bench_<id> | <date> | <cell> | <configuration> | <ours> | <runs> | <board top> | <margin> | <note> |`
-
-   EITHER schema MUST carry `benchId` and `date` columns. Without them a
-   row cannot be traced back to its archive under `experiments/`, and
-   `memory-backfill.sh` cannot produce a provenanced memory from it.
-6. Journal the outcome, then derive the round's verdict memories from the
-   canonical table (best-effort, never blocking — see the mem0 skill's
-   guardrail: on failure spawn a background agent to run
-   `memory-doctor.sh`, never gate the round on it):
-   ```
-   .claude/skills/mem0/scripts/memory-backfill.sh --reconcile research/<name>
-   ```
-   `--reconcile` adds the new rows AND drops `[VERDICT]`/`[CRASH]`
-   entries the table no longer produces, so the index converges on
-   RESULTS.md instead of accreting retired figures. Never hand-write a
-   `[VERDICT]` with `remember.sh` — a hand-written one has no row to
-   reconcile against, and that is precisely how the index diverged from
-   the table.
-
-   Hand-written `remember.sh` calls stay correct for `[LESSON]`, `[ENV]`
-   and `[IDEA]` findings that are NOT derivable from the results table. A
-   crash belongs in RESULTS.md as a row — backfill tags it `[CRASH]` — with
-   the takeaway written as a `[LESSON]`; a hand-written `[CRASH]` under the
-   experiment entity is a reconcile deletion candidate. Commit per repo
-   workflow rules.
-
-## Reading benchy metrics at concurrency > 1
-
-`llama-benchy`'s `t_s` IS `tg_throughput`, and `tg_throughput` is a BATCH
-AGGREGATE — `results.py:352` defines it as `sum(decode tokens) /
-(max_last_token - min_first_token)`, i.e. every request's decode tokens over
-the whole batch span. It is the same field the arena board's `c>1` figures come
-from; sparkrun uploads that CSV. The per-request figure is the separate
-`tg_req_throughput`.
-
-- Report `tg_throughput` and `peak_throughput` side by side for any `c>1` row.
-  Never quote one without the other — `tg` includes admission stagger,
-  `peak_throughput` is the sustained ceiling.
-- NEVER multiply a per-request figure by concurrency. `per-request x c`
-  double-counts and breaks from c4 up.
-- The stagger proxy `stagger ≈ c / (tg / tg_req)` is valid ONLY at full
-  residency. At c5 against `max_num_seqs 4` it reads 3.85-4.08 where
-  timestamps measure ~2.39.
-- Read the scheduler's `Running/Waiting` lines at every new operating point.
-  Residency is the precondition the proxy depends on; confirm it, don't assume
-  it from the `-b concurrency` argument.
-
-Evidence: `research/qwen36-35b-nvfp4-cells` (R10 from the source, R5c re-tested
-on the archives). Across all 34 archived `c>1` records: `tg > tg_req` in 34/34
-(ratios 1.13x-4.02x), `tg <= peak_throughput` 34/34, `tg / tg_req <= c` 34/34.
-The per-request convention survived nine rounds because `c x tg` exceeds
-`peak_throughput` in only 14 of 34 rows — all low-stagger arms — so the error
-hides exactly where a new reader looks first.
-
-## Observation sweep (mandatory at every synthesis, ~5 rounds)
-
-Run an observation pass per the `observe` skill (.claude/skills/observe/SKILL.md)
-over the series' runs, telemetry, and logs — surprises, headroom at every
-layer, missing instruments — recording [ENV]/[LESSON]/[IDEA] memories and an
-"Observations" journal subsection. Telemetry feed:
-`scripts/sample-telemetry.sh <seconds> <outfile>` alongside at least one
-benchmark per series; archive the log with that run. Empty sweeps are
-suspicious.
-
-## Cost ledger
-
-Record harness-token spend for the round in the journal entry (canonical),
-and write a `[COST]` memory per phase (tokens-per-point accounting):
-```
-.claude/skills/mem0/scripts/remember.sh "[COST] <phase>: <tokens> tokens, <result>" experiment:<name>
-```
-
-## Promotion
-
-Stall or satisfied → full official grid + submission (needs
-`sparkrun arena login` once, and the user's explicit go):
+`spark-model` set up <model>, `spark-hypothesis` set up the experiment and its
+rounds. You work inside one round:
 
 ```
-uvx sparkrun benchmark perf ./recipe.yaml --solo -H <box-host> --arena
+Qwen3.6-35B-A3B-NVFP4/experiments/decode-tg
+
+├── EXPERIMENT.md           // objective, strategy, held — frozen
+├── recipe.yaml             // the baseline, we start with this.
+├── h1                      // the round you are running
+│   ├── HYPOTHESIS.md       // hypothesis, method, decision rule, runs
+│   └── run-0001            // directory run with `experiment` skill
+│       ├── id.txt
+│       ├── out
+│       │   ├── engine-capture.log
+│       │   ├── results.yaml
+│       │   └── telemetry.jsonl
+│       └── recipe.yaml
+...
 ```
 
-## Debugging a stuck round
+You own `run-*/` and the round's runs table. Everything else — the objective,
+the strategy, the held, the hypothesis, the decision rule — is frozen before
+you start and you never edit it.
 
-Server-wait past ~6 min usually means an engine crash loop. On the box:
-`docker ps`, then read `/tmp/sparkrun_serve.log` inside the sparkrun container.
-Kill the waiting benchmark task, `docker rm -f` the container, archive with
-`-crash` suffix plus a `crash-log.txt` excerpt.
+## How to use this skill
 
-## Hard rules
+0. Free the card — the embedder is a vLLM instance sharing it with every
+   benchmark. Idempotent, so just assert it when a round starts.
 
-- Never edit past `experiments/` contents; never hand-maintain results
-  tables — numbers live in the exported files only.
-- Transient benchmark failures (e.g. corpus download 504): re-run with
-  `--resume`, same benchId continues.
-- Image/vLLM version comes from the recipe's container and is recorded in
-  every export (`runtime_info`); a version change = new epoch — re-run the
-  incumbent before comparing across it. `--image <ref>` overrides the
-  container for epoch experiments.
-- System-state changes on the box (clock/power policy, driver, kernel, apt)
-  are never made autonomously — measure, journal, and leave the decision to
-  the user.
+```bash
+../memory/scripts/memory.sh stop
+```
+
+1. EXPERIMENTS: cycle CREATE, RUN, RECORD, once per planned row in "## Runs".
+2. VALIDATE: when no row is left to run.
+
+## THE LOOP
+
+Agents do the work. You hold `h<N>/HYPOTHESIS.md` — the hypothesis, the rule,
+the rows — and nothing else. Every benchmark, every read of a run archive, and
+the conclusion pass go to an agent, which returns an answer rather than a file.
+
+You may add rows the method calls for; you never touch the hypothesis or rule.
+
+### CREATE
+
+Use `h<N>/HYPOTHESIS.md` to do these steps:
+
+1. setup: create the next `run-000N/`.
+```bash
+scripts/new-run.sh research/<model>/experiments/<experiment>/h<N>
+```
+2. Set `run-000N/recipe.yaml`; reason with `HYPOTHESIS.md` and previous runs (if they exist).
+
+To read previous runs, send an agent — one run is thousands of lines and you
+only need what it concludes:
+
+```bash
+scripts/show-run.sh <run-dir>
+```
+
+Give the agent the run dirs, the question, and that command. Do not run it
+yourself.
+
+### RUN
+
+Hand the run directory to an agent using the `experiment` skill. It runs the
+benchmark, reads the archive, and returns the report.
+
+The agent is not given the hypothesis.
+
+### RECORD
+
+Take the agent's report and fill in that run's row in "## Runs".
+
+Rows still blank → CREATE. None → VALIDATE. If the blank rows cannot reach the
+Objective's number — the effect is smaller than the scatter in Strategy, or the
+best case left falls short of the target — stop and VALIDATE now rather than
+spend them.
+
+The columns:
+
+- **run** — the run directory, e.g. `run-0003`.
+- **changed** — this run's recipe against the experiment's baseline, as
+  `field: old → new`; comma-separated when a run moves more than one.
+- **why** — the prior result that prompted it. `baseline` for the first run.
+- **cell** — which cell the figures are from, e.g. `d16384 c1`.
+- **pp t/s, tg t/s, ttfr ms** — medians from that cell, not its
+  context-prefill phase.
+- **bench** — the `bench_*` id.
+
+A sweep returns every cell it ran. Record the one the rule reads; the rest are
+data, not evidence, unless the hypothesis named them.
+
+Two levers the grid gives you, worth knowing before you write a recipe:
+
+- **`schedule:`** sets execution order, and a schedule entry may override any
+  grid key for that cell — `runs` included. Spend repeats where the rule turns
+  and leave coverage cells cheap. A cell needs four values before it gets a
+  stability verdict.
+- Cells in one schedule share a boot and a warm cache, so they are **not**
+  independent. Use a schedule for coverage. An arm against a control is one
+  cell per run, which is what the cache reset is for.
+
+A run that crashed still gets its row: `—` for the figures, and what the engine
+reported in **why**.
+
+A report saying declared and served disagreed voids the row. Run it again.
+
+## VALIDATE
+
+1. Conclude the round.
+- Only once every row in the round's "## Runs" is filled.
+- Send an agent to run the `spark-hypothesis` skill. It reads every run, writes
+  the conclusion, and returns which of three the rule gave: **target met**,
+  **lever alive**, or **lever spent**. It reads the archives so you do not.
+
+2. Act on it.
+
+    lever alive: it added rows to this round. Go to CREATE.
+    lever spent: it opened `h<N+1>/`, or closed the experiment as exhausted.
+                 A new round is a new loop — start it at CREATE.
+    target met:  validate it before closing.
+
+3. Validate a met target. `recipe-new.yaml` is the experiment's answer, so run
+   it and see the target hold:
+
+```bash
+scripts/new-run.sh research/<model>/experiments/<experiment> recipe-new.yaml
+```
+
+- then hand it to an agent using the `experiment` skill, as in RUN.
+
+    PASS: it reaches the target. The experiment is closed.
+    FAIL: it doesn't. Hand back to `spark-hypothesis` — the round is not done.
+
+## MEMORY
+
+Once, when the experiment closes. The embedder wants the same card the
+benchmarks do, so it goes back down after.
+
+```bash
+../memory/scripts/memory.sh start
+../memory/scripts/remember.sh "<text>" <entity>   # once, when the experiment closes
+../memory/scripts/memory.sh stop
+```
+
+Each line restates a conclusion already written, and has to stand alone —
+recall prints the line and nothing else.
+
+```
+[OBSERVATION] 2026-08-22 decode-tg/h1: max_num_seqs 4→64 at d0 c1 — tg flat within ±3% across all five, so single-stream decode does not use the extra slots (runs=5, bench_2ebcb63db398..bench_9f1)
+```
+
+Entity: the widest scope it is true for — `experiment:`, `model:`, `family:`,
+`stack:`, `box:`, `flag:`.
