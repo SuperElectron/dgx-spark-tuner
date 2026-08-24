@@ -86,6 +86,12 @@ Measured scatter, per cell — what a decision rule here has to clear:
     tg128 @ d16384 c1: tg max/min 1.01, pp 1.02   (h1 run-0003, MTP off)
     tg128 @ d16384 c1: tg max/min 1.11, pp 1.03   (h1 run-0008, prompt pinned)
 
+On the board grid, which is a different instrument and a different epoch, added
+2026-08-24 from h5 run-0001. `runs: 3` gives no interquartile range at c1, so a
+rule in that lane is stated on the median and sized against this:
+
+    tg128 @ d16384 c1: tg max/min 1.14, median SE 5.2%, n=3   (h5 run-0001)
+
 Most of that scatter was the instrument, not the box. llama-benchy's
 `adapt_prompt` defaults on and shrinks the grid by the measured template
 overhead, which reopens the random prompt start that the fixed corpus was meant
@@ -146,11 +152,20 @@ constant it says in its own Method.
 | h2 | A flag is disabling the prefix cache | premise wrong — our own reset was |
 | h3 | `tg128` measures a transient | refuted — no transient; the effect is KV growth |
 | h4 | The draft's MoE backend is untuned and one alternative beats it | lever spent |
-| h5 | Our recipe on the board's own grid reads above 116.03 | open |
+| h5 | Our recipe on the board's own grid reads above 116.03 | lever spent — 103.7, and the warm cache it rested on never existed |
+| h6 | The checkpoint's `temperature 1.0` is costing decode on the board grid | open |
 
 h1 is spent: its three fields moved `tg` 2.0 against a larger IQR of 11.3, and
 `pp` moved 0.5% — inside this cell's own 1.02 max/min — which killed the
 prefill-chunking mechanism behind them.
+
+h5 delivered the Objective's second figure and it goes against us: **103.7 at
+`d16384 c1` on arena's own grid, against 116.03.** It ran one clean 28-cell
+sweep at `max_model_len 262144`, which is an epoch break from h1-h4. Its own
+mechanism never fired — prefix cache read 0.0% on all 544 samples with no reset
+in the recipe at all, and `pp`, `ctx pp` and `ttfr` all land on h2's *cold*
+column to within 0.5%. So the round is spent by its rule but its hypothesis was
+never tested, and "our protocol flatters us" is not what these numbers say.
 
 Levers still open, in the order to take them. Reordered 2026-08-23 after the
 architecture was read: this is a hybrid, 30 of its 40 layers are linear
@@ -170,10 +185,33 @@ attention with no KV, and only 10 are full attention.
    `flashinfer_trtllm` is refused by the kernel, and `flashinfer_cutlass` runs
    but lands inside the control's spread. What remains of the draft's cost is
    the 286 MB `lm_head` re-read, which is architectural and reaches no flag.
-4. **The board-comparable figure** — `@official/spark-arena-v2` unmodified. Not
-   a lever; it is the second figure the Objective asks for. Costs one long run,
-   and needs their `max_model_len` to reach the deep cells, so it is an epoch
-   break run once.
+4. ~~**The board-comparable figure**~~ — measured by h5. It reads **103.7**,
+   10.6% behind 116.03. The figure exists; what does not exist is an
+   explanation for it, which is lever 5.
+5. **Sampling on the board grid** — the last item in the diff above that has
+   never been varied. Arena does not pin sampling, so the served generation
+   config governs: ours is the checkpoint's own `temperature 1.0`, and the
+   reference recipe overrides it to `0.6`. A served field, board-legal, and
+   untested. h6.
+
+Reopened by h5:
+
+- **The prefix cache still never hits.** h2 closed this on "our own
+  `post_run_cmd` was disabling it". h5 carried no `post_run_cmd` and read 0.0%
+  on all 544 samples anyway. The reset was sufficient to suppress hits, not
+  necessary. The candidate residue is `no_adapt_prompt` and the fixed corpus,
+  which h2 kept and h5 gave up: without them each of a cell's runs draws a
+  different prompt start, so there is nothing to reuse. Not a lever for this
+  Objective — h2 measured a working cache as worth +2.3% `tg`, inside the
+  spread — but it is a live defect and it removes "the board measures warm" as
+  an explanation for anything until someone shows arena's own runs hit.
+- **`max_num_seqs 4` makes c5 and c10 unreadable at depth >= 8192.** Per-request
+  `tg` dispersion runs to 377% IQR and 53x max/min because six of ten requests
+  queue (`running max 4, waiting max 7`). The milestone targets c10 at d16384;
+  that cell reads 48.9 and cannot be moved by decode tuning, nor compared to a
+  board c10 produced under a different `max_num_seqs`. Establishing that is a
+  recipe change and its own round, and it belongs to the milestone rather than
+  to this Objective.
 
 Demoted, with reasons:
 
@@ -184,8 +222,11 @@ Demoted, with reasons:
 - **Speculative depth** — settled. Measured per-position acceptance
   0.87/0.76/0.61 makes N=3 optimal by ~2% over N=2, and N=4 loses.
 
-The sampling config is no longer a lever — the protocol pins `temperature 0`
-itself.
+The sampling config is not a lever for the **Ours** figure — the protocol pins
+`temperature 0` itself. It is a lever for the **board-comparable** figure, which
+arena leaves to the served generation config. Corrected 2026-08-24; this
+previously read "no longer a lever" without the distinction, and h5 showed the
+served value is 1.0.
 
 ## Conclusion
 

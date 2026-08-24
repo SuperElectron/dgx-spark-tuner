@@ -50,12 +50,15 @@ has been asked twice and answered both ways on an instrument that could not
 separate a 6% effect from its own noise.
 
 Our own box has since answered a nearby question, and it favours flat. On
-2026-08-23 a partial arena-v2 sweep (`bench_e86574ff0e1e`, 12 of 28 cells before
-it was killed) read `tg` at c1 of **101.6 at d0 and 96.2 at d65535** — a 5.3%
-decline across four times this ladder's span. It is not this experiment's
-answer and cannot be: it ran arena's protocol, not ours — warm cache, `runs: 3`,
-no `exact_tg`, no pinned prompt, sampling from the checkpoint — and at
+2026-08-24 a complete arena-v2 sweep — decode-tg h5 run-0001, all 28 cells —
+read `tg` at c1 of **96.6 at d0 and 95.6 at d65535** — a 1.0% decline across
+four times this ladder's span. It is not this experiment's
+answer and cannot be: it ran arena's protocol, not ours — `runs: 3`, no
+`exact_tg`, no pinned prompt, sampling from the checkpoint — and at
 `max_model_len 262144`, the far side of an epoch break from every rung here.
+Its cache was cold despite no reset in the recipe: hit rate 0.0% on all 544
+engine samples, which is a finding of its own and is written up in decode-tg
+h5.
 What it does is set the expectation: the effect this ladder is looking for is
 small, which is exactly why the rule below has to be sized against our own
 scatter rather than against a round number.
