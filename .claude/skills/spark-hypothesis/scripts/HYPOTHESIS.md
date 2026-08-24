@@ -38,9 +38,9 @@ spread cannot be read, whatever the medians say.
 
 One row per planned run. Figures blank until it is run.
 
-| run | changed | why | pp t/s | tg t/s | ttfr ms | bench |
-|-----|---------|-----|--------|--------|---------|-------|
-| run-0001 | <what it varies> | <what it is for> | | | | |
+| run | changed | why | cell | pp t/s | tg t/s | ttfr ms | bench |
+|-----|---------|-----|------|--------|--------|---------|-------|
+| run-0001 | <what it varies> | <what it is for> | <the cell the rule reads> | | | | |
 
 ## Conclusion
 

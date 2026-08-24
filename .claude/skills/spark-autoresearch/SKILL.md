@@ -100,9 +100,23 @@ The columns:
 - **changed** — this run's recipe against the experiment's baseline, as
   `field: old → new`; comma-separated when a run moves more than one.
 - **why** — the prior result that prompted it. `baseline` for the first run.
-- **pp t/s, tg t/s, ttfr ms** — medians from the report's named cell, not its
+- **cell** — which cell the figures are from, e.g. `d16384 c1`.
+- **pp t/s, tg t/s, ttfr ms** — medians from that cell, not its
   context-prefill phase.
 - **bench** — the `bench_*` id.
+
+A sweep returns every cell it ran. Record the one the rule reads; the rest are
+data, not evidence, unless the hypothesis named them.
+
+Two levers the grid gives you, worth knowing before you write a recipe:
+
+- **`schedule:`** sets execution order, and a schedule entry may override any
+  grid key for that cell — `runs` included. Spend repeats where the rule turns
+  and leave coverage cells cheap. A cell needs four values before it gets a
+  stability verdict.
+- Cells in one schedule share a boot and a warm cache, so they are **not**
+  independent. Use a schedule for coverage. An arm against a control is one
+  cell per run, which is what the cache reset is for.
 
 A run that crashed still gets its row: `—` for the figures, and what the engine
 reported in **why**.
