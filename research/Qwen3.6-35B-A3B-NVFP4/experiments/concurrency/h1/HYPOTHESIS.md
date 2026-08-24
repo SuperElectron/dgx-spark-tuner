@@ -137,9 +137,41 @@ numbers exist rather than after.
 
 | run | changed | why | c10 tg | c1 tg | c5 tg | c2 tg | bench |
 |-----|---------|-----|--------|-------|-------|-------|-------|
-| run-0001 | baseline, `mnbt` 65536 | the control, on this screen's schedule | | | | | |
+| run-0001 | baseline, `mnbt` 65536 | the control, on this screen's schedule | 49.0 ±0.3% | 96.0 ±4.1% (n=7) | 84.3 ±0.6% | 136.1 ±1.6% | bench_5f5d3d0a1d05 |
 | run-0002 | `mnbt` 65536 → 32768 | the reference recipe's value | | | | | |
 | run-0003 | `mnbt` 65536 → 16384 | is the mechanism monotone | | | | | |
+
+Epoch, recorded per arm because the recipe names a floating tag: image
+`ghcr.io/spark-arena/dgx-vllm-eugr-nightly:latest`, which resolves today to
+image id `b277afb7c08f`, digest `sha256:4894c3f1069ac93f4b28feeab8d7f06cd60eb36fa4739a5381427d00f3818990`
+— byte-identical to the `:2026082102` tag h5 ran, so this is h5's epoch and not
+a new one. If a later arm records a different digest, the arms straddle an epoch
+break and are not comparable. Pinning the recipe by digest is a hygiene item.
+
+Prefix cache hit rate 0.0%, as everywhere.
+
+**The screen validates at the cells it was built for.** Against h5's full 28-cell
+sweep: c10 49.0 vs 48.9, c5 84.3 vs 84.2. Two independent schedules agree to
+0.2% at the primary cell, so the reduced schedule is a sound instrument for
+comparing arms at high concurrency.
+
+**c1 does not, and the decision rule is mis-specified because of it.** The
+control reads 96.0 where h5 read 103.7. The rule's guard is stated as "c1 holds
+at or above 102.8", a floor derived from h5's number — so the control itself
+fails its own guard and no arm can pass it as written. That is an inconsistency
+inside this document: the Runs section says run-0001 does not inherit h5's
+figure, and the rule then set the guard from h5's figure anyway. The rule is
+left exactly as written; the round is concluded against it and the defect
+reported, not edited away. The reading the guard was *intended* to carry is
+"c1 must not regress against this round's own control, 96.0", and both readings
+should be reported.
+
+The 7.4% between 96.0 and 103.7 is itself a finding rather than noise to
+explain away: identical recipe, identical cell, different position in the
+schedule — cold and alone here, mid-sweep at index 13 there. That is the
+thermal-and-warm-cache effect h5 was built to measure and could not, because
+the cache never engaged. With the cache at 0.0% in both, whatever separates
+them is not cache.
 
 run-0001 is not h5's number and does not inherit it: h5 ran the full 28-cell
 sweep and this is a four-cell screen, so the control must be measured on the
