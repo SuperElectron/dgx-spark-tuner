@@ -46,7 +46,9 @@ agreed, and every round is judged against it.
   this, so a cell with no scatter figure needs one measuring first.
 - **Held** — the invariants every round shares. Be sparing: anything named
   here is closed to every future round. "Every field not under test" belongs in
-  a round's Method, not here.
+  a round's Method, not here. A round that runs a schedule holds its cell
+  order too: order decides what is warm and what is hot, and no figure reveals
+  which order produced it.
 
 Then `h1/HYPOTHESIS.md`:
 
@@ -59,7 +61,11 @@ Then `h1/HYPOTHESIS.md`:
   when the round is done.
 - **Decision rule** — written before any number exists, never edited. Three
   outcomes: target met, lever alive, lever spent. Size it against Strategy's
-  scatter, never against this round's own runs.
+  scatter, never against this round's own runs. Name the cell it reads: a
+  sweep returns many, and a rule that does not say which one is not a rule.
+  A cell with fewer than four values has no interquartile range, so a rule
+  stated on spread cannot be evaluated there — say so before running, not
+  after.
 
 3. Create `recipe.yaml` with the user
 - `recipe.yaml` is the config every round of this experiment starts from — the model's `recipe.yaml`, or an earlier experiment's `recipe-new.yaml`. The user must agree on which.

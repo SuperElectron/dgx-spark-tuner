@@ -31,10 +31,13 @@ from pathlib import Path
 
 import sparkrun.api as api
 import yaml
+from sparkrun.core.benchmark_profiles import BenchmarkSpec
+from sparkrun.core.recipe import Recipe
 
 from measure import check_box, report
 
 TELEMETRY_INTERVAL = 0.25
+PROGRESS_INTERVAL = 0.2
 REQUIRED = ("results.yaml", "telemetry.jsonl", "engine-capture.log")
 
 
@@ -114,6 +117,72 @@ class Telemetry:
                 fh.flush()
                 self.frames += 1
                 self._stop.wait(TELEMETRY_INTERVAL)
+
+
+class ProgressRoll:
+    """Keep every cell's per-request events, not just the last one's.
+
+    llama-benchy opens `--emit-progress` with mode "w", and a schedule runs one
+    subprocess per cell, so each cell truncates the file its predecessor wrote.
+    This watches for that truncation and rolls what was there into a file named
+    for the cell that produced it.
+
+    Sampling has a limit: a cell that is truncated and refilled past the old
+    length between two polls would be read as a continuation. Cells run for
+    tens of seconds at least, so the poll is far inside that.
+    """
+
+    def __init__(self, source: Path, dest: Path, labels: list[str]) -> None:
+        self._source = source
+        self._dest = dest
+        self._labels = labels
+        self._offset = 0
+        self._stop = threading.Event()
+        self._thread = threading.Thread(target=self._watch, daemon=True)
+        self.cells = 0
+
+    def __enter__(self) -> "ProgressRoll":
+        self._dest.mkdir(parents=True, exist_ok=True)
+        self._thread.start()
+        return self
+
+    def __exit__(self, *_exc: object) -> None:
+        self._stop.set()
+        self._thread.join(timeout=10)
+        self._drain()
+
+    def _watch(self) -> None:
+        while not self._stop.is_set():
+            self._drain()
+            self._stop.wait(PROGRESS_INTERVAL)
+
+    def _drain(self) -> None:
+        if not self._source.is_file():
+            return
+        size = self._source.stat().st_size
+        if size < self._offset:
+            self.cells += 1
+            self._offset = 0
+        if size == self._offset:
+            return
+        with self._source.open("rb") as fh:
+            fh.seek(self._offset)
+            chunk = fh.read()
+        self._offset = size
+        label = self._labels[self.cells] if self.cells < len(self._labels) else "unknown"
+        with (self._dest / f"{self.cells:02d}-{label}.jsonl").open("ab") as fh:
+            fh.write(chunk)
+
+
+def cell_labels(spec: BenchmarkSpec) -> list[str]:
+    """Execution order, so each rolled file is named for its cell. Mirrors
+    llama-benchy's own task list: the schedule when there is one, otherwise a
+    depth-major product of depth x concurrency."""
+    if spec.schedule:
+        return [f"d{e.get('depth', 0)}c{e.get('concurrency', 1)}" for e in spec.schedule]
+    depths = spec.args.get("depth") or [0]
+    concs = spec.args.get("concurrency") or [1]
+    return [f"d{d}c{c}" for d in depths for c in concs]
 
 
 def run_benchmark(recipe: Path, host: str, out: Path, sctx, seen: list[str]):
@@ -246,7 +315,6 @@ def validate(out: Path) -> None:
 # one that matters — warmup is what absorbs the Triton JIT compilation, so
 # without it the compile lands on the measurements instead.
 GRID_KEYS = ("pp", "tg", "depth", "concurrency", "runs")
-BENCHMARK_META = {"framework", "args", "metadata", "timeout", "schedule", "category"}
 # Set by this script rather than the recipe, so the recipe is not expected to
 # declare them and the check below must not treat them as drift.
 INJECTED = {
@@ -263,25 +331,38 @@ INJECTED = {
 }
 
 
-def served_grid(state: Path) -> dict:
-    """What llama-benchy was actually handed, as sparkrun resolved it."""
-    data = yaml.safe_load((state / "state.yaml").read_text()) or {}
-    return data.get("base_args") or {}
+def declared_bench(recipe: Path) -> BenchmarkSpec:
+    """The recipe's `benchmark:` block, resolved the way sparkrun resolves it.
+
+    Asking sparkrun rather than reading the YAML ourselves is what keeps the
+    two in step: it is the side that decides whether a key nested under `args:`
+    and a key at the top level mean the same thing, and they do.
+    """
+    spec = BenchmarkSpec.from_recipe(Recipe.from_dict(yaml.safe_load(recipe.read_text()) or {}))
+    if spec is None:
+        die("recipe declares no benchmark block")
+    return spec
 
 
-def check_grid(recipe: Path, state: Path) -> dict:
+def check_grid(spec: BenchmarkSpec, state: Path) -> dict:
     """The recipe declares the grid; state.yaml records what ran. A difference
     means the run answered a question the recipe did not ask."""
-    declared = (yaml.safe_load(recipe.read_text()) or {}).get("benchmark") or {}
-    declared = {k: v for k, v in declared.items() if k not in BENCHMARK_META}
-    served = served_grid(state)
+    doc = yaml.safe_load((state / "state.yaml").read_text()) or {}
+    served = doc.get("base_args") or {}
     if not served:
         die("state.yaml has no base_args — cannot tell what grid ran")
 
-    for key in sorted((set(declared) | set(served)) - INJECTED):
-        want, got = declared.get(key), served.get(key)
+    for key in sorted((set(spec.args) | set(served)) - INJECTED):
+        want, got = spec.args.get(key), served.get(key)
         if want != got:
             die(f"grid differs from the recipe: {key} declared {want!r}, ran {got!r}")
+
+    # Order is not decoration: it sets what is warm and what is hot when each
+    # cell runs, and no figure in the results reveals which order produced it.
+    # A per-cell override rides in the schedule too, so an unchecked schedule
+    # leaves the grid check reading only half the declaration.
+    if (spec.schedule or None) != (doc.get("schedule") or None):
+        die("schedule differs from the recipe")
     return served
 
 
@@ -301,41 +382,81 @@ FIXED_CORPUS_URL = "spark-tuner://fixed-corpus"
 BENCHY_CACHE = Path.home() / ".cache" / "llama-benchy"
 
 
-def install_corpus(recipe: Path, model: str) -> int:
-    """Size the corpus to this recipe's grid and write it into llama-benchy's
-    cache. Regenerated every run: a corpus sized for a different grid would
-    silently start jittering again.
+def _cell_size(value, default: int) -> int:
+    """A schedule entry carries scalars where the grid carries lists."""
+    if value is None:
+        return default
+    return max(value) if isinstance(value, list) else int(value)
 
-    The pinning is sized from the largest cell, so it only holds for that one.
-    A multi-cell grid leaves every shallower rung with a nonzero offset range
-    and its decode jitters as before — which is why a grid like that has to be
-    split into one run per cell, or accept the scatter deliberately."""
+
+def corpus_cells(spec: BenchmarkSpec) -> dict[str, tuple[int, int]]:
+    """Which cell each pinned corpus has to serve: {book_url: (pp, depth)}.
+
+    A corpus is sized to one prompt length, so one `book_url` pins one cell.
+    A schedule gives each cell its own url and every cell is pinned; a bare
+    grid has one url for the whole cartesian product, so only the deepest
+    would be, and that is refused rather than half-delivered."""
+    base = (_cell_size(spec.args.get("pp"), 0), _cell_size(spec.args.get("depth"), 0))
+    base_url = spec.args.get("book_url")
+
+    want: dict[str, set[tuple[int, int]]] = {}
+    for entry in spec.schedule or [{}]:
+        url = entry.get("book_url", base_url)
+        if not str(url or "").startswith(FIXED_CORPUS_URL):
+            continue
+        cell = (
+            _cell_size(entry.get("pp"), base[0]),
+            _cell_size(entry.get("depth"), base[1]),
+        )
+        want.setdefault(url, set()).add(cell)
+
+    if not want:
+        return {}
+    if not spec.schedule:
+        cells = len(spec.args.get("pp") or [0]) * len(spec.args.get("depth") or [0])
+        if cells > 1:
+            die(
+                f"the fixed corpus pins one cell; this grid has {cells}. Give each "
+                "schedule entry its own book_url, or split it into one run per cell."
+            )
+    for url, cells in want.items():
+        if len(cells) > 1:
+            die(f"{url} is asked to pin {len(cells)} cells: {sorted(cells)}. One url, one cell.")
+    return {url: next(iter(cells)) for url, cells in want.items()}
+
+
+def install_corpora(spec: BenchmarkSpec, model: str) -> str:
+    """Write one corpus per pinned cell into llama-benchy's cache. Regenerated
+    every run: a corpus sized for a different grid silently starts jittering."""
     from hashlib import md5
 
     from tokenizers import Tokenizer
 
-    grid = (yaml.safe_load(recipe.read_text()) or {}).get("benchmark") or {}
-    need = max(grid.get("pp") or [0]) + max(grid.get("depth") or [0])
-    if need <= 0:
-        die("recipe declares no pp/depth, so the corpus cannot be sized")
+    wanted = corpus_cells(spec)
+    if not wanted:
+        return "no fixed corpus: the recipe does not ask for one"
 
-    cells = len(grid.get("pp") or [0]) * len(grid.get("depth") or [0])
-    if cells > 1:
-        die(
-            f"the fixed corpus pins one cell; this grid has {cells}. Only the "
-            "deepest would be deterministic. Split it into one run per cell."
-        )
-
-    dest_name = f"{md5(FIXED_CORPUS_URL.encode()).hexdigest()}.txt"
-    source = sorted(p for p in BENCHY_CACHE.glob("*.txt") if p.name != dest_name)
+    dests = {f"{md5(url.encode()).hexdigest()}.txt" for url in wanted}
+    source = sorted(p for p in BENCHY_CACHE.glob("*.txt") if p.name not in dests)
     if not source:
         die(f"no llama-benchy corpus cached under {BENCHY_CACHE} to slice from")
-
     tok = Tokenizer.from_pretrained(model)
     ids = tok.encode(source[0].read_text(encoding="utf-8"), add_special_tokens=False).ids
-    if len(ids) < need + 1:
-        die(f"corpus has {len(ids)} tokens, needs {need + 1} for this grid")
 
+    sizes = [
+        _write_corpus(tok, ids, url, pp, depth) for url, (pp, depth) in sorted(wanted.items())
+    ]
+    return f"fixed corpus: {len(sizes)} cell(s), {min(sizes)}-{max(sizes)} tokens"
+
+
+def _write_corpus(tok, ids: list[int], url: str, pp: int, depth: int) -> int:
+    from hashlib import md5
+
+    need = pp + depth
+    if need <= 0:
+        die(f"{url} pins a cell with no pp/depth, so the corpus cannot be sized")
+    if len(ids) < need + 1:
+        die(f"corpus has {len(ids)} tokens, needs {need + 1} for {url}")
     # Slice from a per-cell offset rather than always from token zero. Sliced
     # from zero, a shallow cell's prompt is a leading substring of a deeper
     # one's, so in a depth sweep the rungs donate prefix-cache blocks to each
@@ -345,15 +466,14 @@ def install_corpus(recipe: Path, model: str) -> int:
     room = len(ids) - need - 1
     off = 0
     if room > 0:
-        seed = f"{max(grid.get('pp') or [0])}:{max(grid.get('depth') or [0])}"
-        off = int(md5(seed.encode()).hexdigest(), 16) % room // 1024 * 1024
+        off = int(md5(f"{pp}:{depth}".encode()).hexdigest(), 16) % room // 1024 * 1024
 
     text = tok.decode(ids[off : off + need + 1], skip_special_tokens=False)
     got = len(tok.encode(text, add_special_tokens=False).ids)
     if got != need + 1:
         die(f"corpus slice round-tripped to {got} tokens, not {need + 1} (offset {off})")
 
-    (BENCHY_CACHE / dest_name).write_text(text, encoding="utf-8")
+    (BENCHY_CACHE / f"{md5(url.encode()).hexdigest()}.txt").write_text(text, encoding="utf-8")
     return got
 
 
@@ -370,21 +490,19 @@ def main() -> None:
     if not model:
         die("recipe declares no model")
 
-    # Only a recipe that asks for the fixed corpus gets one. install_corpus
-    # pins a single cell, so its one-cell guard belongs to that protocol rather
-    # than to every run: a recipe measuring a whole grid deliberately, on
-    # llama-benchy's own moving offset, is not a mistake to be caught.
-    bench = doc.get("benchmark") or {}
-    book = bench.get("book_url") or (bench.get("args") or {}).get("book_url")
-    if book == FIXED_CORPUS_URL:
-        say(f"fixed corpus {install_corpus(recipe, model)} tokens")
-    else:
-        say("no fixed corpus: the recipe does not ask for one")
+    # Only a recipe that asks for the fixed corpus gets one: a recipe measuring
+    # a grid on llama-benchy's own moving offset is a deliberate choice, not a
+    # mistake to be caught.
+    spec = declared_bench(recipe)
+    say(install_corpora(spec, model))
 
     seen: list[str] = []
     say(f"benchmarking {recipe} on {host}")
     try:
-        with Telemetry(host, out / "telemetry.jsonl", ssh_kwargs, sctx) as telemetry:
+        with (
+            Telemetry(host, out / "telemetry.jsonl", ssh_kwargs, sctx) as telemetry,
+            ProgressRoll(out / "progress.jsonl", out / "progress", cell_labels(spec)),
+        ):
             result, bench_id = run_benchmark(recipe, host, out, sctx, seen)
     except (api.HostsUnreachable, api.InsufficientCapacity) as exc:
         die(f"box unavailable: {type(exc).__name__}: {exc}")
@@ -406,7 +524,7 @@ def main() -> None:
         api.stop(cluster_id=result.cluster_id, hosts=[host], sctx=sctx)
 
     validate(out)
-    grid = check_grid(recipe, state)
+    grid = check_grid(spec, state)
     box = check_box(out)
     copy_to_state(out, state)
     report(out, state, telemetry.frames, grid, box, GRID_KEYS)

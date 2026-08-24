@@ -122,10 +122,20 @@ def cacheable(grid: dict) -> bool:
     return tokens >= BLOCK_TOKENS
 
 
-def requests(out: Path) -> dict:
+def progress_files(out: Path) -> list[tuple[str, Path]]:
+    """One file per cell, labelled by the cell that wrote it. run.py rolls them
+    out of the single path llama-benchy overwrites; a run predating that has
+    only the one file, holding whichever cell finished last."""
+    rolled = sorted((out / "progress").glob("*.jsonl"))
+    if rolled:
+        return [(p.stem.split("-", 1)[-1], p) for p in rolled]
+    single = out / "progress.jsonl"
+    return [("", single)] if single.is_file() else []
+
+
+def requests(path: Path) -> dict:
     """Per-request shape, which the aggregate figures average away. If
     max_num_seqs is throttling, ttft clusters in waves of that width."""
-    path = out / "progress.jsonl"
     if not path.is_file():
         return {}
     ttft: list[float] = []
@@ -170,9 +180,8 @@ def _repeat_windows(text: str) -> list[float]:
     return out
 
 
-def degeneration(out: Path) -> dict:
+def degeneration(path: Path) -> dict:
     """Per request, the worst sliding-window repeat ratio in its output."""
-    path = out / "progress.jsonl"
     if not path.is_file():
         return {}
     texts: dict[int, str] = {}
@@ -293,23 +302,24 @@ def report(out: Path, state: Path, frames: int, grid: dict, box: dict, keys) -> 
             note = f"  (expected: prompt is under one {BLOCK_TOKENS}-token block)"
         print(f"cache:     hit rate max {eng['hit_max']:.1f}% over {eng['hit_samples']} samples{note}")
 
-    deg = degeneration(out)
-    if deg:
-        flag = (
-            f"  {len(deg['bad'])}/{deg['n']} LOOPING (requests {deg['bad']}) — "
-            "these decode faster and inflate tg"
-            if deg["bad"]
-            else ""
-        )
-        print(f"text:      worst repeat {deg['worst']:.2f} over {deg['n']} requests{flag}")
-
-    req = requests(out)
-    if req:
-        lo, mid, hi = req["rate"]
-        print(f"per-req:   decode {lo:.1f} / {mid:.1f} / {hi:.1f} tok/s over {req['n']} requests")
-        if req["ttft"]:
-            lo, mid, hi = req["ttft"]
-            print(f"           ttft   {lo:.2f} / {mid:.2f} / {hi:.2f} s  (min/median/max)")
+    for label, path in progress_files(out):
+        head = f"{label} " if label else ""
+        deg = degeneration(path)
+        if deg:
+            flag = (
+                f"  {len(deg['bad'])}/{deg['n']} LOOPING (requests {deg['bad']}) — "
+                "these decode faster and inflate tg"
+                if deg["bad"]
+                else ""
+            )
+            print(f"{head}text:      worst repeat {deg['worst']:.2f} over {deg['n']} requests{flag}")
+        req = requests(path)
+        if req:
+            lo, mid, hi = req["rate"]
+            print(f"{head}per-req:   decode {lo:.1f} / {mid:.1f} / {hi:.1f} tok/s over {req['n']} requests")
+            if req["ttft"]:
+                lo, mid, hi = req["ttft"]
+                print(f"{head}           ttft   {lo:.2f} / {mid:.2f} / {hi:.2f} s  (min/median/max)")
 
     for row in spread(out):
         if row["metric"] == "prefill*":
