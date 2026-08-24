@@ -335,4 +335,129 @@ whatever `tg` says.
 
 ## Conclusion
 
-<pending>
+**Target met on the screen, and the screen cannot close it. Outcome:
+target-met-pending-validation.** `max_num_seqs` 4 → 10 → 16, one engine start
+per arm, all four cells completed in every arm, `failed_indices: []` and
+`crash_count: 0` throughout.
+
+    arm   mns   running max   waiting max     c1      c2      c5     c10
+    0001    4             4             6  107.0   136.3    84.2    49.0
+    0002   10            10             4  102.1   137.9   172.0*  137.5
+    0003   16            10             4  114.1   133.4   171.5   139.8
+
+    * run-0002's c5 carried 1/30 LOOPING and is an upper bound; run-0003 raised
+      no LOOPING on any cell, so 171.5 is this round's clean c5.
+
+### Validity
+
+All three arms served what they declared. vLLM's `non-default args:` line
+matches each recipe's `defaults:` field for field, and the only field that
+differs between arms is `max_num_seqs` (4 / 10 / 16). One epoch: image tag
+`ghcr.io/spark-arena/dgx-vllm-eugr-nightly:2026082102`, vLLM
+`e85d1b69cf2f1c6101cfc7c799bb0c457cacc4b3` (0.27.2rc1.dev360), flashinfer
+`4927c0e15cb63a2abb6df09019c39a172222f0eb`, source digest
+`sha256:19d2158d…` — identical in all three archives. Three distinct recipe
+hashes (`67caf49e…`, `8c5fe0a4…`, `de57c810…`), so no arm duplicated another.
+Integrity clean on all twelve cells: `request_end` and `request_first_token`
+counts agree everywhere, and only one request in the whole round returned short
+(94 tokens, run-0001 c5).
+
+The box was not the constraint. Over the benchmark window only, GPU utilisation
+held a median 96% and clocks sat at 2398-2411 MHz with no throttling, 47-75 C,
+in every arm. Swap did not grow in any arm (786 → 786, 791 → 790, 795 → 795 MB).
+Host memory headroom did narrow with the slot count — worst-case free memory
+7967 → 3558 → 2507 MB across mns 4 / 10 / 16 — which is not binding at 10 but is
+one more reason not to reach past it speculatively. KV peaked at 3.6% / 9.4% /
+9.2% of pool with zero preemptions everywhere.
+
+### Against the decision rule as written
+
+The rule reads c10 and c1 aggregate `tg` medians against this round's own
+control.
+
+- **c10: passed, decisively.** 49.0 → 137.5 is a 2.81x, and 137.5 clears the
+  Objective's 102.31 by 34%. The control reproduces h1's control at this cell to
+  0.0%, and the cell's own spread is ±0.2-1.8%, so the step is roughly two orders
+  of magnitude larger than the instrument's resolution there.
+- **The pre-registered mechanism check passed before any throughput number was
+  read.** `running max` 4 → 10, `waiting max` 6 → 4. The queue shortened because
+  the slots existed to serve it, which is what the hypothesis said would happen
+  and the only evidence that the gain is admission rather than something else.
+- **c1: the rule's floor is not resolvable, and this is the round's
+  methodological finding.** The written floor is 0.959 × control = 102.61.
+  run-0002 reads 102.1, missing it by 0.5%. Taken literally that fires *lever
+  spent* on the guard clause. It should not, and the reason was recorded in this
+  round's own text before the arms ran: the direct replicate of h1 run-0001
+  showed c1 not reproducing at ±11.5% under a byte-identical configuration, so a
+  floor sized at 4.1% is finer than the instrument. This round then supplied the
+  demonstration in triplicate — 107.0, 102.1, 114.1, an 11.7% span on a field
+  that provably cannot act at c1, where `running max` is 1 by construction. The
+  three readings are not even monotone in the field, and the *highest* of them is
+  the 16-slot arm. The floor is therefore **mis-specified**, not failed, and it
+  is left as written. c1 is unresolvable on this schedule at better than about
+  ±11%, and no guard reading of any size below that is available from it.
+
+Recorded, because it is a real cost and not a rounding error: **c10 ttft median
+rose 19.12 s → 28.08 s** between the control and the 10-slot arm. Arena scores
+`tg`, so this costs nothing on the board, but the round bought a 2.8x in
+throughput partly with first-token latency and the record says so.
+
+### What was learned
+
+1. **The queue was the cost, and it is paid in full at 10.** run-0003 settles
+   the two competing accounts: `running max` stops at **10** even with sixteen
+   slots configured, because arena's grid never offers more than ten concurrent
+   requests, so slots eleven through sixteen have nothing to admit. c10 moves
+   137.5 → 139.8, a 1.7% difference against per-cell spreads of ±1.8% and ±0.4%.
+   "More slots always help" is **refuted**; "the queue was the cost" is
+   **confirmed**; and the smallest sufficient value is **10**, which is exactly
+   the maximum concurrency the grid presents. 10 is also what the evidence
+   covers — 16 is not wrong, it is unmeasurable on this grid.
+2. **c5 moves too, and by the same mechanism.** 84.2 → 171.5 clean, +104%, and
+   c5 is a cell where four slots also queue. c2 (136.3 → 133.4-137.9) and c1 do
+   not move beyond their own noise, which is what admission predicts: below the
+   slot count there is nothing to admit.
+3. **The experiment's Strategy was wrong about this, in a specific and
+   instructive way.** "The gap is not slots" was argued from the reference recipe
+   also serving `max_num_seqs 4`. That argument is sound about why the *reference*
+   beats us and does not bear on whether raising slots raises *our* number. It
+   held the campaign off the largest lever it has found. `max_num_seqs` was
+   deliberately left out of Held, which is what made this round legal; the
+   Strategy sentence stands as written with this correction beneath it.
+4. **c1 needs a different instrument, and the campaign already knows what it
+   is.** Memory records that c1 run-to-run spread at this cell is ~3% once the
+   prompt is pinned (`no_adapt_prompt`, `exact_tg`, temperature 0) and 6-8% when
+   llama-benchy redraws the prompt each run — which is what happens here, because
+   neither the screen nor arena's grid pins it. So the ±11% is a protocol
+   property, not a property of c1, and it is not fixable inside a board-comparable
+   run: Held requires the unmodified grid and the unmodified grid does not pin the
+   prompt. The guard as an experiment-level construct can only ever be read as a
+   floor on the full grid, never as a percentage comparison, and any future round
+   wanting a real c1 answer must ask it off the board's schedule.
+5. Ruled out as before, and confirmed again: prefix cache 0.0% in every arm
+   (standing campaign defect, 8th confirmation, not this round's to fix), zero
+   preemptions, KV never above 9.4% of pool, MTP acceptance flat.
+
+### Was it worth running
+
+Yes — this is the round the experiment existed for. It moved the Objective's cell
+by 2.8x where h1's lever moved it by under 10% in the wrong direction, it
+identified the winning value and proved it is the smallest sufficient one, and
+it retired a load-bearing sentence in the experiment's own Strategy.
+
+### What follows
+
+Not closure. Held is explicit: the Objective closes only on one full unmodified
+28-cell arena-v2 run, and reduced-schedule figures are never board-comparable.
+These are screen figures on four cold cells; arena's grid runs twenty-eight in a
+heat-aware order with twelve cells preceding `d16384 c1`. 137.5 is a **candidate**,
+not the number. So this round's rule sends the work straight to that run, and it
+is also the only measurement that can give the guard a reading on the grid it is
+defined against.
+
+- `recipe-new.yaml` is written beside `recipe.yaml`, identical to it in every
+  field except `max_num_seqs: 10`, carrying the unmodified 28-cell arena-v2
+  schedule.
+- **h3** runs it, once, unmodified, and reads `d16384 c10` against 102.31 and
+  `d16384 c1` against 103.7 as floors on arena's own grid.
+- The experiment's Conclusion stays pending until h3 reports.
