@@ -138,7 +138,7 @@ numbers exist rather than after.
 | run | changed | why | c10 tg | c1 tg | c5 tg | c2 tg | bench |
 |-----|---------|-----|--------|-------|-------|-------|-------|
 | run-0001 | baseline, `mnbt` 65536 | the control, on this screen's schedule | 49.0 ±0.3% | 96.0 ±4.1% (n=7) | 84.3 ±0.6% | 136.1 ±1.6% | bench_685e42bde522 |
-| run-0002 | `mnbt` 65536 → 32768 | the reference recipe's value | | | | | |
+| run-0002 | `mnbt` 65536 → 32768 | the reference recipe's value | 48.0 ±0.6% | 107.2 ±4.1% (n=7) | 80.8 ±0.5% | 131.3 ±2.9% | bench_da8989775690 |
 | run-0003 | `mnbt` 65536 → 16384 | is the mechanism monotone | | | | | |
 
 Epoch, recorded per arm because the recipe names a floating tag: image
@@ -172,6 +172,37 @@ schedule — cold and alone here, mid-sweep at index 13 there. That is the
 thermal-and-warm-cache effect h5 was built to measure and could not, because
 the cache never engaged. With the cache at 0.0% in both, whatever separates
 them is not cache.
+
+### run-0002, and the hypothesis inverting
+
+    arm        mnbt      c1      c2     c5     c10
+    run-0001  65536    96.0   136.1   84.3    49.0
+    run-0002  32768   107.2   131.3   80.8    48.0
+
+**The primary cell does not move.** c10 reads 48.0 against the control's 49.0 —
+a 2.0% *decrease*, well inside the rule's 5% threshold and in the wrong
+direction. Halving the token budget did not free decode under queueing. c5 and
+c2 drift the same way, -4.2% and -3.5%. run-0002's c10 additionally carries
+2 of 60 requests LOOPING, which run.py flags as decoding faster and inflating
+`tg`, so 48.0 is if anything generous. The mechanism argued in the Hypothesis —
+prefill hogging the step budget, halved budget halving the wait — is not what
+governs this cell.
+
+`running max 4, waiting max 6, kv max 3.6%, preemptions 0` in both arms: the
+queue is real, the capacity is not the limit, and the budget does not change
+either.
+
+**The guard cell moves instead, and upward.** c1 reads 107.2 against 96.0,
++11.7%, on n=7 both sides. This was not predicted and it contradicts the
+memory this round was built on, which records the field as INERT at c1 —
++0.27% (0.07 SE) across 8192 -> 65536, a range that contains this change.
+
+Not claimed as established. c1 is this screen's noisy cell (iqr 14.1% and
+10.4%, ±4.1% each), so the SE of the difference is about 5.8% and 11.7% is
+roughly 2 SE. run-0003 at 16384 is the discriminator: monotone continuation
+says the effect is real, a fall back to ~96 says it was scatter. Whichever it
+is, it is a finding about the *guard*, and the Objective's primary is
+unmoved — a round can be interesting and still spend its lever.
 
 run-0001 is not h5's number and does not inherit it: h5 ran the full 28-cell
 sweep and this is a four-cell screen, so the control must be measured on the
