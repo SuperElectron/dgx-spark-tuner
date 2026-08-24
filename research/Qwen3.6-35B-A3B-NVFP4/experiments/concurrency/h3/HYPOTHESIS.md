@@ -148,7 +148,7 @@ One row per planned run. Figures blank until it is run.
 
 | run | changed | why | cell | pp t/s | tg t/s | ttfr ms | bench |
 |-----|---------|-----|------|--------|--------|---------|-------|
-| run-0001 | `recipe-new.yaml`: `max_num_seqs` 10, full 28-cell arena-v2 schedule | the only measurement that can close the Objective | d16384 c10, guard d16384 c1 | | | | |
+| run-0001 | `recipe-new.yaml`: `max_num_seqs` 10, full 28-cell arena-v2 schedule | the only measurement that can close the Objective | d16384 c10, guard d16384 c1 | 677.9 | **141.5** ±0.2% (141.5 140.8 141.7) · guard c1 **95.8** ±15.0% (95.8 124.2 86.1), pp 628.0 | 28636.2 · guard c1 3281.9 | bench_95fdfa8922a3 |
 
 Record, as h2 did: the container image tag and digest, the vLLM and flashinfer
 commits, `running max`, `waiting max`, `kv max`, preemptions, prefix cache hit
@@ -159,4 +159,136 @@ and buys everywhere else.
 
 ## Conclusion
 
-<pending>
+**Target met, guard unresolved** — the rule's second branch, the one this round
+pre-registered as most likely.
+
+    primary   d16384 c10   141.5  ±0.2%  (141.5 140.8 141.7)   floor 102.31   MET, +38%
+    guard     d16384 c1     95.8 ±15.0%  ( 95.8 124.2  86.1)   floor 103.7    -7.6%, inside ±11%
+
+Aggregate `tg` medians from `bench_95fdfa8922a3`'s `results.yaml`. The primary
+clears the Objective's 102.31 by 38% and is **2.89x** h5's incumbent 48.9 at the
+same cell on the same unmodified grid. The guard lands 7.6% below 103.7, inside
+the pre-registered ±11% band (floor 92.29), so it is **unresolved — not held and
+not regressed**.
+
+### The run is valid and comparable to the incumbent
+
+vLLM's `non-default args:` line agrees with `recipe.yaml`'s `defaults:` field for
+field: `max_num_seqs 10`, `max_num_batched_tokens 65536`,
+`gpu_memory_utilization 0.8`, `max_model_len 262144`, `kv_cache_dtype fp8`,
+`attention_backend flashinfer`, `moe_backend marlin`, `enable_prefix_caching`,
+`enable_chunked_prefill`, `async_scheduling`, and the MTP speculative config at
+`num_speculative_tokens 3` on triton. The engine served what the recipe declared.
+
+Epoch: vLLM `0.27.2rc1.dev360+ge85d1b69c.d20260821`, flashinfer 0.6.18, image
+`ghcr.io/spark-arena/dgx-vllm-eugr-nightly:2026082102`, image id
+`sha256:b277afb7c08fb5941e27449fa936aafeeb360a952fc95c38a28f5f570739c2f2`, repo
+digest `sha256:4894c3f1069ac93f4b28feeab8d7f06cd60eb36fa4739a5381427d00f3818990`.
+The **same epoch as h2 and as decode-tg h5**, which is what makes the comparison
+against the incumbent `bench_e86574ff0e1e` legitimate rather than a cross-epoch
+guess.
+
+One session, `crash_count 0`, `failed_indices []`, all 28 cells completed, wall
+1:51:51 — against h5's 1h57m on the identical schedule, so the grid cost nothing
+extra. `exit_on_first_fail: true` was set and never fired.
+
+### The whole board row, against the incumbent
+
+Aggregate `tg` medians, h5 `bench_e86574ff0e1e` (`max_num_seqs 4`) against this
+run (`max_num_seqs 10`). Everything else identical.
+
+    depth      c1                 c2                 c5                  c10
+    0        96.6 →  99.9 1.03x  152.3 → 151.0 0.99x  170.6 → 211.3 1.24x  154.2 → 276.8 1.80x
+    4096    109.6 → 106.5 0.97x  138.6 → 136.2 0.98x  131.8 → 185.1 1.40x  105.8 → 237.7 2.25x
+    8192    103.0 → 115.6 1.12x  129.3 → 141.6 1.10x  107.9 → 183.3 1.70x   77.7 → 230.5 2.96x
+    16384   103.7 →  95.8 0.92x  130.9 → 137.8 1.05x   84.2 → 176.1 2.09x   48.9 → 141.5 2.89x
+    32768   106.1 →  93.3 0.88x  125.0 → 128.3 1.03x   53.1 → 126.1 2.38x   25.8 →  37.5 1.46x
+    65535    95.6 →  90.4 0.95x  107.7 → 102.4 0.95x   19.7 →  20.5 1.04x   10.5 →  10.9 1.04x
+    100000   82.4 →  91.0 1.10x   58.2 →  58.3 1.00x    8.3 →   8.5 1.03x    5.4 →   5.5 1.03x
+
+Read as one figure: **the win is admission, and it is confined to cells where
+offered concurrency exceeds the old slot count.**
+
+- **Where it gains** — c5 and c10 from d0 to d32768, 1.24x to 2.96x. The largest
+  gain is not the Objective's cell but `d8192 c10` at 2.96x.
+- **Where it is flat** — the whole c1 column (0.88x-1.12x, unsigned scatter about
+  a cell that this run itself shows spans ±15%) and the whole c2 column
+  (0.95x-1.10x). Two offered requests never queued behind four slots, so there
+  was nothing for the field to buy, exactly as h2 predicted.
+- **Where it is also flat, and shouldn't have been** — `d65535` and `d100000` at
+  c5 and c10 move 1.03x-1.04x, which is nothing. At those depths the cells are
+  already collapsed (20.5, 10.9, 8.5, 5.5 t/s) and something other than admission
+  is bounding them. The slot count is not the lever there and this run does not
+  say what is.
+- **Nothing got materially worse.** The three cells below 1.00x by more than 5%
+  are `d16384 c1` 0.92x, `d32768 c1` 0.88x and `d65535 c2` 0.95x. The two c1 cells
+  sit inside a column whose own three values this run spans 86.1-124.2 at
+  `d16384`, so they are not readable as regressions. No cell fell far enough to
+  clear the instrument's noise.
+
+### What the guard does and does not establish
+
+It establishes that `d16384 c1` did not collapse: 95.8 against a floor of 103.7
+is a 7.6% shortfall on a cell whose three values in this very run are 95.8, 124.2
+and 86.1 — a **±15.0% span on a single unchanged configuration**. That is wider
+than the ±5.2% Strategy carried from h5 and wider than the ±11% band this rule
+pre-registered, and it is measured under the board's own protocol.
+
+It does **not** establish that the guard held. At `runs: 3` with an unpinned
+prompt, `d16384 c1` cannot resolve a change of the size the guard was written to
+catch. h2 reached the same finding independently — 107.0 / 102.1 / 114.1 across
+three arms of a field that provably cannot act at c1, where `running max` is 1 by
+construction. Memory records the excess as protocol, not cell: the prompt is
+redrawn per run and arena's schedule does not pin it. It is not fixable inside a
+board-comparable run, because Held requires the unmodified grid. A pinned-prompt
+c1 measurement is a separate instrument question and is not this experiment's.
+
+**The milestone's c1 target of 116.03 is not claimed.** This run's `d16384 c1`
+median is 95.8 and nothing here moves that target.
+
+The rule was **not** mis-specified. It named this branch before the numbers
+existed, on h2's evidence, and the numbers landed in it.
+
+### The rest of the record
+
+- **Scheduler.** `running max 10`, `waiting max 7`, `preemptions 0`, `kv max
+  24.6%` of pool. The mechanism check passes on its own terms: ten slots are
+  actually occupied, which is the difference from h5's `running max 4`. The queue
+  is not empty at c10 — seven waiting at the worst point, against six in h2's
+  four-cell screen — because the grid's deeper cells offer requests the slots
+  cannot clear. KV at 24.6% is 2.6x h5's 9.8% and still nowhere near binding.
+- **Box.** Peak 99.3 W, peak clock 2411 MHz. Neither power nor clock was the
+  constraint across 1h51m.
+- **MTP.** Median mean acceptance length 3.42 over 312 samples (min 2.35, max
+  4.00) at `num_speculative_tokens 3`. Recorded as a control that it did not move
+  — never as an explanation for anything above. Eighth consecutive round where
+  acceptance is flat under a scheduler knob.
+- **LOOPING.** None raised, for any cell. Worst repeat ratio 0.18 (`d0 c1`) to
+  0.44 (`d100000 c10`). The h1 arms' looping-inflated figures have no analogue
+  here, so no cell in the board row is an upper bound.
+- **Prefix cache.** Hit rate max 0.0% over 527 samples, and `run.py` itself flags
+  `SUSPECT: recipe asks for prefix caching`. Eighth confirmation of the standing
+  campaign defect. **Every figure here is cold-cache**, including the 141.5.
+- **Integrity: 27 of 28 cells clean** — `request_end == request_first_token` and
+  every request `total_tokens == 128`. **One failure:** `06-d100000c2.jsonl` has
+  `request_end` 13 against `request_first_token` 12 — one extra completion with no
+  matching first-token event, where the grid expects 12. All 13 ends carry
+  `total_tokens 128`, so there is no short generation. That cell (`d100000 c2`,
+  tg 58.3) is **SUSPECT** and is marked so. It is not a cell either branch of the
+  rule reads and it does not touch the outcome; it is the same shape of damage h1
+  run-0003 carried and it is now the second sighting, which makes it a pattern
+  worth naming rather than a one-off.
+- **Known noise.** `SSH script <- spark-6f0e... FAILED rc=1 (0.4s)` fires at the
+  start of every run in this tree, is unexplained, and is not fatal. The
+  `HF_TOKEN` warning is benign.
+
+### Was the round worth running
+
+Yes, and it bought the one thing h2 could not: a board-comparable number.
+141.5 at `d16384 c10` is measured on arena's own 28-entry schedule in arena's own
+order, which is the only figure Held permits to be set beside 102.31. It also
+cost h2's screen figure almost nothing — 137.5 cold on four cells against 141.5
+warm on twenty-eight — so arena's ordering does not eat the gain, which was the
+round's stated alternative finding and is now closed.
+
+Nothing is submitted to Spark Arena. `recipe-new.yaml` is a deliverable for Mat.
