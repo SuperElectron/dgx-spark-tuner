@@ -229,7 +229,25 @@ band.
 Full cell menu: c1 102.1 ±4.2% (n=7), c2 137.9 ±3.2%, c5 **172.0** ±1.9%,
 c10 **137.5** ±1.8%. Integrity clean on all four cells — `request_end` and
 `request_first_token` agree (14/14, 60/60, 30/30, 12/12) and every request
-returned a full 128 tokens.
+returned a full 128 tokens with an empty error string.
+
+Three qualifications on those numbers:
+
+- **c5's 172.0 is inflated.** 1 of 30 requests was flagged LOOPING, which
+  run.py records as decoding faster and lifting `tg`. c1, c2 and c10 raised
+  none, so the headline c10 figure is clean and c5's is an upper bound.
+- **Latency moved the other way.** c10 ttft median went 19.12 s -> 28.08 s
+  against the control. Arena scores `tg`, so this costs nothing on the board,
+  but the round bought throughput with first-token latency and the record
+  should say so rather than report only the half that flatters it.
+- **KV rose but did not bind:** 3.6% -> 9.4% of pool, preemptions still 0.
+  CUDA-graph capture now runs to size 80 at 1.95 GiB. Headroom remains, which
+  is what makes the 16-slot arm worth running rather than reckless.
+
+One non-finding, checked and dismissed: the c10 progress file holds 65
+`request_start` lines for 60 distinct request ids — five ids emit a duplicate
+start line. Unique starts, ends and first-tokens all equal 60, so nothing is
+lost or double-counted; it is a duplicated log emission, not a data fault.
 
 ### The mechanism did exactly what it was raised to do
 
