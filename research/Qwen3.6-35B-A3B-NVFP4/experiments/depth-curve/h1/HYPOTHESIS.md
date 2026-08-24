@@ -121,7 +121,7 @@ One row per planned run. Figures blank until it is run.
 
 | run | depth | runs | why | tg t/s | iqr | pp t/s | prefill t/s | ttfr ms | hit % | bench |
 |-----|-------|------|-----|--------|-----|--------|-------------|---------|-------|-------|
-| run-0001 | 0 | 9 | the intercept: no KV term, single phase, and the rule reads it | | | | | | | |
+| run-0001 | 0 | 9 | the intercept: no KV term, single phase, and the rule reads it | 114.6 | 5.1% UNSTABLE | 5695.1 | 5610.5 | 377.0 | 0.0 | bench_594c47d62013 |
 | run-0002 | 4096 | 7 | first rung with a context | | | | | | | |
 | run-0003 | 8192 | 7 | witnesses monotonicity | | | | | | | |
 | run-0004 | 16384 | 7 | re-bases the incumbent under the new corpus offset | | | | | | | |
