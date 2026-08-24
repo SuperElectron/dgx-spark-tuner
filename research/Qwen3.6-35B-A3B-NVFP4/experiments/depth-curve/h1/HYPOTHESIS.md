@@ -127,7 +127,8 @@ One row per planned run. Figures blank until it is run.
 | run-0004 | 16384 | 7 | re-bases the incumbent under the new corpus offset | 117.8 | 2.6% | 628.6 | 5639.4 | 3279.0 | 0.0 | bench_c003c48ede71 |
 | run-0005 | 30592 | 9 | the deepest legal context at max_model_len 32768; the rule reads it — HTTP 400, one token over: prompt 32641 + tg 128 = 32769 vs max_model_len 32768 | — | — | — | — | — | — | bench_5330c0302d07 |
 
-| run-0006 | 30591 | 9 | d30592 is one token over the ceiling: the corpus carries a spare token, so the deepest servable rung is one shallower. Stands in as the rule's deep anchor | | | | | | | |
+| run-0006 | 30591 | 9 | one token shallower than run-0005 — HTTP 400 again, at the same 32641 input tokens. The endpoint adds a token of its own, so the served prompt is pp + depth + 2 | — | — | — | — | — | — | bench_f574047b8c2e |
+| run-0007 | 30464 | 9 | measured ceiling is d30590 with zero margin; this takes 126 tokens of headroom for the same rung. Stands in as the rule's deep anchor | 109.5 | 4.3% (±2.1%) | 327.1 | 5195.9 | 6270.8 | 0.0 | bench_6bd19fe9a3c2 |
 
 run-0001 is also the first end-to-end run of the harness rewritten on
 2026-08-23 — per-cell corpora, rolled progress files, schedule-aware grid
