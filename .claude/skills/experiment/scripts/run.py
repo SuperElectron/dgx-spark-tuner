@@ -361,9 +361,33 @@ def check_grid(spec: BenchmarkSpec, state: Path) -> dict:
     # cell runs, and no figure in the results reveals which order produced it.
     # A per-cell override rides in the schedule too, so an unchecked schedule
     # leaves the grid check reading only half the declaration.
-    if (spec.schedule or None) != (doc.get("schedule") or None):
-        die("schedule differs from the recipe")
+    #
+    # Compare against the schedule sparkrun would build, not the literal one:
+    # a recipe with no schedule still reaches state.yaml as the expanded grid,
+    # so the absent and the derived forms are the same declaration.
+    want, got = expected_schedule(spec), doc.get("schedule") or []
+    if _cells(want) != _cells(got):
+        die(f"schedule differs from the recipe: declared {_cells(want)}, ran {_cells(got)}")
+    for i, entry in enumerate(want):
+        extra = {k: v for k, v in entry.items() if k not in ("depth", "concurrency")}
+        for key, value in extra.items():
+            if got[i].get(key) != value:
+                die(f"schedule cell {i} differs: {key} declared {value!r}, ran {got[i].get(key)!r}")
     return served
+
+
+def expected_schedule(spec: BenchmarkSpec) -> list[dict]:
+    """The schedule sparkrun runs: the recipe's own when it declares one, and
+    otherwise the depth-major product it expands a bare grid into."""
+    if spec.schedule:
+        return list(spec.schedule)
+    depths = spec.args.get("depth") or [0]
+    concs = spec.args.get("concurrency") or [1]
+    return [{"depth": d, "concurrency": c} for d in depths for c in concs]
+
+
+def _cells(entries: list[dict]) -> list[tuple]:
+    return [(e.get("depth"), e.get("concurrency")) for e in entries]
 
 
 # llama-benchy draws each prompt from a random offset into a corpus and seeds

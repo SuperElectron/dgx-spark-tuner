@@ -22,9 +22,9 @@ benchmark:
   framework: llama-benchy
   pp: [2048]
   tg: [128]
-  depth: [30592]
+  depth: [16384]
   concurrency: [1]
-  runs: 9
+  runs: 7
   prefix_caching: true
   book_url: spark-tuner://fixed-corpus
   exact_tg: true

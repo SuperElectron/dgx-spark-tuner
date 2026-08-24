@@ -49,6 +49,21 @@ running this experiment rather than reading the answer off memory: the question
 has been asked twice and answered both ways on an instrument that could not
 separate a 6% effect from its own noise.
 
+Our own box has since answered a nearby question, and it favours flat. On
+2026-08-23 a partial arena-v2 sweep (`bench_e86574ff0e1e`, 12 of 28 cells before
+it was killed) read `tg` at c1 of **101.6 at d0 and 96.2 at d65535** — a 5.3%
+decline across four times this ladder's span. It is not this experiment's
+answer and cannot be: it ran arena's protocol, not ours — warm cache, `runs: 3`,
+no `exact_tg`, no pinned prompt, sampling from the checkpoint — and at
+`max_model_len 262144`, the far side of an epoch break from every rung here.
+What it does is set the expectation: the effect this ladder is looking for is
+small, which is exactly why the rule below has to be sized against our own
+scatter rather than against a round number.
+
+The same sweep is the only concurrency data the tree holds, and it is not
+comparable either: `max_num_seqs 4` means its c5 and c10 cells queue rather
+than batch.
+
 Rungs must not contaminate each other, and our own instrument was worse than
 the board's at this until recently. Sliced from token zero, a shallow rung's
 prompt is a leading substring of a deeper one's, so the rungs would donate
@@ -68,9 +83,14 @@ worth a round.
 - One node, one GB10. No ray, no tensor parallel above 1.
 - The checkpoint pinned in `docs/model-card.md`.
 - The container image and its vLLM and flashinfer commits.
-- `pp 2048 · tg 128 · concurrency 1 · runs 7`. **Depth is the variable** — it is
-  the only field that moves across rungs, and everything else in the recipe is
-  what decode-tg holds.
+- `pp 2048 · tg 128 · concurrency 1`, and `runs 7` as the floor. **Depth is the
+  variable** — it is the only field that moves across rungs, and everything else
+  in the recipe is what decode-tg holds. A rung the decision rule reads directly
+  carries `runs 9`: the verdict rests on those two medians, and repeats are
+  cheaper than a re-run. (Until 2026-08-23 this said `runs 7` flat, before
+  per-rung repeats were available.)
+- One rung per run directory, each with its own server. Rungs are compared to
+  each other, so none may inherit another's cache or heat.
 - The measurement protocol, which is part of the epoch: `exact_tg`,
   `extra_body temperature=0`, `no_adapt_prompt`, the per-cell fixed corpus, and
   `post_run_cmd` resetting the prefix cache between runs.
@@ -82,8 +102,59 @@ worth a round.
 
 | round | hypothesis | outcome |
 |-------|------------|---------|
-| h1 | decode is flat with depth, as the board's vLLM entries are | pending |
+| h1 | decode is flat with depth, as the board's vLLM entries are | flat — confirmed, 4.5% d0 to d30464 |
+
+h1 ran five rungs, one server each, with only `depth` moving: 0, 4096, 8192,
+16384, and 30464 standing in for the unservable 30592. `tg` medians read 114.6,
+110.1, 127.0, 117.8, 109.5 — a 4.5% decline from d0 to the deep anchor against
+the rule's 10% threshold, so **flat**. The raw ladder is not monotone, and the
+reason is that each rung reads different prose: dividing by the measured MTP
+acceptance length removes the d8192 bump and leaves a 5.1% decline, matching
+the Hypothesis's KV arithmetic, which rises from ~0% to ~12% of the per-step
+read across the same span. All seven runs share one container digest, one vLLM
+commit, one flashinfer commit, and a byte-identical `non-default args:` line.
 
 ## Conclusion
 
-Pending.
+**Our position against the board is a level, not a slope — over every depth
+this `max_model_len` lets us measure.**
+
+Decode on this stack declines 4.5% from d0 to d30464 on raw `tg`, and 5.1% once
+MTP acceptance is divided out. The board's `1199b578` vLLM entry declines 3.4%
+from d0 to d32768. Two instruments, two runtimes, the same shape. d16384 was
+therefore a fair place to have been looking: our c1 advantage there is not an
+artifact of two curves crossing at one depth, and it should hold across the
+board's shallow and middle cells.
+
+The honest limit on that claim is the top of the ladder. `max_model_len 32768`
+stops us at d30464, and the board scores d65535 and d100000. Nothing here says
+what happens above 30464, and the one nearby measurement the box holds — a
+partial arena-v2 sweep at `max_model_len 262144`, on the far side of an epoch
+break — reads a 5.3% decline out to d65535, which is consistent with flat
+continuing but is not this experiment's evidence. Answering the deep cells
+means raising `max_model_len`, which is a new epoch and was out of scope by
+design.
+
+The experiment moved no recipe field, and `recipe-new.yaml` is `recipe.yaml`
+unchanged. That is the correct outcome: this experiment was asked to measure a
+shape, not to find a win.
+
+What it bought is the closure of two levers. `--kv-cache-dtype` and
+`--attention-backend` act only on the 10 full-attention layers of 40, which are
+exactly the depth-dependent ones. A curve this flat bounds what both flags can
+be worth together at a few percent across the entire legal context range, so
+neither earns a round. The ceiling is weight-read bandwidth and per-step
+overhead, and future rounds belong on the MoE path, the draft path and the
+scheduler. h1's Conclusion carries the full arithmetic and the validity checks.
+
+Two corrections this experiment owes its own documents:
+
+- The Strategy above says the per-cell corpus offsets leave the rungs
+  "disjoint across cells". They are not. The offsets are deterministic, which
+  is what makes a rung reproducible, but the spans overlap freely — d4096 sits
+  entirely inside d16384, and d0 sits entirely inside d30464. Rung isolation
+  came from one server per rung, not from the offsets. Left standing as
+  written, with this correction beneath it.
+- The deepest servable `depth` is `max_model_len − pp − 2`, not
+  `max_model_len − pp − tg`. The endpoint adds a token and the pinned corpus
+  adds another. d30592 and d30591 both cost a run to learn this.
