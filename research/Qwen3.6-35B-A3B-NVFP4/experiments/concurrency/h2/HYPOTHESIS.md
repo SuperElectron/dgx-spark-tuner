@@ -224,7 +224,49 @@ as a guard at better than about ±11%**, whatever `runs` it is given, so a guard
 stated on a few percent of c1 is unreadable. The rule below reads c1 against
 this control and against that reproducibility figure, not against a tighter
 band.
-| run-0002 | `max_num_seqs` 4 → 10 | the queue disappears at exactly the primary cell's concurrency | d16384 c10, guard d16384 c1 | | | | |
+| run-0002 | `max_num_seqs` 4 → 10 | the queue disappears at exactly the primary cell's concurrency | d16384 c10, guard d16384 c1 | 577.6 | **137.5 ±1.8%** | 8127 | bench_8ced4b0ea3c2 |
+
+Full cell menu: c1 102.1 ±4.2% (n=7), c2 137.9 ±3.2%, c5 **172.0** ±1.9%,
+c10 **137.5** ±1.8%. Integrity clean on all four cells — `request_end` and
+`request_first_token` agree (14/14, 60/60, 30/30, 12/12) and every request
+returned a full 128 tokens.
+
+### The mechanism did exactly what it was raised to do
+
+    cell    mns 4    mns 10    change      board (1199b578)
+    c1      107.0     102.1     -4.6%      116.03
+    c2      136.3     137.9     +1.2%      165.88
+    c5       84.2     172.0    +104.3%     142.30
+    c10      49.0     137.5    +180.6%     102.31
+
+`running max` rose 4 -> **10**, `waiting max` fell 6 -> **4**. That is the
+pre-registered check, and it passed before any throughput figure was read: the
+queue shortened because the slots exist to serve it.
+
+**c10 clears the Objective's 102.31 by 34% and c5 clears the board's 142.30 by
+21%**, on a screen that reproduces those two cells to within 0.2%. This is the
+lever the experiment was looking for, and it was not the token budget.
+
+The guard holds. c1 reads 102.1 against this round's own control of 107.0, a
+4.6% fall — well inside the ±11% run-to-run reproducibility measured at this
+cell above, and therefore not readable as a regression. It is also not readable
+as "no cost": c1 simply cannot resolve a change of this size, which is a fact
+about the instrument and is why the full-grid run below is what settles it.
+
+**What this does NOT yet establish.** These figures are from the reduced screen
+and Held forbids setting them beside the board. Arena's grid runs 28 cells in a
+heat-aware order with `runs: 3` and no per-cell repeats at c1; the screen runs
+four cells cold. The Objective closes on a full 28-cell arena-v2 run and nothing
+less, so what run-0002 buys is a *candidate*, not the board-comparable number.
+
+**A correction this round owes the experiment's own Strategy.** `EXPERIMENT.md`
+argues "the gap is not slots", reasoning that the reference recipe serves
+`max_num_seqs 4` exactly as we do and therefore slot count cannot be what
+separates us. That reasoning is sound about the *reference* and wrong about the
+*Objective*: we are not required to beat 102.31 by the route the reference took.
+The Strategy sentence stands as written with this correction beneath it, and
+`max_num_seqs` was deliberately left out of Held, which is what made this round
+legal to run.
 | run-0003 | `max_num_seqs` 4 → 16 | separates "the queue was the cost" from "more slots always help" | d16384 c10, guard d16384 c1 | | | | |
 
 Record per arm, because the recipe names a floating tag: the container image
