@@ -285,7 +285,41 @@ separates us. That reasoning is sound about the *reference* and wrong about the
 The Strategy sentence stands as written with this correction beneath it, and
 `max_num_seqs` was deliberately left out of Held, which is what made this round
 legal to run.
-| run-0003 | `max_num_seqs` 4 → 16 | separates "the queue was the cost" from "more slots always help" | d16384 c10, guard d16384 c1 | | | | |
+| run-0003 | `max_num_seqs` 4 → 16 | separates "the queue was the cost" from "more slots always help" | d16384 c10, guard d16384 c1 | 668.6 | **139.8 ±0.4%** | 29047 | bench_4363a52d9d21 |
+
+Full cell menu: c1 114.1 ±3.2% (n=7), c2 133.4 ±0.6%, c5 171.5 ±1.9%,
+c10 **139.8** ±0.4%. Integrity clean on all four cells (14/14, 60/60, 30/30,
+12/12, every request 128 tokens), and **no LOOPING raised on any cell** — so
+this arm's c5 is the clean one, where run-0002's carried an inflating loop.
+
+### The two explanations separate, and it was the queue
+
+    arm   mns   running max   waiting max     c1      c2      c5     c10
+    0001    4             4             6  107.0   136.3    84.2    49.0
+    0002   10            10             4  102.1   137.9   172.0   137.5
+    0003   16            10             4  114.1   133.4   171.5   139.8
+
+**`running max` stops at 10 in the 16-slot arm.** The grid never offers more
+than ten concurrent requests, so slots eleven through sixteen have nothing to
+admit and the engine never uses them. c10 moves 137.5 -> 139.8, a 1.7%
+difference against ±1.8% and ±0.4%: noise, not a gain.
+
+So the mechanism is settled. The cost was requests **waiting for a slot**, it is
+paid in full once slots reach the offered concurrency, and beyond that the field
+is inert on this grid. "More slots always help" is refuted; "the queue was the
+cost" is what the data shows.
+
+Consequence for `recipe-new.yaml`: the winning value is the smallest that covers
+arena's maximum concurrency, which is **10**. Sixteen buys nothing measurable
+here and cannot, because the grid tops out at c10. Preemptions stayed 0 and KV
+peaked at 9.2% in this arm, so nothing argues against a larger value either —
+the argument for 10 is that it is the value the evidence actually covers.
+
+c1's three readings across the round are 107.0, 102.1, 114.1 — an 11.7% span on
+a field that provably does not reach c1 (`running max` is 1 there by
+construction). That is the same ±11% reproducibility recorded above, and it is
+the clearest demonstration in the experiment that this cell cannot resolve a
+change of the size the guard was written to catch.
 
 Record per arm, because the recipe names a floating tag: the container image
 digest and the vLLM and flashinfer commits. h1's epoch is image digest
