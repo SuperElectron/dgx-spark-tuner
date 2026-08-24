@@ -37,12 +37,17 @@ attention levers are live and worth rounds.
 
 One run directory per rung, run in that order. Nothing else moves.
 
-One run per rung rather than one grid, for two reasons. The fixed corpus is
-sized from the largest cell in a grid, so a multi-rung grid would pin only the
-deepest and let every shallower rung jitter — `run.py` refuses such a grid
-outright. And a separate run means a separate server, so no rung can leave
-state for another. It costs ~17 minutes against ~7 for a single schedule, and
-the whole reason our `tg` is readable is the pinned prompt.
+**One run per rung rather than one schedule, for isolation.** A separate run is
+a separate server, so no rung inherits another's prefix cache or the heat it
+left behind. The rungs are compared to each other and to nothing else, so that
+independence is the measurement, not an overhead on it. It costs ~17 minutes
+against ~7.
+
+(Until 2026-08-23 this also cited a harness limit: the fixed corpus was sized
+from the largest cell in a grid, so `run.py` refused a multi-cell grid outright.
+That is no longer true — a schedule entry can carry its own `book_url` and each
+cell gets its own pinned corpus. The obstacle is gone; the reason above is not,
+and it is the one that decides it.)
 
 d0 is the important rung and the cheapest. It is the only one with no KV term
 at all, so it is the intercept the whole curve is read against, and llama-benchy
@@ -60,46 +65,72 @@ Grid per rung:
 
     pp 2048 · tg 128 · concurrency 1 · runs 7
 
+d0 and d30592 run at `runs 9`. The rule is stated on those two medians and the
+middle three only witness monotonicity, so the repeats belong where the verdict
+is decided.
+
 ### What to record
 
 Per rung: `tg` median and IQR, `pp` median, the true prefill rate `run.py`
-prints beside it, `ttfr`, peak power, and the maximum prefix cache hit rate.
+prints beside it, `ttfr`, peak power, the worst repeat ratio, and the maximum
+prefix cache hit rate.
 
-That last one matters here. Every run so far reports 0.0%, which decode-tg h2
-is chasing. If h2 lands first and the cache starts hitting, this experiment's
-rungs must all be measured on the same side of that fix — a curve half-measured
-with a working cache and half without is not a curve.
+The hit rate is a protocol check here, not an open question. decode-tg h2
+settled it: the 0.0% every run reported was our own `post_run_cmd` resetting
+the cache between runs, and h2 kept the reset because it is what makes runs
+independent. So every rung should read 0.0%, and a rung that does not has lost
+its reset and is not comparable to the others. d0 reads 0.0% for a second
+reason — its 2048-token prompt is under this model's forced 2144-token
+attention block, so it cannot hit at all, and `run.py` labels that case.
 
 ## Decision rule
 
-Stated on the total decline across the ladder, because that is the quantity the
-Objective asks about, and evaluated on medians since each rung has its own
-seven values.
+Read `tg` at `pp2048 · tg128 · c1` — the cell itself, never its context-prefill
+phase — from the d0 and d30592 rows. Evaluated on medians, since each rung
+carries its own values.
 
-- **Flat** if `tg` at d30592 is within 10% of `tg` at d0. Decode is
-  depth-independent on this stack; the attention-side levers are bounded by the
-  10 full-attention layers and the objective's ceiling lies elsewhere.
-- **Sloped** if the decline exceeds 10% and is monotone across the rungs. KV
-  read is a live term, and `--kv-cache-dtype` and the attention backend are
+Let **D** be the decline from d0 to d30592 as a fraction of d0, and **S** the
+larger of those two rungs' `tg` interquartile spreads.
+
+- **Flat** if D is at most 10%. Decode is depth-independent on this stack; the
+  attention-side levers are bounded by the 10 full-attention layers and the
+  objective's ceiling lies elsewhere.
+- **Sloped** if D exceeds 10%, is monotone across the rungs, **and exceeds S**.
+  KV read is a live term, and `--kv-cache-dtype` and the attention backend are
   worth their own rounds.
-- **Neither** if the decline exceeds 10% but is not monotone. Then something
-  other than depth is moving — check each rung's hit rate, peak power and IQR
-  before reading anything into the shape.
+- **Neither** if D exceeds 10% and is not monotone. Something other than depth
+  is moving — check each rung's hit rate, peak power and IQR before reading
+  anything into the shape.
+- **Unreadable** if D exceeds 10% but does not exceed S. The ladder cannot
+  separate the effect from the scatter that produced it. Re-run both anchor
+  rungs at higher `runs` before calling anything; do not report a slope.
 
 A rung whose `tg` IQR exceeds 5% is not counted toward the decline until it is
-re-run; an unstable rung cannot anchor a slope.
+re-run; an unstable rung cannot anchor a slope. Every rung carries at least 7
+values, so an interquartile range exists at all of them.
+
+(Amended 2026-08-23, before any rung ran. It previously had three branches and
+a bare 10% threshold, with no branch for a decline that clears 10% while
+sitting inside the rungs' own spread — the outcome the prior evidence makes
+most likely, since the nearest measurement on this box declines 5.3% across
+four times this span. A threshold that can be met by noise is not a rule.)
 
 ## Runs
 
 One row per planned run. Figures blank until it is run.
 
-| run | depth | why | tg t/s | iqr | pp t/s | prefill t/s | ttfr ms | hit % | bench |
-|-----|-------|-----|--------|-----|--------|-------------|---------|-------|-------|
-| run-0001 | 0 | the intercept: no KV term, single phase | | | | | | | |
-| run-0002 | 4096 | first rung with a context | | | | | | | |
-| run-0003 | 8192 | | | | | | | | |
-| run-0004 | 16384 | re-bases the incumbent under the new corpus offset | | | | | | | |
-| run-0005 | 30592 | the deepest legal context at max_model_len 32768 | | | | | | | |
+| run | depth | runs | why | tg t/s | iqr | pp t/s | prefill t/s | ttfr ms | hit % | bench |
+|-----|-------|------|-----|--------|-----|--------|-------------|---------|-------|-------|
+| run-0001 | 0 | 9 | the intercept: no KV term, single phase, and the rule reads it | | | | | | | |
+| run-0002 | 4096 | 7 | first rung with a context | | | | | | | |
+| run-0003 | 8192 | 7 | witnesses monotonicity | | | | | | | |
+| run-0004 | 16384 | 7 | re-bases the incumbent under the new corpus offset | | | | | | | |
+| run-0005 | 30592 | 9 | the deepest legal context at max_model_len 32768; the rule reads it | | | | | | | |
+
+run-0001 is also the first end-to-end run of the harness rewritten on
+2026-08-23 — per-cell corpora, rolled progress files, schedule-aware grid
+checking. It is the cheapest cell in the tree, so it proves the instrument
+before the ladder spends anything on it.
 
 ## Conclusion
 

@@ -49,6 +49,21 @@ running this experiment rather than reading the answer off memory: the question
 has been asked twice and answered both ways on an instrument that could not
 separate a 6% effect from its own noise.
 
+Our own box has since answered a nearby question, and it favours flat. On
+2026-08-23 a partial arena-v2 sweep (`bench_e86574ff0e1e`, 12 of 28 cells before
+it was killed) read `tg` at c1 of **101.6 at d0 and 96.2 at d65535** — a 5.3%
+decline across four times this ladder's span. It is not this experiment's
+answer and cannot be: it ran arena's protocol, not ours — warm cache, `runs: 3`,
+no `exact_tg`, no pinned prompt, sampling from the checkpoint — and at
+`max_model_len 262144`, the far side of an epoch break from every rung here.
+What it does is set the expectation: the effect this ladder is looking for is
+small, which is exactly why the rule below has to be sized against our own
+scatter rather than against a round number.
+
+The same sweep is the only concurrency data the tree holds, and it is not
+comparable either: `max_num_seqs 4` means its c5 and c10 cells queue rather
+than batch.
+
 Rungs must not contaminate each other, and our own instrument was worse than
 the board's at this until recently. Sliced from token zero, a shallow rung's
 prompt is a leading substring of a deeper one's, so the rungs would donate
@@ -68,9 +83,14 @@ worth a round.
 - One node, one GB10. No ray, no tensor parallel above 1.
 - The checkpoint pinned in `docs/model-card.md`.
 - The container image and its vLLM and flashinfer commits.
-- `pp 2048 · tg 128 · concurrency 1 · runs 7`. **Depth is the variable** — it is
-  the only field that moves across rungs, and everything else in the recipe is
-  what decode-tg holds.
+- `pp 2048 · tg 128 · concurrency 1`, and `runs 7` as the floor. **Depth is the
+  variable** — it is the only field that moves across rungs, and everything else
+  in the recipe is what decode-tg holds. A rung the decision rule reads directly
+  carries `runs 9`: the verdict rests on those two medians, and repeats are
+  cheaper than a re-run. (Until 2026-08-23 this said `runs 7` flat, before
+  per-rung repeats were available.)
+- One rung per run directory, each with its own server. Rungs are compared to
+  each other, so none may inherit another's cache or heat.
 - The measurement protocol, which is part of the epoch: `exact_tg`,
   `extra_body temperature=0`, `no_adapt_prompt`, the per-cell fixed corpus, and
   `post_run_cmd` resetting the prefix cache between runs.
