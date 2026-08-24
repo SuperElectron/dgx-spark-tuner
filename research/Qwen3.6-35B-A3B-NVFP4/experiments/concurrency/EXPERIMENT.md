@@ -127,7 +127,8 @@ config. Those are the search space.
 
 | round | hypothesis | outcome |
 |-------|------------|---------|
-| h1 | our `max_num_batched_tokens` is twice the reference's and starves decode under load | <pending> |
+| h1 | our `max_num_batched_tokens` is twice the reference's and starves decode under load | **lever spent — refuted with the sign reversed.** `mnbt` 65536 → 32768 → 16384 on a four-cell screen, one engine start per arm, all three serving what they declared on one epoch. `d16384 c10` is monotone *downward* as the budget falls — 49.0 → 48.0 → 44.2, ±0.5% at n=3, per-request decode medians agreeing at 28.5 → 20.2 → 19.7 — so the control's 65536 is the best of the three and the reference's 32768 is not the source of its c10 advantage. Looping requests (0, 2/60, 1/60) inflate `tg` in the two losing arms only, which steepens the trend rather than explaining it. Decelerating step sizes (+8.6%, then +2.1% per doubling) close the untested upward direction too. The rule is **mis-specified** — its guard floor of 102.8 came from h5's cross-schedule 103.7 while this screen's control reads 96.0, so the control fails its own guard and only *lever spent* could ever fire; under the intended reading (no regression against this round's 96.0 control) the guard holds, and the outcome is the same either way. The c1 step 96.0 → 107.2/106.2 is **not established**: the cell drifts up to 19% within itself, drifts *downward* in one arm, anti-correlates with `ctx_tg` at −0.88 in another, and memory records this field as inert at c1 (+0.27%, 0.07 SE). Left standing for h2: `running max 4, waiting max 6/6/8, preemptions 0, kv max 3.9%`, and a mean-to-peak aggregate gap of 6.4x at c10. `recipe.yaml` untouched. |
+| h2 | four slots serve ten requests, so `max_num_seqs` — not the token budget — is what the c10 aggregate is paying for | <pending> |
 
 ## Conclusion
 

@@ -139,7 +139,13 @@ numbers exist rather than after.
 |-----|---------|-----|--------|-------|-------|-------|-------|
 | run-0001 | baseline, `mnbt` 65536 | the control, on this screen's schedule | 49.0 ±0.3% | 96.0 ±4.1% (n=7) | 84.3 ±0.6% | 136.1 ±1.6% | bench_685e42bde522 |
 | run-0002 | `mnbt` 65536 → 32768 | the reference recipe's value | 48.0 ±0.6% | 107.2 ±4.1% (n=7) | 80.8 ±0.5% | 131.3 ±2.9% | bench_da8989775690 |
-| run-0003 | `mnbt` 65536 → 16384 | is the mechanism monotone | 44.2 ±0.5% | 106.2 ±2.9% (n=7) | 61.3 ±3.5% | 130.5 ±1.6% | bench_fbb28a3df00f |
+| run-0003 | `mnbt` 65536 → 16384 | is the mechanism monotone | 44.2 ±0.5% | 106.2 ±2.9% (n=7) | 61.3 — DAMAGED, do not quote | 130.5 ±1.6% | bench_fbb28a3df00f |
+
+run-0003's c5 cell is damaged and its 61.3 must not be quoted. Verified in the
+archive: request 27 returned **1 token in 0.0 s** and the cell logged 29
+first-token events against 30 request-ends, which is also the source of that
+cell's 817.9 t/s `pp` outlier against 580. The c10 trend does not depend on it.
+(Recorded 2026-08-24, after the round's own conclusion pass caught it.)
 
 Epoch, recorded per arm because the recipe names a floating tag: image
 `ghcr.io/spark-arena/dgx-vllm-eugr-nightly:latest`, which resolves today to
@@ -257,4 +263,180 @@ same schedule as the arms it is compared against.
 
 ## Conclusion
 
-<pending>
+**Lever spent. The hypothesis is refuted with the sign reversed.**
+
+`max_num_batched_tokens` was moved 65536 → 32768 → 16384, one field, nothing
+else, on one reduced schedule (`d16384` at c1, c10, c5, c2; `runs` 7/3/3/3).
+
+The three arms are valid and comparable. Each engine's `non-default args:`
+matches its recipe's `defaults:` field for field — 65536/32768/16384 with
+`max_model_len 262144`, `gpu_memory_utilization 0.8`, `max_num_seqs 4` in all
+three. All three ran vLLM `0.27.2rc1.dev360+ge85d1b69c.d20260821` on image
+digest `sha256:4894c3f1069ac93f4b28feeab8d7f06cd60eb36fa4739a5381427d00f3818990`
+with flashinfer `4927c0e1`, so no epoch break separates them. The three recipe
+hashes differ and the recipes are byte-identical apart from the one field, so
+each arm tested something. `crash_count 0` and `failed_indices []` throughout.
+
+### Against the decision rule as written
+
+    branch          requires                                  reads
+    target met      c10 > 102.31 and c1 >= 102.8              c10 max is 49.0 — no
+    lever alive     c10 rises > 5% and c1 >= 102.8            c10 never rises — no
+    lever spent     c10 moves < 5% either way, or rises
+                    while c1 falls below 102.8                yes, via the 32768 arm
+
+The 32768 arm reads c10 48.0 against the control's 49.0, −2.0%, inside the 5%
+threshold in the wrong direction: **lever spent**. The 16384 arm's −9.8% is
+outside every clause verbatim — the rule wrote no branch for a large *fall* —
+but both other branches require a rise, so nothing else can fire, and a lever
+that only moves the primary downward is spent by any reading.
+
+**The rule is mis-specified, and it is recorded rather than repaired.** Its
+guard, "c1 at or above 102.8", is one scatter width below decode-tg h5's 103.7,
+a figure measured on the full 28-cell grid. This screen's own control reads
+96.0. The control therefore fails its own guard, and no arm could have reached
+*target met* or *lever alive* whatever c10 had done — the rule could only ever
+return *lever spent*. It is left exactly as written.
+
+**The reading the guard was intended to carry** is that c1 must not regress
+against this round's own control of 96.0. Under that reading the guard holds
+comfortably: both lower arms sit *above* the control, 107.2 (+11.7%) and 106.2
+(+10.6%). The outcome is unchanged — **lever spent under both readings**,
+because the primary cell never rose under either.
+
+### What the primary cell says
+
+    mnbt      c1      c2     c5     c10      c10 per-request decode median
+    65536   96.0   136.1   84.3    49.0      28.5 tok/s
+    32768  107.2   131.3   80.8    48.0      20.2 tok/s
+    16384  106.2   130.5   61.3    44.2      19.7 tok/s
+
+c10 is monotone downward as the budget falls, 49.0 → 48.0 → 44.2, and the
+per-request decode *medians* fall the same way and harder, 28.5 → 20.2 → 19.7.
+Aggregate `tg` is an arithmetic mean of a rate and overweights fast samples; the
+medians of the underlying per-request values agree with it on direction, so the
+result does not rest on the mean's shape. c5 falls further still, 84.3 → 61.3.
+The control is the best arm at the primary cell, so 65536 is already the better
+of the three settings for what this experiment chases, and the reference
+recipe's 32768 is not the source of its c10 advantage.
+
+This refutes the hypothesis rather than failing to support it. The mechanism
+argued for prefill hogging the step budget and a halved budget halving the
+decode wait; the budget was halved twice and decode got *worse* twice, monotone,
+with the c10 arms internally tight (±0.3%, ±0.6%, ±0.5% at n=3). It agrees
+instead with what memory already held about this field — that a larger budget is
+"good for aggregate throughput, bad for latency". This round read the latency
+half of that entry and predicted the throughput half would follow it. It does
+not.
+
+**The LOOPING requests do not rescue the arms below the control.** Recomputed
+from the archives: 0/60, 2/60 (requests 13, 15) and 1/60 (request 48) at c10 for
+65536, 32768 and 16384. `measure.py` flags these as decoding faster and
+inflating `tg`. The arm with *zero* looping is the one that wins, so the bias
+runs against the two losing arms — de-biasing 48.0 and 44.2 would push them
+lower and steepen the trend, not flatten it. That is a stronger argument than
+"the middle arm loops most so it cannot produce a monotone trend", which is also
+true but only rules out a monotone confound.
+
+**Forward implication.** If c10 rises with the budget across every value
+measured, the untested direction is *upward* from 65536, which no arm reached.
+The step sizes say not to chase it: +8.6% for 16384 → 32768, +2.1% for 32768 →
+65536. The response is decelerating hard, so the next doubling extrapolates to
+about +1%, roughly 49.0 → 49.5, against an Objective that needs 102.31 — a
+2.1x. Memory also already records this model measured at `max_num_batched_tokens`
+98304 with nothing remarkable to show for it. The lever is spent in both
+directions, not merely in the one tested.
+
+### The c1 step does not survive its confound
+
+The 96.0 → 107.2 → 106.2 step at the guard cell is **not established**, and no
+later round may rest on it.
+
+Three things stand against it. First, the cell is not stationary: run-0003's
+seven c1 values in execution order are 95.5, 102.0, 101.2, 106.2, 108.8, 111.6,
+114.1 — a 19% upward span with no reversal — and run-0001's drift the same way,
+88.7 to 108.4. c1 runs first in this schedule and is the cell most exposed to a
+cold start. The within-cell span, ~19-20 t/s, is larger than the ~11 t/s
+between-arm step it is being asked to support.
+
+Second, the drift is not even consistent in direction: run-0002's c1 drifts
+*downward* across its seven runs (median of the first three 117.1, of the last
+three 107.2). A cell that warms up would warm up in every arm. And in run-0001
+the `tg128` and `ctx_tg` phases anti-correlate at −0.88 across the seven runs —
+`tg128` climbing 88.7 → 108.4 while `ctx_tg` falls 105.4 → 91.5 — which reads as
+work being attributed between the two phases run to run rather than as the
+machine getting faster. Memory independently holds that c1's ~14% scatter on
+this model is per-sequence MTP acceptance bimodality and is "not thermal and not
+clock-related", which is consistent with a bimodal draw landing in an order that
+looks like a ramp.
+
+Third, memory records this exact field as **inert at c1**: 8192 → 65536 moved
+`tg128 d16384 c1` by +0.27% (0.07 SE) at n=7, a range that *contains* this
+round's change. Against that, the step here is +11.7% and +10.6% at roughly 2.0
+and 2.1 SE of the difference — marginal individually. Two arms agreeing with
+each other is better evidence than one 2-SE difference, which is why the step is
+called unresolved rather than absent; but a 2-SE result that contradicts a
+direct n=7 null, measured in a cell whose own drift exceeds the effect, is not a
+finding.
+
+The archives name the likely mechanical culprit: triton JIT compilation fires
+*inside* the measurement window, nine kernels during c1's first run in run-0001
+and eight in run-0003, with two more landing inside c10's first run in both.
+vLLM's own log says this causes a latency spike and warmup should be extended.
+Only the c1 cell ran a per-test warmup and the coherence test; c10, c5 and c2
+ran with `--skip-coherence` and no per-test warmup, so the cells are not warmed
+alike.
+
+**What a later round resting on c1 must do**: extend warmup to cover these
+shapes, or discard the first run of the cell, or read the second-half median
+alongside the full one — and report which. Simply raising `runs` does not help,
+because the problem is drift, not scatter.
+
+### The box, and the rest of the round
+
+Nothing in the machine's state qualifies these figures. Over the benchmark
+windows only, GPU utilisation was sustained (median 96%, dipping to zero only in
+the inter-cell gaps), clocks held 2392-2411 MHz with no frame in the 400-900 MHz
+power-delivery fault band, GPU temperature peaked at 76 C, and swap did not grow
+in any arm (768 → 767, 781 → 779, 784 → 783 MB). Host memory fell to a 6949 MB
+low-water mark in run-0001, which is worth watching but is not scarcity. The
+clock telemetry reports only two or three distinct values per run and no
+throttle field exists in this box's schema, so throttling can only be inferred
+from the clock, and the clock shows none.
+
+Other observations from the arms:
+
+- **KV capacity is not close to binding and neither is the queue's cause.**
+  `running max 4` in every arm — pinned at `max_num_seqs` — with `waiting max`
+  6, 6, 8 rising as the budget falls, `kv max` 3.9%, 3.6%, 3.1%, and zero
+  preemptions anywhere. The engine reports maximum concurrency of 19.3x at the
+  full 262144-token window, and this grid asks for 18432.
+- **The reported aggregate at c10 is dominated by queueing, not by decode
+  rate.** In the control, aggregate `tg` falls 97.9 → 136.8 → 84.7 → 49.1 across
+  c1, c2, c5, c10 while aggregate *peak* throughput rises monotonically 106 →
+  174 → 297 → 316. The mean-to-peak gap widens from 1.09x at c1 to 6.4x at c10.
+  With four slots serving ten requests, six wait at the peaks, and the wall-clock
+  window the aggregate divides by is mostly serialized prefill and queueing.
+  That is the single most useful thing this round measured, and it is what h2
+  goes after.
+- **Prefix cache hit rate 0.0%** over 44 samples in each of the three arms, with
+  `measure.py` flagging the recipe as asking for caching. Every figure here is a
+  cold-cache figure. Standing defect, not this round's to fix.
+- **MTP acceptance is flat, as a control and not a candidate**: mean acceptance
+  length 3.07, 2.9-3.2 and 3.15 across the three arms, draft acceptance ~69% in
+  each. It did not move with the token budget, for the sixth consecutive round.
+- **run-0003's c5 cell is damaged** and its 61.3 should carry an asterisk: one
+  request in c5 run 3 returned a single token with no first-token event, which
+  also cost `e2e_ttft` a sample and produced that run's 817.9 t/s `pp` outlier
+  against 580.4 and 580.0. c5 is a pre-registered non-finding in this round
+  anyway, but the c5 column should not be quoted from this arm.
+
+### Was it worth running
+
+It settled a question rather than moving the Objective, and it was worth one
+screen for that. It closes the largest single field difference between our
+recipe and the reference in both directions, retires the prefill-share account
+of the c10 gap, and it hands the next round a measured mechanism — four slots,
+six waiting, zero preemptions, 3.9% KV, and a 6.4x mean-to-peak gap — that the
+Objective's arithmetic can actually be argued from. The control's 65536 stands;
+`recipe.yaml` is untouched.
