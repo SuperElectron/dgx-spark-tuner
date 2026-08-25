@@ -135,7 +135,7 @@ One row per planned run. Figures blank until it is run.
 
 | run | changed | why | cell | pp t/s | tg t/s median | ttfr ms | accept len | bench |
 |-----|---------|-----|------|--------|---------------|---------|------------|-------|
-| run-0001 | `--override-generation-config` temperature 0.6 | the last untested field in the reference diff | d16384 c1 | | | | | |
+| run-0001 | `--override-generation-config` temperature 0.6 | the last untested field in the reference diff | d16384 c1 | 633.71 | **105.12** (n=3, max/min 1.132; 105.12 94.43 106.91) | 3243.59 | 3.22 median over 401 samples | bench_44dd96bddd72 |
 
 For reference, the control this is read against — h5 run-0001, same grid, same
 schedule, same epoch, served generation config `temperature 1.0`:
@@ -146,4 +146,134 @@ schedule, same epoch, served generation config `temperature 1.0`:
 
 ## Conclusion
 
-<pending>
+**Lever spent, by the rule as written.** `tg` median at `d16384 c1`, cell phase,
+is **105.12** (n=3; 105.12, 94.43, 106.91; max/min 1.132). The rule's floor is
+110.7 and its target is 116.03. 105.12 is below both, so the branch is *lever
+spent*: the served sampling config does not govern decode on the board grid, and
+`temperature 0.6` is not what makes the reference recipe read 116.03.
+
+`bench_44dd96bddd72`, distinct from h5's `bench_e86574ff0e1e` as the round
+required, so nothing was overwritten.
+
+### The mechanism fired and bought nothing
+
+This is a stronger refutation than a mechanism that fails to engage, and it is
+the finding worth carrying out of this round.
+
+    served temperature      1.0 (h5)   ->   0.6 (h6)
+    MTP acceptance length   3.07       ->   3.22      +4.9%   (401 engine samples)
+    tg median               103.7      ->   105.12    +1.4%
+    pp                      636.7      ->   633.71    -0.5%
+    ttfr                    3242.6 ms  ->   3243.59 ms  +0.0%
+
+The flag took effect — the engine served `temperature 0.6, top_p 0.95,
+top_k 20` — and acceptance moved in exactly the predicted direction and by
+roughly the predicted kind of amount. Throughput did not follow. 1.4% sits
+inside a cell whose own three values span 94.43 to 106.91, which is a 13% range;
+the move is not distinguishable from drawing three more samples.
+
+### This breaks the campaign's "tg ≈ 37 × acceptance" relation at fixed depth
+
+decode-tg and depth-curve have both been steering on the idea that decode
+throughput is set by accepted tokens per target forward pass, so that `tg`
+divided by acceptance length is a near-constant of the machine. depth-curve h1
+measured that constant at 37.0, 38.9, 38.5, 36.9, 35.1 across its ladder and
+used it to normalise the depth curve. At `d16384` it read **36.9**.
+
+That relation predicts, at fixed depth, that a 4.9% rise in acceptance is a 4.9%
+rise in `tg`: 103.7 → 108.8. Taken against depth-curve's constant directly it
+predicts 3.22 × 36.9 = **118.8**. We measured **105.12**. In this lane the
+quotient is not constant either: it reads 33.8 at h5 and **32.6** here — it
+*fell* 3.6% while acceptance rose 4.9%.
+
+So: **at fixed depth, on the board grid, `tg` is not proportional to MTP
+acceptance length.** Stated plainly because that relation has been choosing this
+campaign's levers and it now has a counterexample.
+
+Two honest qualifications, neither of which rescues the prediction:
+
+- 118.8 is a cross-epoch, cross-protocol number. depth-curve's 36.9 was measured
+  under our internal protocol at `max_model_len 32768`; this lane runs arena's
+  grid at 262144. The relation may simply have a different constant per lane.
+  But the h5→h6 comparison is *within* one lane, one epoch, one schedule, one
+  changed flag — and it breaks there too, which is the part that matters.
+- 1.4% and 4.9% are both small against this cell's scatter, so what is
+  established is a bound, not a slope: whatever `tg` owes to acceptance at fixed
+  depth, it is small enough that a 4.9% acceptance gain does not surface. The
+  relation survives as a way to *explain away* the prose-driven bumps in a depth
+  ladder, where acceptance varies because the corpus varies. It does not survive
+  as a lever: buying acceptance did not buy throughput.
+
+The mechanism this suggests is that decode here is bound by the per-step weight
+read and the fixed overheads of the speculative cycle — the draft's 286 MB
+`lm_head` re-read that h4 closed on, plus three draft passes — and one extra
+accepted token in twenty does not move that. h1's per-position rates at
+`temperature 0` (0.87/0.76/0.61, implying ~2.93) already hinted the acceptance
+axis was short; this measures the payoff on it directly and it is ~0.3 `tg` per
+0.01 of acceptance where the relation asks for ~1.1.
+
+### Validity
+
+The run is clean. `crash_count 0`, `failed_indices []`, all 28 cells in
+`completed_indices`, one session of 1:56:02. The epoch is **identical** to h5
+and to the rest of the tree — vLLM `0.27.2rc1.dev360+ge85d1b69c.d20260821`
+(`e85d1b69cf2f1c6101cfc7c799bb0c457cacc4b3`), flashinfer
+`4927c0e15cb63a2abb6df09019c39a172222f0eb`, image
+`ghcr.io/spark-arena/dgx-vllm-eugr-nightly:2026082102` @
+`sha256:4894c3f1069ac93f4b28feeab8d7f06cd60eb36fa4739a5381427d00f3818990`. No
+epoch break, so the h5 comparison above is valid as a within-lane comparison.
+
+Box state over the benchmark window: peak 99.6 W, peak clock 2405 MHz, swap flat
+at 784 MB against its 793 MB baseline. Engine: running max 4, waiting max 7, KV
+cache max 9.7%, zero preemptions. **The box was never bound** — nothing here was
+measured against a limit of the machine.
+
+Prefix cache hit rate: 0.0% max over 552 samples, and `run.py` flags it SUSPECT.
+Ninth confirmation of the standing campaign defect. Every figure in this round is
+cold-cache, as every figure in h5 was, so the comparison is like for like.
+
+Four requests looped: 1/30 at `d65535 c5`, 1/60 at `d65535 c10`, 2/60 at
+`d100000 c10`. All in cells this round already declared unreadable; the rule's
+cell is untouched.
+
+### One instrument defect, recorded not chased
+
+Two cells each wrote **one byte-identical duplicate `request_end` line** —
+`12-d4096c10` and `27-d100000c10`, both 61 ends against 60 first-token events.
+Independently confirmed by two separate counts. This is a writer double-flush,
+not a phantom request: a real extra request would have a first-token event and a
+distinct payload. Neither cell is the rule's cell, so the verdict rests on clean
+data.
+
+This shape has now appeared four times — concurrency h1 run-0003, concurrency h3
+`06-d100000c2`, and twice here. That is a harness logging defect worth recording
+as a pattern, not a measurement error. Any analysis that counts request records
+rather than deduplicating them will over-count by one per affected cell.
+
+### The full board row, for the record
+
+run.py's own mean column, all 28 cells. c5 and c10 at depth >= 8192 are
+unreadable under `max_num_seqs 4` and are printed only because the grid asks for
+them:
+
+    depth        c1      c2      c5     c10
+    d0         93.7   149.3   163.1   166.0
+    d4096      97.9   144.7   129.4   106.8
+    d8192     112.4   139.8   111.0    78.5
+    d16384    102.2   136.4    80.7    49.8
+    d32768     99.1   127.8    52.7    25.8
+    d65535    102.8   105.2    19.6    10.5
+    d100000    87.7    58.2     8.3     5.3
+
+The c1 column tracks h5's within scatter, which is the expected result for a
+round that changed one sampling flag.
+
+### Was it worth running?
+
+Yes. It was the cheapest of the four candidates h5 left conflated, it was a
+single flag, and it resolved. It cost one run and it closes the sampling axis
+*and* puts a counterexample under the acceptance relation — the second of those
+was not what the round was bought for and is worth more than the first.
+
+`temperature 0.6` does not earn a place in the recipe: +1.4% inside a ±13%
+cell.
