@@ -13,6 +13,7 @@ instrument itself is in `docs/measurement.md`.
 |---|---|---|---|---:|---:|---:|---|---|
 | <name> | <YYYY-MM-DD> | <field: values swept> | <field: value> | <n> | <n> | <n> | <bench_...> | <survived / failed> |
 | depth-curve | 2026-08-24 | depth: 0, 4096, 8192, 16384, 30464 | none — measurement only, no field moved | 628.6 | 117.8 | 3279.0 | bench_c003c48ede71 | survived |
+| concurrency | 2026-08-24 | max_num_batched_tokens: 65536, 32768, 16384 · max_num_seqs: 4, 10, 16 | max_num_seqs: 10 | 677.9 | 141.5 | 28636.2 | bench_95fdfa8922a3 | survived |
 | decode-tg | 2026-08-24 | gpu_memory_utilization, max_model_len, max_num_batched_tokens, prefix-cache reset, tg length, draft moe_backend, served generation config | none — every lever landed inside the spread | 633.7 | 105.1 | 3243.6 | bench_44dd96bddd72 | exhausted |
 
 depth-curve measured a shape rather than chasing a number, so its row carries
@@ -24,6 +25,17 @@ continuing it. The full five-rung ladder is in
 4.5% from d0 to d30464 (5.1% once MTP acceptance is divided out), matching the
 board's own 3.4% and closing `--kv-cache-dtype` and `--attention-backend` as
 levers.
+
+concurrency's row carries `d16384 c10` — the cell its Objective named — measured
+on arena's own unmodified 28-cell grid, so it is board-comparable and is not the
+`c1` cell the rest of this table reports. `max_num_seqs` 4 → 10 takes that cell
+from 48.9 to **141.5**, a 2.89x and 38% above the best vLLM board entry's 102.31.
+The win is admission, not batching: four slots were admitting four of ten offered
+requests while six waited inside the measurement window. It is confined to cells
+where offered concurrency exceeds four — the whole `c1` and `c2` columns are flat,
+and `d16384 c1` reads 95.8, which neither held nor regressed against its 103.7
+guard because that cell spans ±15.0% within this single run. `recipe-new.yaml`
+is that run's recipe. Full account in `experiments/concurrency/EXPERIMENT.md`.
 
 decode-tg closed exhausted after six rounds and twenty-one runs with no field
 moved, so its `recipe-new.yaml` is `recipe.yaml` unchanged. Its row carries the
