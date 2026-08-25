@@ -50,8 +50,10 @@ it before reporting a run as lost.
 ## 3. Report
 
 `run.py` prints the run's figures — per cell, per metric, values in execution
-order, with a stable/UNSTABLE verdict. **Paste its output verbatim.** Do not
-reformat it, do not sort the values, do not recompute the verdict.
+order, with the median's uncertainty beside its spread. **Paste its output
+verbatim.** Do not reformat it, do not sort the values, do not add a verdict of
+your own: `±` is how well the median is pinned, `iqr` is how much the samples
+scatter, and whether either is good enough is the caller's rule to apply.
 
 Then add the four things it cannot know, read from the archive:
 

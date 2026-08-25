@@ -86,6 +86,12 @@ Measured scatter, per cell — what a decision rule here has to clear:
     tg128 @ d16384 c1: tg max/min 1.01, pp 1.02   (h1 run-0003, MTP off)
     tg128 @ d16384 c1: tg max/min 1.11, pp 1.03   (h1 run-0008, prompt pinned)
 
+On the board grid, which is a different instrument and a different epoch, added
+2026-08-24 from h5 run-0001. `runs: 3` gives no interquartile range at c1, so a
+rule in that lane is stated on the median and sized against this:
+
+    tg128 @ d16384 c1: tg max/min 1.14, median SE 5.2%, n=3   (h5 run-0001)
+
 Most of that scatter was the instrument, not the box. llama-benchy's
 `adapt_prompt` defaults on and shrinks the grid by the measured template
 overhead, which reopens the random prompt start that the fixed corpus was meant
@@ -146,11 +152,20 @@ constant it says in its own Method.
 | h2 | A flag is disabling the prefix cache | premise wrong — our own reset was |
 | h3 | `tg128` measures a transient | refuted — no transient; the effect is KV growth |
 | h4 | The draft's MoE backend is untuned and one alternative beats it | lever spent |
-| h5 | Our recipe on the board's own grid reads above 116.03 | open |
+| h5 | Our recipe on the board's own grid reads above 116.03 | lever spent — 103.7, and the warm cache it rested on never existed |
+| h6 | The checkpoint's `temperature 1.0` is costing decode on the board grid | lever spent — acceptance moved 3.07 → 3.22 and `tg` did not follow |
 
 h1 is spent: its three fields moved `tg` 2.0 against a larger IQR of 11.3, and
 `pp` moved 0.5% — inside this cell's own 1.02 max/min — which killed the
 prefill-chunking mechanism behind them.
+
+h5 delivered the Objective's second figure and it goes against us: **103.7 at
+`d16384 c1` on arena's own grid, against 116.03.** It ran one clean 28-cell
+sweep at `max_model_len 262144`, which is an epoch break from h1-h4. Its own
+mechanism never fired — prefix cache read 0.0% on all 544 samples with no reset
+in the recipe at all, and `pp`, `ctx pp` and `ttfr` all land on h2's *cold*
+column to within 0.5%. So the round is spent by its rule but its hypothesis was
+never tested, and "our protocol flatters us" is not what these numbers say.
 
 Levers still open, in the order to take them. Reordered 2026-08-23 after the
 architecture was read: this is a hybrid, 30 of its 40 layers are linear
@@ -170,10 +185,38 @@ attention with no KV, and only 10 are full attention.
    `flashinfer_trtllm` is refused by the kernel, and `flashinfer_cutlass` runs
    but lands inside the control's spread. What remains of the draft's cost is
    the 286 MB `lm_head` re-read, which is architectural and reaches no flag.
-4. **The board-comparable figure** — `@official/spark-arena-v2` unmodified. Not
-   a lever; it is the second figure the Objective asks for. Costs one long run,
-   and needs their `max_model_len` to reach the deep cells, so it is an epoch
-   break run once.
+4. ~~**The board-comparable figure**~~ — measured by h5. It reads **103.7**,
+   10.6% behind 116.03. The figure exists; what does not exist is an
+   explanation for it, which is lever 5.
+5. ~~**Sampling on the board grid**~~ — closed by h6. `temperature 0.6` was
+   served and it worked: MTP acceptance rose 3.07 → 3.22. `tg` went 103.7 →
+   105.12, +1.4% inside a cell whose own three values span 13%. The last
+   untested field in the reference diff is spent, and it took the
+   "`tg` ≈ 37 × acceptance" relation with it — see the Conclusion.
+
+Reopened by h5:
+
+- **The prefix cache still never hits.** h2 closed this on "our own
+  `post_run_cmd` was disabling it". h5 carried no `post_run_cmd` and read 0.0%
+  on all 544 samples anyway. The reset was sufficient to suppress hits, not
+  necessary. The candidate residue is `no_adapt_prompt` and the fixed corpus,
+  which h2 kept and h5 gave up: without them each of a cell's runs draws a
+  different prompt start, so there is nothing to reuse. Not a lever for this
+  Objective — h2 measured a working cache as worth +2.3% `tg`, inside the
+  spread — but it is a live defect and it removes "the board measures warm" as
+  an explanation for anything until someone shows arena's own runs hit.
+- **`max_num_seqs 4` makes c5 and c10 unreadable at depth >= 8192.** Solved
+  elsewhere, 2026-08-24: the `concurrency` experiment closed by raising
+  `max_num_seqs` 4 → 10, taking `d16384 c10` from 48.9 to 141.5. decode-tg
+  handed that field away explicitly, so there is no conflict — but note the
+  shape of it: the campaign's c10 problem is now solved and decode-tg's own c1
+  objective stands where h5 left it. Original note follows. Per-request
+  `tg` dispersion runs to 377% IQR and 53x max/min because six of ten requests
+  queue (`running max 4, waiting max 7`). The milestone targets c10 at d16384;
+  that cell reads 48.9 and cannot be moved by decode tuning, nor compared to a
+  board c10 produced under a different `max_num_seqs`. Establishing that is a
+  recipe change and its own round, and it belongs to the milestone rather than
+  to this Objective.
 
 Demoted, with reasons:
 
@@ -184,9 +227,125 @@ Demoted, with reasons:
 - **Speculative depth** — settled. Measured per-position acceptance
   0.87/0.76/0.61 makes N=3 optimal by ~2% over N=2, and N=4 loses.
 
-The sampling config is no longer a lever — the protocol pins `temperature 0`
-itself.
+The sampling config is not a lever for the **Ours** figure — the protocol pins
+`temperature 0` itself. It is a lever for the **board-comparable** figure, which
+arena leaves to the served generation config. Corrected 2026-08-24; this
+previously read "no longer a lever" without the distinction, and h5 showed the
+served value is 1.0.
 
 ## Conclusion
 
-Pending.
+**Closed as exhausted, 2026-08-24.** Six rounds, twenty-one runs, and the
+recipe is unchanged. `recipe-new.yaml` is `recipe.yaml` byte for byte, because
+no field earned a place in it.
+
+### Why exhausted rather than an h7
+
+h6 resolved *lever spent*, and the skill's spent branch opens a new round only
+if a hypothesis exists that aims at the same Objective, respects Held, and is
+motivated by a row already measured. There is no such hypothesis left. Every
+candidate was checked before this was written:
+
+- **The reference diff is empty.** Six differences were listed in Strategy.
+  `gpu_memory_utilization`, `max_model_len` and `max_num_batched_tokens` went to
+  h1 and moved `tg` 2.0 against an IQR of 11.3. The sampling override went to h6
+  and moved it 1.4% against a 13% cell. What remains is
+  `--default-chat-template-kwargs preserve_thinking: true` and the
+  `fix-qwen3.6-chat-template` mod. Neither is a decode lever: they change how the
+  prompt is rendered and what the model is allowed to emit, not the rate at which
+  it emits. No measured row motivates them, and inventing a round for them would
+  be filling a slot.
+- **The draft path** — closed by h4. Two of three alternatives cannot be
+  constructed on SM121 at all and the third lands inside the control's spread.
+  What is left of the draft's cost is the 286 MB `lm_head` re-read, which is
+  architectural and reaches no flag.
+- **Attention backend and KV dtype** — closed by depth-curve. They act on 10 of
+  40 layers, which are exactly the depth-dependent ones, and the depth curve is
+  flat enough to bound both at a few percent across the whole legal context
+  range.
+- **Speculative depth** — settled. Per-position acceptance 0.87/0.76/0.61 makes
+  N=3 optimal by ~2% over N=2, and N=4 loses.
+- **The prefix cache** — a live defect, not a lever for this Objective. h2
+  measured a working cache at +2.3% `tg`, inside the spread. It is a latency
+  finding and it belongs to whoever fixes the harness.
+- **`max_num_seqs`** — never this Objective's field; c1 has one sequence. The
+  `concurrency` experiment took it and won there.
+
+The Objective's own closing condition is also met, on its own terms: no lever in
+Strategy remains open, and two consecutive rounds — h5 and h6 — failed to move
+the standing best.
+
+### What it cost and what it bought
+
+Twenty-one runs across six rounds: h1 eight, h2 five, h3 two, h4 four, h5 one,
+h6 one. Roughly a dozen hours of box time, two of them in h6 alone. No recipe
+field moved.
+
+What it bought is a map of what does not work, which is the thing this campaign
+was short of:
+
+1. **The board-comparable figure exists and it goes against us.** 103.7 at
+   `d16384 c1` on arena's own unmodified grid (h5), 105.12 with sampling matched
+   to the reference recipe (h6), against the board's 116.03. We are behind
+   there, and we now know it by measurement rather than by assertion.
+2. **The 13% gap between our internal 119.6 and that board figure is still
+   unexplained, and three of the four candidates are now eliminated.** Not warm
+   cache — the prefix cache reads 0.0% under every protocol we have run, nine
+   times confirmed. Not MTP acceptance — h5 measured it *higher* than greedy, and
+   h6 raised it further to no effect. Not the served sampling config — h6. What
+   remains conflated is the prompt (`adapt_prompt`'s random start against our
+   fixed corpus), the absence of `exact_tg`, and mid-sweep thermal state. All
+   three are protocol, not recipe, and separating them means diverging from
+   arena's grid — which makes the result no longer board-comparable. That is the
+   wall this experiment ends against.
+3. **Decode throughput is not proportional to MTP acceptance length at fixed
+   depth.** h6 raised acceptance 3.07 → 3.22 and `tg` moved 1.4%; the relation
+   predicted 108.8 within the lane, or 118.8 against depth-curve's constant of
+   36.9. The quotient fell from 33.8 to 32.6 while acceptance rose. That
+   relation has been steering lever choices across this campaign and it now has
+   a counterexample. It remains useful for *normalising away* prose-driven bumps
+   in a depth ladder, where acceptance varies because the corpus varies. It is
+   not a lever: buying acceptance does not buy throughput.
+4. **The spread is speculation, and it is the instrument's dominant term.**
+   Removing MTP collapses `tg` standard deviation 8.6 → 0.24 while `pp` does not
+   move. Every `tg` figure in this tree is drawn from a distribution MTP widens,
+   and MTP stays because it is worth 36% of decode and 3.8x on prefill.
+5. **Two protocol facts the tree now runs on.** `no_adapt_prompt` plus a fixed
+   corpus is what makes a run reproducible (h1). Degeneration is a first-class
+   check, with a 100-word sliding-window repeat ratio rather than whole-output
+   uniqueness (h3).
+
+### What is now known to be closed
+
+For this epoch — image `2026082102`, vLLM `e85d1b69`, flashinfer `4927c0e1` — the
+following are closed as decode levers at `tg128 @ d16384 c1` and should not be
+reopened without a new epoch or a new measured row:
+
+    gpu_memory_utilization, max_model_len, max_num_batched_tokens   h1
+    prefix cache as a throughput lever                              h2
+    tg128 as a warm-up transient                                    h3
+    the draft's moe_backend                                         h4
+    the served generation config / sampling                         h5, h6
+    kv-cache-dtype, attention-backend                               depth-curve
+    speculative depth                                               settled at N=3
+
+Standing best under our own protocol, unchanged by this experiment: **119.6**
+(h1 run-0008), re-based to 117.8 by depth-curve under the per-cell corpus
+offset. Standing board-comparable figure: **105.12** (h6 run-0001).
+
+### The open defect this hands on
+
+The prefix cache reads 0.0% on every sample of every run in this tree, under
+every protocol, with `--enable-prefix-caching` set and confirmed in the engine's
+own config line. h2 attributed it to our `post_run_cmd`; h5 ran without one and
+read 0.0% anyway. Nine confirmations. The leading candidate for the residue is
+`adapt_prompt` re-deriving the grid so each run draws a different prompt start,
+but that is unproven and it does not explain h5's own repeated cells. It is not
+worth a decode round — h2 priced it at +2.3% `tg` — but it removes "the board
+measures warm" as an explanation for anything until someone shows arena's runs
+hit, and it is the largest single unexplained thing this experiment found.
+
+Second, smaller: a harness logging defect that writes one byte-identical
+duplicate `request_end` line for a cell, seen four times now (concurrency h1
+run-0003, concurrency h3 `06-d100000c2`, and twice in h6). Any analysis counting
+request records must deduplicate.
