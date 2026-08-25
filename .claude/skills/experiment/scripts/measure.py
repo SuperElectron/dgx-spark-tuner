@@ -86,6 +86,10 @@ def check_box(out: Path) -> dict:
 # block so its pages align with the mamba pages. A shorter prompt cannot hit.
 BLOCK_TOKENS = 2144
 
+# The engine's first hit-rate sample is always 0.0%, so one sample is no
+# evidence. Below this, the cache verdict is withheld rather than asserted.
+MIN_HIT_SAMPLES = 2
+
 
 def engine_state(out: Path, wants_cache: bool) -> dict:
     """What the engine said about itself while it served.
@@ -110,7 +114,11 @@ def engine_state(out: Path, wants_cache: bool) -> dict:
     }
     # Asking for prefix caching and never getting a hit means measuring
     # something other than what the recipe declared. Not fatal, but not silent.
-    state["cache_suspect"] = bool(wants_cache and hits and state["hit_max"] == 0.0)
+    # The first sample is always 0.0% — the cache cannot have been read yet — so
+    # a lone sample says nothing and must not be reported as a confirmation.
+    state["cache_suspect"] = bool(
+        wants_cache and len(hits) >= MIN_HIT_SAMPLES and state["hit_max"] == 0.0
+    )
     return state
 
 

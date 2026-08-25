@@ -178,3 +178,49 @@ never be set beside a board number again without saying so.
 Recorded for the record: the 2144-token attention block size, forced up so
 attention pages align with mamba pages, does not prevent hits. It was a
 reasonable suspect and it is cleared.
+
+### Amendment, 2026-08-25
+
+Everything above stands for the pair it compares. Arm A and run-0005 differ
+only by the reset, both carry a pinned corpus, and between those two the reset
+is the discriminator. What over-reaches is the sentence "Our own `post_run_cmd`
+was" read as *the* cause of every 0.0% in this tree. There are **two**
+independent causes and every run in the campaign carries at least one.
+
+The second is **MTP**. Controlled A/B already on disk, same grid
+(pp2048 · tg128 · d16384 · c1 · runs 7), no reset in either, only
+`--speculative-config` differing:
+
+    decode-tg/h1/run-0001   MTP on    0.0%
+    decode-tg/h1/run-0003   MTP off   42.1%  (37.7 -> 39.5 -> 42.1)
+
+42.1% rising is llama-benchy's phase1/phase2 asymptote — 16384 hits over
+16384+18432 queries is 47.1% — so a hit needs no repetition at all: each run
+serves the context alone, then the context plus prompt. That is why a prompt
+redrawn per run (`prompts.py:37`, `np.random.randint`, unseeded) is not the
+explanation either, though it does cost the *cross-run* hits that pinning
+recovers.
+
+This retires the correction that ran the other way. concurrency h3 read 0.0%
+over 527 samples with no reset at all, and that was taken as evidence the reset
+account was wrong. It is not wrong; it is incomplete. h3 was MTP-on and
+unpinned, so it had both other causes and needed no reset to read zero.
+
+Two consequences beyond this round:
+
+- Board entries that do not run MTP get roughly 47% for free. Ours read 0%
+  because of MTP, not because of anything arena does. The claim that arena's
+  protocol cannot benefit from prefix caching is false.
+- `depth-curve/h1/run-0005` and `run-0006` logged a single hit-rate sample
+  each, and the engine's first sample is always 0.0%. They were counted as
+  confirmations and carry no information. `measure.py` now withholds the
+  verdict below two samples, so they no longer assert.
+
+Unsettled: *why* MTP defeats the within-run hit, given the shared prefix is
+present and 2144-aligned either way. One run at this cell — MTP on, pinned
+corpus, `VLLM_LOGGING_LEVEL=DEBUG` for per-request `num_cached_tokens` —
+separates "phase 1 blocks never committed" from "phase 2 lookup misses". It
+buys no `tg`, so it has not been run.
+
+Provenance: source read of llama-benchy `prompts.py`/`runner.py` and sparkrun,
+plus re-reading the engine logs of all 31 archived runs. No new benchmark.
