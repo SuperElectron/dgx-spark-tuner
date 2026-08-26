@@ -51,7 +51,8 @@ current standing.
    or losing ground.
    → [document-results.md](references/document-results.md) — `our-`/`their-`
    column naming, linking competitors, and what must never appear in a
-   comparison table.
+   comparison table, copying
+   [assets/results-example.md](assets/results-example.md).
 
 ## Quick reference
 
