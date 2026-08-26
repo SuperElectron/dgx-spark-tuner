@@ -5,7 +5,18 @@ description: Run one round of an experiment — decide what the next run should 
 
 # spark-autoresearch
 
+## What HYPOTHESIS.md is for
+
+It is the **contract** for the round — hypothesis, method, decision rule, and
+the runs table. It is not the notebook. Per-round analysis belongs in the
+memory store, which is queryable and config-stamped; the file holds only what
+the round is bound to. The decision rule was frozen before any figure existed,
+and you never edit it.
+
 ## Role
+
+Every command here assumes cwd is this skill's own directory, which is why the
+memory scripts are reached as `../memory/scripts/...`.
 
 You run one round of an experiment and decide when its runs are done. Use
 these skills:
@@ -66,7 +77,20 @@ Use `h<N>/HYPOTHESIS.md` to do these steps:
 ```bash
 scripts/new-run.sh research/<model>/experiments/<experiment>/h<N>
 ```
-2. Set `run-000N/recipe.yaml`; reason with `HYPOTHESIS.md` and previous runs (if they exist).
+2. Recall before the run is written. Has this cell already been measured? The
+   embedder stays down — these forms do not need it.
+
+```bash
+../memory/scripts/recall.sh --list '' 2000 --filter model=<hf-id>,test=<test>,depth=<d>,conc=<c>
+../memory/scripts/recall.sh --get <id>
+```
+
+`--get` anything you intend to act on. A scan line is triage; the record
+carries the date, the protocol and the epoch, which are usually what decide
+whether it transfers to your cell.
+
+3. Set `run-000N/recipe.yaml`; reason with `HYPOTHESIS.md`, what recall
+   returned, and previous runs (if they exist).
 
 To read previous runs, send an agent — one run is thousands of lines and you
 only need what it concludes:
@@ -78,6 +102,20 @@ scripts/show-run.sh <run-dir>
 Give the agent the run dirs, the question, and that command. Do not run it
 yourself.
 
+4. Propose the row. A not-yet-run row is written by the same script that later
+   fills it, with the figures left off:
+
+```bash
+../memory/scripts/record-run.sh h<N>/HYPOTHESIS.md --run run-000N \
+  --changed "<field: old -> new>" --why "<the prior result that prompted it>" \
+  --cell "d<D> c<C>"
+```
+
+That is the round's plan: the proposed rows are the ones still to run. RECORD
+re-runs the same command with the figures, and the script replaces the row
+rather than appending a second one. Planning lives nowhere else — no free-text
+row, no hand edit.
+
 ### RUN
 
 Hand the run directory to an agent using the `experiment` skill. It runs the
@@ -87,7 +125,41 @@ The agent is not given the hypothesis.
 
 ### RECORD
 
-Take the agent's report and fill in that run's row in "## Runs".
+Take the agent's report and write two things: the row, and the memory. Both
+once per run, both now — not at close.
+
+```bash
+../memory/scripts/record-run.sh h<N>/HYPOTHESIS.md --run run-000N \
+  --changed "<field: old -> new>" --why "<prior result>" --cell "d<D> c<C>" \
+  --pp <n> --tg <n> --ttfr <n> --bench <bench_id>
+
+../memory/scripts/remember.sh \
+  "[OBSERVATION] <what this run measured, and what it decides next>" \
+  round:<experiment>/h<N> \
+  --meta date=<YYYY-MM-DD> --meta model=<hf-id> --meta quant=<q> --meta runtime=vLLM \
+  --meta test=<test> --meta depth=<D> --meta conc=<C> --meta runs=<n> \
+  --meta bench=<bench_id> --meta protocol=<exact_tg> \
+  --meta epoch.build_source=<digest> --meta epoch.vllm=<sha>
+```
+
+This is the round's notebook and it is written per run, so it can be verbose:
+record the dead end as well as the result. The next run needs "changed X, no
+effect at this cell, so go at Y" and nobody should have to re-derive it.
+
+- **Exit 3 is a refusal** naming the field that is missing. Fix the write.
+  Never route around a guard — a line without its config is a claim no later
+  round can judge.
+- **Exit 0 can still mean NOT written**, when the store is unreachable. Memory
+  never blocks work, which is why stderr matters: check it.
+- **Bench ids come from `run-000N/id.txt`**, read, never reconstructed.
+- **`epoch.build_source` is the digest the agent reported**, sparkrun's upstream
+  build source. It is not `epoch.image`, which means the image the box ran and
+  which only `observe` can supply. Never write one under the other.
+- **Every `<...>` above is a placeholder** — substitute the value, never the
+  brackets. `test=` takes one of `tg128`, `pp2048`, `ctx_tg`; a stray
+  `test=<tg128>` matches no filter and the CREATE dedupe scan then finds
+  nothing. The full vocabulary is in
+  [../memory/references/write.md](../memory/references/write.md).
 
 Rows still blank → CREATE. None → VALIDATE. If the blank rows cannot reach the
 Objective's number — the effect is smaller than the scatter in Strategy, or the
@@ -118,8 +190,8 @@ Two levers the grid gives you, worth knowing before you write a recipe:
   independent. Use a schedule for coverage. An arm against a control is one
   cell per run, which is what the cache reset is for.
 
-A run that crashed still gets its row: `—` for the figures, and what the engine
-reported in **why**.
+A run that crashed still gets its row: `--pp — --tg — --ttfr —`, and what the
+engine reported in **why**.
 
 A report saying declared and served disagreed voids the row. Run it again.
 
@@ -127,9 +199,12 @@ A report saying declared and served disagreed voids the row. Run it again.
 
 1. Conclude the round.
 - Only once every row in the round's "## Runs" is filled.
-- Send an agent to run the `spark-hypothesis` skill. It reads every run, writes
-  the conclusion, and returns which of three the rule gave: **target met**,
-  **lever alive**, or **lever spent**. It reads the archives so you do not.
+- Send an agent to run the `spark-hypothesis` skill. It reads every run, fills
+  the `## Verdict` line, writes the conclusion, and returns which of three the
+  rule gave: **target met**, **lever alive**, or **lever spent**. It reads the
+  archives so you do not.
+- Then promote and prune this round's memories — see `## MEMORY`. The round is
+  not closed until that is done.
 
 2. Act on it.
 
@@ -152,21 +227,40 @@ scripts/new-run.sh research/<model>/experiments/<experiment> recipe-new.yaml
 
 ## MEMORY
 
-Once, when the experiment closes. The embedder wants the same card the
-benchmarks do, so it goes back down after.
+Writing happens at RECORD, once per run. What happens here is **promotion**,
+after the conclusion is written and before the round is left.
+
+Volume rises through a round and falls at its close. That fall is what bounds
+the bloat: without it, every round's working notes live forever and recall
+degrades into scrolling.
+
+1. Read back everything the round wrote.
 
 ```bash
-../memory/scripts/memory.sh start
-../memory/scripts/remember.sh "<text>" <entity>   # once, when the experiment closes
-../memory/scripts/memory.sh stop
+../memory/scripts/recall.sh --list round:<experiment>/h<N> 200
 ```
 
-Each line restates a conclusion already written, and has to stand alone —
-recall prints the line and nothing else.
+2. Promote what holds wider than this round's cell, model or epoch — a
+   mechanism, not a figure; the runs table already holds the figures. Promote
+   by writing a **new** memory at the widest entity it is actually true for.
 
-```
-[OBSERVATION] 2026-08-22 decode-tg/h1: max_num_seqs 4→64 at d0 c1 — tg flat within ±3% across all five, so single-stream decode does not use the extra slots (runs=5, bench_2ebcb63db398..bench_9f1)
+```bash
+../memory/scripts/remember.sh "[LESSON] <what holds wider>" flag:<lever> \
+  --meta date=<YYYY-MM-DD> --meta basis="<experiment>/h<N>: <cells and figures>" \
+  --meta model=<hf-id> --meta test=<test>
 ```
 
-Entity: the widest scope it is true for — `experiment:`, `model:`, `family:`,
-`stack:`, `box:`, `flag:`.
+3. Confirm it reads back, then prune. Deletion is permanent and the store keeps
+   no undo — never prune before the promotion is confirmed.
+
+```bash
+../memory/scripts/recall.sh --list flag:<lever> 50
+../memory/scripts/recall.sh --list round:<experiment>/h<N> 200 | cut -f1 | ../memory/scripts/forget.sh --yes -
+```
+
+A round that closes without pruning has not closed.
+
+The markers are `[OBSERVATION]` `[ENV]` `[LESSON]` `[IDEA]` and nothing else;
+`[EXPERIMENT]` is retired and rejected. Entities and the per-marker metadata
+contract are in [../memory/references/write.md](../memory/references/write.md);
+promotion in [../memory/references/tiers.md](../memory/references/tiers.md).

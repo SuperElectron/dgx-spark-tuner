@@ -5,6 +5,18 @@ description: Open an experiment — its objective, strategy and held — and the
 
 # spark-hypothesis
 
+## What HYPOTHESIS.md is for
+
+It is the **contract** for the round — hypothesis, method, decision rule, and
+the runs table. It is not the notebook. Per-round analysis, discarded theories
+and per-run reasoning go to the memory store, which is queryable and
+config-stamped; the file holds only what the round is bound to.
+
+The decision rule is frozen the moment it is written, before any figure exists.
+That is what makes the round falsifiable: a rule edited after the numbers
+arrive is a rule fitted to them, and the round proves nothing. If the rule turns
+out to be the wrong rule, say so in the Conclusion — never edit it.
+
 ## Role
 
 Owns the experiment and its rounds:
@@ -20,6 +32,9 @@ research/<model>/experiments/<experiment>/
 
 Reads `run-*/` but never writes to it, and never writes a runs table.
 
+Every command here assumes cwd is this skill's own directory, which is why the
+memory scripts are reached as `../memory/scripts/...`.
+
 An experiment has one objective and as many rounds as it takes. A round that
 fails does not end the experiment — it ends that lever.
 
@@ -29,6 +44,71 @@ fails does not end the experiment — it ends that lever.
 2. END: after a round's runs, conclude it and decide what follows.
 
 ## START
+
+### Recall first
+
+Before a word of hypothesis is written. A round that starts without a recall is
+a round betting its runs on nothing. Widest scopes first — and the widest scope
+is the unfiltered one. Start here, always:
+
+```bash
+../memory/scripts/recall.sh --list '' 2000 | head -60
+```
+
+**The wide sweep comes first because `--filter` drops any record that lacks the
+key.** `--filter model=<hf-id>` does not mean "this model or anything general" —
+it means "records that carry a `model` key equal to this", so a cross-model
+lesson written at `stack:vllm`, or any pre-contract memory with no config
+stamped on it, is invisible to it. Filtering before you have looked wide is how
+a round misses the memory that would have chosen its lever. Skim the whole
+sweep; `grep` it by keyword rather than by metadata:
+
+```bash
+../memory/scripts/recall.sh --list '' 2000 | grep -i '<the lever, by name>'
+```
+
+Only then narrow, to sort what you have already seen:
+
+```bash
+../memory/scripts/recall.sh --list '' 2000 --filter model=<hf-id> | head -60
+../memory/scripts/recall.sh --list <entity> 50
+```
+
+Entities worth trying by name: `stack:vllm` for engine-wide lessons,
+`flag:<lever>` if one exists for your lever — but not every lever has one, and
+the absence of a `flag:` entity is not the absence of a memory.
+
+Only if you do not know what to ask for by name, bring the embedder up and put
+it back down — it is a vLLM instance on the same card as every benchmark:
+
+```bash
+../memory/scripts/memory.sh start
+../memory/scripts/recall.sh "<the lever question, in words>" stack:vllm 15
+../memory/scripts/memory.sh stop
+```
+
+Then, for **every memory you intend to act on**:
+
+```bash
+../memory/scripts/recall.sh --get <id>
+```
+
+**No decision rests on a summary line.** The scan format exists to triage, not
+to decide. `--get` the record and read its date and its config before the lever
+is chosen: a figure from another cell, epoch or protocol is a reason to look,
+not evidence for yours.
+
+Date it from the record, not from the scan line. `created_at` is the store's
+own timestamp and every memory carries one; `metadata.date` is stamped only by
+schema-1 writes, so it is absent on everything written before the contract and
+the scan line's config suffix renders nothing for those. Read both, take
+`created_at` when `metadata.date` is missing, and then ask the question that
+matters: **what ran after this date?** A memory written before the experiment
+that tested its claim is a hypothesis someone held, not a result. Check it
+against the research tree before spending a round on it. See [../memory/references/recall.md](../memory/references/recall.md)
+for the questions to put to what comes back.
+
+### Then set up
 
 1. `git checkout -b feature/<model>-<experiment> staging`
 2. setup the new directory, run this:
@@ -57,8 +137,10 @@ Then `h1/HYPOTHESIS.md`:
   how big a win this mechanism can buy. If that is smaller than the Objective
   needs, the round is wrong before it runs.
 - **Variables to test** — one line per recipe field this round may move.
-- **Runs** — one planned row each, figures blank. That is what tells the loop
-  when the round is done.
+- **Runs** — leave the block between the `RUNS` markers empty. The table is
+  script-written; `spark-autoresearch` proposes each row at CREATE with the
+  figures blank, and that is what tells the loop when the round is done. Never
+  hand-write a row.
 - **Decision rule** — written before any number exists, never edited. Three
   outcomes: target met, lever alive, lever spent. Size it against Strategy's
   scatter, never against this round's own runs. Name the cell it reads: a
@@ -119,15 +201,42 @@ things worth saying; say whatever else you found.
 - what is your conclusion, and what are the major learnings?
 - was the hypothesis worth running — did it move the Objective, or only settle a question?
 
+7. Write the findings to memory, not to prose.
+
+This skill writes its own findings now; they are not routed through the
+Conclusion. Everything from questions 1–6 that another round would want — the
+shape of the spread, the box state, the dead end, the theory the data killed —
+is a memory, written at `round:<experiment>/h<N>` while it is still in hand.
+Tier 1 is disposable, so it can be verbose.
+
+```bash
+../memory/scripts/remember.sh "[OBSERVATION] <what the set measured, and what it decides>" \
+  round:<experiment>/h<N> \
+  --meta date=<YYYY-MM-DD> --meta model=<hf-id> --meta test=<test> \
+  --meta depth=<D> --meta conc=<C> --meta bench=<bench_id>
+```
+
+The metadata contract, the four markers, the per-class guards and the exit
+codes are in [../memory/references/write.md](../memory/references/write.md). A
+write refused for a missing field is the contract working; fix the write.
+
 ### 3. Write
 
-1. The Conclusion in `h<N>/HYPOTHESIS.md`, against that round's decision rule
-   as written. Wrong rule? Say so; do not edit the rule. Then its row in
-   `EXPERIMENT.md`'s rounds table.
-   Write it so it stands on its own: what varied, over what values, what held
-   or did not, and the evidence.
+1. The `## Verdict` line in `h<N>/HYPOTHESIS.md` — one of TARGET MET, LEVER
+   ALIVE, LEVER SPENT, plus the number that decided it. It is filled at
+   conclusion time and nowhere else.
 
-2. Then one of three, from the round's decision rule:
+2. The Conclusion in the same file, against that round's decision rule as
+   written. Wrong rule? Say so; do not edit the rule. Then its row in
+   `EXPERIMENT.md`'s rounds table.
+
+   **Budget: 15 stated lines.** Enough to name the verdict, the deciding
+   figure, what varied over what values, and one line of why. Anything beyond
+   that — per-run analysis, discarded theories, exploratory reasoning — went to
+   the memory store in §2.7 and does not belong here. If the Conclusion is
+   growing past the budget, the overflow is a memory you have not written yet.
+
+3. Then one of three, from the round's decision rule:
 
     **Target met** — close the experiment. Conclusion in `EXPERIMENT.md`,
     `recipe-new.yaml` beside `recipe.yaml`, one row in `RESULTS.md`, one PR
