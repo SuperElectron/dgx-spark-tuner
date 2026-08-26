@@ -1,6 +1,8 @@
 ---
 name: spark-autoresearch
 description: Run one round of an experiment — decide what the next run should test, dispatch it, record the result, then conclude the round and act on what it gave. Use when a round is open.
+allowed-tools: Bash(.claude/skills/spark-autoresearch/scripts/new-run.sh:*) Bash(.claude/skills/spark-autoresearch/scripts/show-run.sh:*) Bash(.claude/skills/memory/scripts/recall.sh:*) Bash(.claude/skills/memory/scripts/remember.sh:*) Bash(.claude/skills/memory/scripts/record-run.sh:*) Bash(.claude/skills/memory/scripts/prune-round.sh:*) Bash(.claude/skills/memory/scripts/memory.sh stop) Bash(jq:*) Bash(cut:*) Read Grep Glob
+disallowed-tools: Bash(.claude/skills/memory/scripts/forget.sh:*) Bash(.claude/skills/memory/scripts/migrate.sh:*) Bash(.claude/skills/memory/scripts/regen.sh:*)
 ---
 
 # spark-autoresearch
@@ -15,8 +17,16 @@ and you never edit it.
 
 ## Role
 
-Every command here assumes cwd is this skill's own directory, which is why the
-memory scripts are reached as `../memory/scripts/...`.
+Every command here assumes cwd is the **repo root**, which is why every script
+is reached as `.claude/skills/...`. That is the one convention across all
+skills, and it is what lets a single permission rule cover every caller.
+
+**Memory:** you may recall by `--list`, `--get` and `--filter`; write
+`[OBSERVATION]` at `round:<experiment>/h<N>` and promote `[LESSON]` to a tier-2
+entity; write the runs table; and `memory.sh stop` — never `start`, because the
+embedder shares the card with the benchmarks you dispatch. You are the only
+skill that deletes, and deletion goes through `prune-round.sh` alone. Full
+matrix: [../memory/references/access.md](../memory/references/access.md).
 
 You run one round of an experiment and decide when its runs are done. Use
 these skills:
@@ -55,7 +65,7 @@ you start and you never edit it.
    benchmark. Idempotent, so just assert it when a round starts.
 
 ```bash
-../memory/scripts/memory.sh stop
+.claude/skills/memory/scripts/memory.sh stop
 ```
 
 1. EXPERIMENTS: cycle CREATE, RUN, RECORD, once per planned row in "## Runs".
@@ -75,14 +85,14 @@ Use `h<N>/HYPOTHESIS.md` to do these steps:
 
 1. setup: create the next `run-000N/`.
 ```bash
-scripts/new-run.sh research/<model>/experiments/<experiment>/h<N>
+.claude/skills/spark-autoresearch/scripts/new-run.sh research/<model>/experiments/<experiment>/h<N>
 ```
 2. Recall before the run is written. Has this cell already been measured? The
    embedder stays down — these forms do not need it.
 
 ```bash
-../memory/scripts/recall.sh --list '' 2000 --filter model=<hf-id>,test=<test>,depth=<d>,conc=<c>
-../memory/scripts/recall.sh --get <id>
+.claude/skills/memory/scripts/recall.sh --list '' 2000 --filter model=<hf-id>,test=<test>,depth=<d>,conc=<c>
+.claude/skills/memory/scripts/recall.sh --get <id>
 ```
 
 `--get` anything you intend to act on. A scan line is triage; the record
@@ -96,7 +106,7 @@ To read previous runs, send an agent — one run is thousands of lines and you
 only need what it concludes:
 
 ```bash
-scripts/show-run.sh <run-dir>
+.claude/skills/spark-autoresearch/scripts/show-run.sh <run-dir>
 ```
 
 Give the agent the run dirs, the question, and that command. Do not run it
@@ -106,7 +116,7 @@ yourself.
    fills it, with the figures left off:
 
 ```bash
-../memory/scripts/record-run.sh h<N>/HYPOTHESIS.md --run run-000N \
+.claude/skills/memory/scripts/record-run.sh research/<model>/experiments/<experiment>/h<N>/HYPOTHESIS.md --run run-000N \
   --changed "<field: old -> new>" --why "<the prior result that prompted it>" \
   --cell "d<D> c<C>"
 ```
@@ -129,11 +139,11 @@ Take the agent's report and write two things: the row, and the memory. Both
 once per run, both now — not at close.
 
 ```bash
-../memory/scripts/record-run.sh h<N>/HYPOTHESIS.md --run run-000N \
+.claude/skills/memory/scripts/record-run.sh research/<model>/experiments/<experiment>/h<N>/HYPOTHESIS.md --run run-000N \
   --changed "<field: old -> new>" --why "<prior result>" --cell "d<D> c<C>" \
   --pp <n> --tg <n> --ttfr <n> --bench <bench_id>
 
-../memory/scripts/remember.sh \
+.claude/skills/memory/scripts/remember.sh \
   "[OBSERVATION] <what this run measured, and what it decides next>" \
   round:<experiment>/h<N> \
   --meta date=<YYYY-MM-DD> --meta model=<hf-id> --meta quant=<q> --meta runtime=vLLM \
@@ -217,7 +227,7 @@ A report saying declared and served disagreed voids the row. Run it again.
    it and see the target hold:
 
 ```bash
-scripts/new-run.sh research/<model>/experiments/<experiment> recipe-new.yaml
+.claude/skills/spark-autoresearch/scripts/new-run.sh research/<model>/experiments/<experiment> recipe-new.yaml
 ```
 
 - then hand it to an agent using the `experiment` skill, as in RUN.
@@ -237,7 +247,7 @@ degrades into scrolling.
 1. Read back everything the round wrote.
 
 ```bash
-../memory/scripts/recall.sh --list round:<experiment>/h<N> 200
+.claude/skills/memory/scripts/recall.sh --list round:<experiment>/h<N> 200
 ```
 
 2. Promote what holds wider than this round's cell, model or epoch — a
@@ -245,18 +255,41 @@ degrades into scrolling.
    by writing a **new** memory at the widest entity it is actually true for.
 
 ```bash
-../memory/scripts/remember.sh "[LESSON] <what holds wider>" flag:<lever> \
+.claude/skills/memory/scripts/remember.sh "[LESSON] <what holds wider>" flag:<lever> \
   --meta date=<YYYY-MM-DD> --meta basis="<experiment>/h<N>: <cells and figures>" \
   --meta model=<hf-id> --meta test=<test>
 ```
 
-3. Confirm it reads back, then prune. Deletion is permanent and the store keeps
-   no undo — never prune before the promotion is confirmed.
+3. Confirm the promotion reads back.
 
 ```bash
-../memory/scripts/recall.sh --list flag:<lever> 50
-../memory/scripts/recall.sh --list round:<experiment>/h<N> 200 | cut -f1 | ../memory/scripts/forget.sh --yes -
+.claude/skills/memory/scripts/recall.sh --list flag:<lever> 50
 ```
+
+4. Then prune — and only then. **Promote, confirm the read-back, prune.** That
+   order is not advice: deletion is permanent and the store keeps no undo, so
+   the round's reasoning must exist somewhere wider before its only copy goes.
+
+```bash
+.claude/skills/memory/scripts/prune-round.sh round:<experiment>/h<N> \
+  --promoted-to flag:<lever>
+
+.claude/skills/memory/scripts/prune-round.sh round:<experiment>/h<N> \
+  --promoted-to flag:<lever> --confirm-destructive
+```
+
+The first call is the review step: it prints every memory it would delete, ids
+and text, and stops. It refuses outright (exit 3) unless a memory at
+`flag:<lever>` already carries `<experiment>/h<N>` in its `basis=` — which is
+why step 2's `--meta basis=` is load-bearing rather than decorative. Read what
+it printed before running the second call.
+
+**Never prune with `forget.sh` directly.** The old form —
+`recall.sh --list <round> 200 | cut -f1 | forget.sh --yes -` — reads as safe
+because `forget.sh` refuses without `--yes` and prints what it would delete. But
+that pipeline passes `--yes` itself, so the guard never fires and the ids are
+never surfaced. The review step existed on paper only, which is exactly what
+`prune-round.sh` was written to fix.
 
 A round that closes without pruning has not closed.
 

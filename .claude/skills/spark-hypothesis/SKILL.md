@@ -1,6 +1,8 @@
 ---
 name: spark-hypothesis
 description: Open an experiment — its objective, strategy and held — and the rounds that chase it, then conclude each round and decide whether the target is met, the lever has more to give, or the next hypothesis is needed. Use when starting an experiment or finishing a round.
+allowed-tools: Bash(.claude/skills/spark-hypothesis/scripts/new-experiment.sh:*) Bash(.claude/skills/spark-hypothesis/scripts/new-round.sh:*) Bash(.claude/skills/spark-hypothesis/scripts/show-run.sh:*) Bash(.claude/skills/memory/scripts/recall.sh:*) Bash(.claude/skills/memory/scripts/remember.sh:*) Bash(.claude/skills/memory/scripts/memory.sh start) Bash(.claude/skills/memory/scripts/memory.sh stop) Bash(git checkout:*) Bash(git status:*) Bash(jq:*) Bash(grep:*) Bash(head:*) Read Write Edit Grep Glob
+disallowed-tools: Bash(.claude/skills/memory/scripts/forget.sh:*) Bash(.claude/skills/memory/scripts/prune-round.sh:*) Bash(.claude/skills/memory/scripts/migrate.sh:*) Bash(.claude/skills/memory/scripts/regen.sh:*)
 ---
 
 # spark-hypothesis
@@ -32,8 +34,15 @@ research/<model>/experiments/<experiment>/
 
 Reads `run-*/` but never writes to it, and never writes a runs table.
 
-Every command here assumes cwd is this skill's own directory, which is why the
-memory scripts are reached as `../memory/scripts/...`.
+Every command here assumes cwd is the **repo root**, which is why every script
+is reached as `.claude/skills/...`. That is the one convention across all
+skills, and it is what lets a single permission rule cover every caller.
+
+**Memory:** you may recall in every form, semantic included — and you are the
+only skill that may raise the embedder, at START, and must lower it again in the
+same breath. You write `[OBSERVATION]` at `round:<experiment>/h<N>`. You never
+delete and never write a runs table. Full matrix:
+[../memory/references/access.md](../memory/references/access.md).
 
 An experiment has one objective and as many rounds as it takes. A round that
 fails does not end the experiment — it ends that lever.
@@ -52,7 +61,7 @@ a round betting its runs on nothing. Widest scopes first — and the widest scop
 is the unfiltered one. Start here, always:
 
 ```bash
-../memory/scripts/recall.sh --list '' 2000 | head -60
+.claude/skills/memory/scripts/recall.sh --list '' 2000 | head -60
 ```
 
 **The wide sweep comes first because `--filter` drops any record that lacks the
@@ -64,14 +73,14 @@ a round misses the memory that would have chosen its lever. Skim the whole
 sweep; `grep` it by keyword rather than by metadata:
 
 ```bash
-../memory/scripts/recall.sh --list '' 2000 | grep -i '<the lever, by name>'
+.claude/skills/memory/scripts/recall.sh --list '' 2000 | grep -i '<the lever, by name>'
 ```
 
 Only then narrow, to sort what you have already seen:
 
 ```bash
-../memory/scripts/recall.sh --list '' 2000 --filter model=<hf-id> | head -60
-../memory/scripts/recall.sh --list <entity> 50
+.claude/skills/memory/scripts/recall.sh --list '' 2000 --filter model=<hf-id> | head -60
+.claude/skills/memory/scripts/recall.sh --list <entity> 50
 ```
 
 Entities worth trying by name: `stack:vllm` for engine-wide lessons,
@@ -82,15 +91,15 @@ Only if you do not know what to ask for by name, bring the embedder up and put
 it back down — it is a vLLM instance on the same card as every benchmark:
 
 ```bash
-../memory/scripts/memory.sh start
-../memory/scripts/recall.sh "<the lever question, in words>" stack:vllm 15
-../memory/scripts/memory.sh stop
+.claude/skills/memory/scripts/memory.sh start
+.claude/skills/memory/scripts/recall.sh "<the lever question, in words>" stack:vllm 15
+.claude/skills/memory/scripts/memory.sh stop
 ```
 
 Then, for **every memory you intend to act on**:
 
 ```bash
-../memory/scripts/recall.sh --get <id>
+.claude/skills/memory/scripts/recall.sh --get <id>
 ```
 
 **No decision rests on a summary line.** The scan format exists to triage, not
@@ -113,7 +122,7 @@ for the questions to put to what comes back.
 1. `git checkout -b feature/<model>-<experiment> staging`
 2. setup the new directory, run this:
 ```bash
-scripts/new-experiment.sh research/<model>/experiments/<experiment>
+.claude/skills/spark-hypothesis/scripts/new-experiment.sh research/<model>/experiments/<experiment>
 ```
 
 Fill every `<...>` with the user. `EXPERIMENT.md` first — it is frozen once
@@ -163,7 +172,7 @@ After a round's runs are in, analyze them and decide what follows.
 Read `EXPERIMENT.md` and the round's `HYPOTHESIS.md`, then run this script:
 
 ```bash
-scripts/show-run.sh <run-dir>
+.claude/skills/spark-hypothesis/scripts/show-run.sh <run-dir>
 ```
 
 
@@ -210,7 +219,7 @@ is a memory, written at `round:<experiment>/h<N>` while it is still in hand.
 Tier 1 is disposable, so it can be verbose.
 
 ```bash
-../memory/scripts/remember.sh "[OBSERVATION] <what the set measured, and what it decides>" \
+.claude/skills/memory/scripts/remember.sh "[OBSERVATION] <what the set measured, and what it decides>" \
   round:<experiment>/h<N> \
   --meta date=<YYYY-MM-DD> --meta model=<hf-id> --meta test=<test> \
   --meta depth=<D> --meta conc=<C> --meta bench=<bench_id>
@@ -245,7 +254,7 @@ write refused for a missing field is the contract working; fix the write.
     **Lever alive** — the target is not met but this mechanism has more to
     give. Add rows to the round and hand back; do not open a new round.
 
-    **Lever spent** — `scripts/new-round.sh <experiment-dir>`, and write the
+    **Lever spent** — `.claude/skills/spark-hypothesis/scripts/new-round.sh <experiment-dir>`, and write the
     next hypothesis. It must aim at the same Objective, respect Held, and be
     motivated by a row already measured. If no such hypothesis exists, close
     the experiment as exhausted: same artifacts, saying what it cost and what

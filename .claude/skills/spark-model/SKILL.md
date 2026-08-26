@@ -1,6 +1,8 @@
 ---
 name: spark-model
 description: Set up a model for tuning — its docs, its baseline recipe, its results table. Use once, when a model enters the research tree for the first time.
+allowed-tools: Bash(.claude/skills/spark-model/scripts/new-model.sh:*) Read Write Edit Grep Glob
+disallowed-tools: Bash(.claude/skills/memory/scripts/memory.sh:*) Bash(.claude/skills/memory/scripts/remember.sh:*) Bash(.claude/skills/memory/scripts/forget.sh:*) Bash(.claude/skills/memory/scripts/prune-round.sh:*) Bash(.claude/skills/memory/scripts/record-run.sh:*) Bash(.claude/skills/memory/scripts/migrate.sh:*) Bash(.claude/skills/memory/scripts/regen.sh:*)
 ---
 
 # spark-model
@@ -19,6 +21,10 @@ research/<model>/
 
 Runs nothing.
 
+**Memory:** nothing. No step here recalls, writes, deletes or starts anything —
+no experiment exists yet to remember. Matrix:
+[../memory/references/access.md](../memory/references/access.md).
+
 ## How to use this skill
 
 Once per model, when it first enters the research tree. Everything here is
@@ -29,13 +35,14 @@ Nothing is committed to a branch — no experiment has been run yet.
 ## 1. Create the directory
 
 ```bash
-scripts/new-model.sh <model>
+.claude/skills/spark-model/scripts/new-model.sh <model>
 ```
 
 `<model>` is the model's name. Nothing else goes in it.
 
-Copies `scripts/_template/` into `research/<model>/`: `RESULTS.md` with the
-name substituted, and empty `docs/` and `experiments/`. Steps 2 to 4 fill it.
+Copies `.claude/skills/spark-model/scripts/_template/` into `research/<model>/`:
+`RESULTS.md` with the name substituted, and empty `docs/` and `experiments/`.
+Steps 2 to 4 fill it.
 
 ## 2. Write `docs/` with the user
 

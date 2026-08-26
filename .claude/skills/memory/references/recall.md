@@ -1,10 +1,10 @@
 # Recalling
 
 ```bash
-scripts/recall.sh "<query>" [entity] [k]      # semantic — needs the embedder up
-scripts/recall.sh --list [entity] [limit]     # no embedder needed
-scripts/recall.sh --get <id>                  # one full record, as JSON
-scripts/recall.sh ... [--json] [--filter k=v,k=v]
+.claude/skills/memory/scripts/recall.sh "<query>" [entity] [k]      # semantic — needs the embedder up
+.claude/skills/memory/scripts/recall.sh --list [entity] [limit]     # no embedder needed
+.claude/skills/memory/scripts/recall.sh --get <id>                  # one full record, as JSON
+.claude/skills/memory/scripts/recall.sh ... [--json] [--filter k=v,k=v]
 ```
 
 The positional forms are unchanged from before the contract. Flags may appear
@@ -39,6 +39,12 @@ list and picks the id out of it. A missing id prints to stderr and exits 0.
 `--filter` is a client-side AND over metadata, comma-separated, dotted keys
 supported.
 
+A dotted key such as `epoch.vllm` is resolved twice: the flat literal key
+`"epoch.vllm"` first, then the nested path `metadata.epoch.vllm`. Writers emit
+the nested form only — see [write.md](write.md) — so the fallback is what
+normally matches; the literal attempt exists so a stray flat key is reachable
+rather than invisible.
+
 **`k=v` matches only records where `k` is present and equal. A record missing
 `k` is excluded, not passed through.** There is no "unknown counts as a match".
 That has one practical consequence worth stating plainly: a filtered scan cannot
@@ -48,17 +54,17 @@ cannot see a cross-model one (a `stack:vllm` lesson that deliberately carries no
 everything the store holds:
 
 ```bash
-scripts/recall.sh --list '' 2000 | head -60
-scripts/recall.sh --list '' 2000 | grep -i '<the lever, by name>'
+.claude/skills/memory/scripts/recall.sh --list '' 2000 | head -60
+.claude/skills/memory/scripts/recall.sh --list '' 2000 | grep -i '<the lever, by name>'
 ```
 
 So filters narrow a result you have already looked at. They are never the first
 look.
 
 ```bash
-scripts/recall.sh --list '' 2000 --filter model=Qwen3.6-35B-A3B-NVFP4,depth=16384,conc=10
-scripts/recall.sh --list --filter epoch.vllm=abc1234
-scripts/recall.sh "does max_num_seqs help decode" stack:vllm 20 --filter test=tg128
+.claude/skills/memory/scripts/recall.sh --list '' 2000 --filter model=Qwen3.6-35B-A3B-NVFP4,depth=16384,conc=10
+.claude/skills/memory/scripts/recall.sh --list --filter epoch.vllm=abc1234
+.claude/skills/memory/scripts/recall.sh "does max_num_seqs help decode" stack:vllm 20 --filter test=tg128
 ```
 
 The useful ones in practice:

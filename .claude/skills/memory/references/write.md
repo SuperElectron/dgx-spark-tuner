@@ -1,7 +1,7 @@
 # Writing a memory
 
 ```bash
-scripts/remember.sh "<text>" <entity> [--meta k=v ...]
+.claude/skills/memory/scripts/remember.sh "<text>" <entity> [--meta k=v ...]
 ```
 
 Every write is stamped `metadata.schema = "1"`. The entity is stored in the
@@ -47,6 +47,32 @@ date model quant runtime test depth conc runs bench protocol
 epoch.image epoch.build_source epoch.vllm epoch.flashinfer
 scope basis evidence
 ```
+
+### Dotted keys nest — the stored shape
+
+`--meta epoch.vllm=e85d1b69` is **not** a key called `"epoch.vllm"`. The dot is
+a path: the value lands inside an `epoch` object. Every writer emits this shape
+— `remember.sh`, `regen.sh`, and anything else that POSTs — and it is the shape
+`recall.sh --filter epoch.vllm=…` is built around.
+
+```json
+{
+  "entity": "model:nvidia/Qwen3.6-35B-A3B-NVFP4",
+  "schema": "1",
+  "test": "tg128", "depth": "16384", "conc": "10",
+  "epoch": {
+    "build_source": "sha256:1f2e…",
+    "vllm": "e85d1b69",
+    "flashinfer": "9c40a7c"
+  }
+}
+```
+
+A flat literal `"epoch.vllm": "e85d1b69"` is wrong and must not be written. It
+is nonetheless *readable*: `recall.sh --filter` tries the flat literal key first
+and falls back to the nested path, so a stray flat key from some future writer
+is still reachable rather than silently invisible. That tolerance is a safety
+net for readers, not a licence for writers.
 
 - **`depth` and `conc` are the cell** — carried as two fields, never as a single
   `cell` key. `--meta depth=16384 --meta conc=10` prints back as `d16384 c10`.
@@ -103,14 +129,14 @@ block research. It is also why stderr matters — `remember: NOT written` on exi
 ## Examples
 
 ```bash
-scripts/remember.sh \
+.claude/skills/memory/scripts/remember.sh \
   "[OBSERVATION] max_num_seqs 4→64: tg flat within ±3% across all five, so single-stream decode does not use the extra slots" \
   round:decode-tg/h1 \
   --meta date=2026-08-22 --meta model=Qwen3.6-35B-A3B-NVFP4 --meta quant=NVFP4 \
   --meta runtime=vLLM --meta test=tg128 --meta depth=0 --meta conc=1 \
   --meta runs=5 --meta bench=bench_2ebcb63db398
 
-scripts/remember.sh \
+.claude/skills/memory/scripts/remember.sh \
   "[LESSON] max_num_seqs governs decode only when concurrency exceeds 1; at c1 it is inert" \
   flag:--max-num-seqs \
   --meta date=2026-08-22 --meta basis="decode-tg h1 c1 flat, h2 c10 2.89x" \

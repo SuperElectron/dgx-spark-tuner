@@ -49,7 +49,7 @@ The runs table in `HYPOTHESIS.md`, between `<!-- RUNS:BEGIN -->` and
 `<!-- RUNS:END -->`.
 
 ```bash
-scripts/record-run.sh <HYPOTHESIS.md> --run run-0003 \
+.claude/skills/memory/scripts/record-run.sh <HYPOTHESIS.md> --run run-0003 \
   --changed "max_num_seqs: 4 → 64" --why "h1 c1 flat, retest at c10" \
   --cell "d16384 c10" --pp 412.7 --tg 129.32 --ttfr 118 --bench bench_2ebcb63db398
 ```
@@ -84,12 +84,23 @@ rests on, so a later reader can check it instead of taking it.
 Then prune:
 
 ```bash
-scripts/recall.sh --list round:decode-tg/h1 200          # read them all first
-scripts/recall.sh --list round:decode-tg/h1 200 | cut -f1 | scripts/forget.sh --yes -
+M=.claude/skills/memory/scripts
+
+$M/recall.sh --list flag:<lever> 50                      # the promotion landed?
+$M/prune-round.sh round:decode-tg/h1 --promoted-to flag:<lever>
+$M/prune-round.sh round:decode-tg/h1 --promoted-to flag:<lever> --confirm-destructive
 ```
 
-`forget.sh` refuses without `--yes` and prints what it would delete, so the
-refusal run is the review step. Deletion is permanent and the server keeps no
-undo — promote before you prune, and confirm the promoted lines read back.
+The first `prune-round.sh` call is the review: it prints every memory it would
+delete and stops. It also refuses outright unless a memory at `flag:<lever>`
+already carries this round in its `basis=`, so the promotion cannot be skipped.
+
+Do **not** prune with `recall.sh --list <round> | cut -f1 | forget.sh --yes -`.
+That pipeline reads as safe — `forget.sh` refuses without `--yes` and prints
+what it would delete — but it passes `--yes` itself, so the guard never fires
+and the ids never reach the agent. The review step was on paper only. That is
+the whole reason `prune-round.sh` exists.
+
+Deletion is permanent and the server keeps no undo.
 
 A round that closes without pruning has not closed.

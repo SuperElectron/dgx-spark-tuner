@@ -9,7 +9,9 @@
 # Options on --list and search:
 #   --json                 full records, metadata included, as a JSON array
 #   --filter k=v,k=v       keep only records matching every pair, compared
-#                          against metadata (dotted keys: epoch.vllm=abc123)
+#                          against metadata (dotted keys: epoch.vllm=abc123).
+#                          A dotted key tries the flat literal key first, then
+#                          the nested path, so either shape on disk matches.
 #
 # Prints one line per memory: id, entity, text, then a config suffix showing
 # the configuration the line was measured at. Exits 0 with no output when the
@@ -78,8 +80,9 @@ if [ -n "$filter" ]; then
   recs="$(jq -c --arg f "$filter" '
     ($f | split(",") | map(select(length > 0)
        | (index("=")) as $i | {k: .[:$i], v: .[$i+1:]})) as $want
-    | map(select(. as $r | $want | all(. as $w
-        | (($r.metadata // {}) | getpath($w.k | split("."))) as $got
+    | map(select(. as $r | ($r.metadata // {}) as $md | $want | all(. as $w
+        | (if ($md | has($w.k)) then $md[$w.k]
+           else (try ($md | getpath($w.k | split("."))) catch null) end) as $got
         | $got != null and ($got | tostring) == $w.v)))' <<<"$recs" 2>/dev/null)"
 fi
 

@@ -1,6 +1,8 @@
 ---
 name: experiment
 description: Run one benchmark from a prepared run directory, read its archive, and return the figures and validity checks. Use when a run-000N directory holds a recipe and needs running.
+allowed-tools: Bash(uv:*) Bash(.claude/skills/experiment/scripts/reset-cache.sh:*) Bash(.claude/skills/memory/scripts/remember.sh:*) Bash(jq:*) Read Grep Glob
+disallowed-tools: WebFetch WebSearch Bash(.claude/skills/memory/scripts/memory.sh:*) Bash(.claude/skills/memory/scripts/recall.sh:*) Bash(.claude/skills/memory/scripts/forget.sh:*) Bash(.claude/skills/memory/scripts/prune-round.sh:*) Bash(.claude/skills/memory/scripts/record-run.sh:*)
 ---
 
 # experiment
@@ -18,6 +20,12 @@ archive.
 
 Every command here assumes cwd is the repo root, which is why scripts are
 reached as `.claude/skills/...`.
+
+**Memory:** you write `[ENV]` at `box:<alias>` when the box leaves its band, and
+nothing else. No recall — you must not see what the round expects, or you could
+steer toward it. No deletes, no runs table, and **never the embedder**: it is a
+vLLM instance on the same card you are timing. Matrix:
+[../memory/references/access.md](../memory/references/access.md).
 
 ## 1. Run
 
@@ -87,8 +95,9 @@ reported an hour late has cost the box an hour.
 ## 4. If the box left its band, write one `[ENV]`
 
 The band is the one `run.py` already checks, in
-`scripts/measure.py`. You add no instrumentation: the emit reads the `box:`
-line of the report you just pasted, or the message `run.py` died with.
+`.claude/skills/experiment/scripts/measure.py`. You add no instrumentation: the
+emit reads the `box:` line of the report you just pasted, or the message
+`run.py` died with.
 
 | value | known band | out of band means |
 |---|---|---|

@@ -8,7 +8,7 @@
 #
 # WHY REGENERATE RATHER THAN MIGRATE
 # The 208 legacy records carry only sha256 and entity. Phase 7 showed a metadata
-# edit means DELETE + re-POST (no update route), and that 0 of 11 legacy
+# edit means DELETE + re-POST (no update route), and that 0 of 7 legacy
 # [OBSERVATION]s could be completed anyway: each spans several cells or fuses a
 # pp figure with a tg one, so no single test/depth/conc exists for it. The
 # archives, by contrast, hold the figures at full resolution. So we do not
@@ -38,7 +38,9 @@
 # flags, so most units carry none and must say so by silence. epoch.image
 # likewise: nothing in the archives records the digest of the image the box
 # ran, so no record here carries one. What the archives do hold is the digest
-# sparkrun BUILT FROM, and that goes under epoch.build_source.
+# sparkrun BUILT FROM, and that goes under epoch.build_source. Epoch fields
+# NEST — metadata.epoch.build_source, an "epoch" object — which is what
+# remember.sh writes and the only shape recall.sh --filter epoch.*= reads.
 #
 # ENTITY IS model:<hf-id>, read verbatim from the archive. A generator cannot
 # pick round: or flag: — round: is transient and belongs to a round that is
@@ -103,7 +105,11 @@ def protocol_of(args):
     return ", ".join(bits) or None
 
 def epoch_of(rti):
-    """No epoch.image. The archives record what sparkrun BUILT FROM
+    """Returned as the NESTED object remember.sh writes: {"build_source": ...}
+    goes to metadata.epoch.build_source, never to a flat "epoch.build_source"
+    key. recall.sh --filter reads the nested form.
+
+    No epoch.image. The archives record what sparkrun BUILT FROM
     (container_dev_sparkrun_source_digest, an upstream docker.io/eugr/spark-vllm
     digest), never the digest of the image the box actually ran. Those are two
     objects, and epoch.image is defined as the second, so it is unrecoverable
@@ -112,11 +118,11 @@ def epoch_of(rti):
     e = {}
     if isinstance(rti, dict):
         if rti.get("container_dev_sparkrun_source_digest"):
-            e["epoch.build_source"] = rti["container_dev_sparkrun_source_digest"]
+            e["build_source"] = rti["container_dev_sparkrun_source_digest"]
         if rti.get("build_vllm_commit"):
-            e["epoch.vllm"] = rti["build_vllm_commit"]
+            e["vllm"] = rti["build_vllm_commit"]
         if rti.get("build_flashinfer_commit"):
-            e["epoch.flashinfer"] = rti["build_flashinfer_commit"]
+            e["flashinfer"] = rti["build_flashinfer_commit"]
     return e
 
 def emit(unit, cell_depth, conc, entries):
@@ -147,7 +153,8 @@ def emit(unit, cell_depth, conc, entries):
             n = unit.get("runs") or (len(vals) or None)
             if n:
                 meta["runs"] = str(n)
-            meta.update(unit["epoch"])
+            if unit["epoch"]:
+                meta["epoch"] = dict(unit["epoch"])
 
             short = unit["model"].split("/")[-1]
             sd = fig.get("std")
@@ -279,7 +286,7 @@ if [ "$mode" = print ]; then
   jq -r '.records[] |
     "── \(.entity)  [\(.meta.test) d\(.meta.depth) c\(.meta.conc)]  \(.unit)",
     "   \(.text)",
-    "   --meta " + (.meta | to_entries | sort_by(.key)
+    "   --meta " + (.meta | [paths(scalars) as $p | {key: ($p|join(".")), value: getpath($p)}] | sort_by(.key)
       | map("\(.key)=" + (if (.value | test("[ ,]")) then "\"\(.value)\"" else .value end))
       | join(" --meta ")),
     ""' <<<"$plan"
@@ -305,8 +312,8 @@ jq -r '
   "",
   "optional coverage:",
   ([ "quant","runtime","runs","protocol","epoch.image","epoch.build_source","epoch.vllm","epoch.flashinfer" ][]
-     as $k | "   \($k | . + (" " * (18 - length))) \([$r[]|select(.meta[$k])]|length)"),
-  "   all three epoch.*  \([$r[]|select(.meta["epoch.build_source"] and .meta["epoch.vllm"] and .meta["epoch.flashinfer"])]|length)",
+     as $k | "   \($k | . + (" " * (18 - length))) \([$r[]|select(.meta | getpath($k|split(".")))]|length)"),
+  "   all three epoch.*  \([$r[]|select(.meta.epoch.build_source and .meta.epoch.vllm and .meta.epoch.flashinfer)]|length)",
   "",
   "date range              : \([$r[].meta.date]|min) .. \([$r[].meta.date]|max)",
   "",

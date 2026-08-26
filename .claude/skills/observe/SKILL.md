@@ -2,13 +2,18 @@
 name: observe
 description: Sweep the box at rest — clocks, power policy, thermals, driver, kernel, image identity — and write what changed as a config-stamped [ENV] memory. Read-only; runs no benchmark. Use before an experiment opens, after a reboot or an image pull, and when a run's figures moved with no recipe change.
 when_to_use: Before opening an experiment or a round; after any reboot, driver bump, image pull or box maintenance; when figures shift under an unchanged recipe; when a hypothesis needs the box's state on a given date and the store has no [ENV] for it. Not while a benchmark is running.
-allowed-tools: Bash(.claude/skills/observe/scripts/*) Bash(scripts/*) Bash(.claude/skills/memory/scripts/recall.sh:*) Bash(.claude/skills/memory/scripts/remember.sh:*) Bash(jq *) Read
-disallowed-tools: WebFetch WebSearch
+allowed-tools: Bash(.claude/skills/observe/scripts/sweep.sh:*) Bash(.claude/skills/memory/scripts/recall.sh --list:*) Bash(.claude/skills/memory/scripts/remember.sh:*) Bash(jq:*) Read Grep Glob
+disallowed-tools: WebFetch WebSearch Bash(.claude/skills/memory/scripts/memory.sh:*) Bash(.claude/skills/memory/scripts/forget.sh:*) Bash(.claude/skills/memory/scripts/prune-round.sh:*) Bash(.claude/skills/memory/scripts/record-run.sh:*)
 ---
 
 # observe
 
 Every benchmark measures the box through a model. This skill measures the box.
+
+**Memory:** `recall.sh --list` to read the box's last `[ENV]` back, and `[ENV]`
+writes at `box:<alias>`. Nothing else — no deletes, no runs table, and **never
+the embedder**, which shares the card with every benchmark. Matrix:
+[../memory/references/access.md](../memory/references/access.md).
 
 It exists because the things that move underneath an experiment — a driver
 bump, a reboot that dropped persistence mode, a governor gone back to
