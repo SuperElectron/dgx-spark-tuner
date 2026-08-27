@@ -34,7 +34,7 @@ fi
 
 ok=0 fail=0
 for id in "${args[@]}"; do
-  status="$(ssh -o ConnectTimeout=10 -o BatchMode=yes "$host" \
+  status="$(ssh -n -o ConnectTimeout=10 -o BatchMode=yes "$host" \
     "curl -sS --max-time 15 -o /dev/null -w '%{http_code}' -X DELETE \
      'http://127.0.0.1:${PORT}/memories/${id}'" 2>/dev/null)"
   if [[ "$status" =~ ^2 ]]; then ok=$((ok+1)); else fail=$((fail+1)); echo "forget: $id -> http ${status:-000}" >&2; fi

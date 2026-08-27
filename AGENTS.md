@@ -22,6 +22,7 @@ Procedures live in the skills; see `## Skills`.
 
 - Never change system state autonomously: clocks, power policy, driver, kernel,
   `apt`. Measure it, record it, leave the decision to Mat.
+- Measure the box with `memory`'s box sweep, never by hand.
 - The hostname comes from `.claude/box.json` (gitignored).
 - An image or vLLM version change is a new epoch — re-measure the incumbent
   before comparing across it.
@@ -38,6 +39,11 @@ Invoke the skill; do not reimplement it from memory.
   record it, then conclude and act.
 - `experiment` — runs one run directory and reports the figures. Sees no
   hypothesis.
+- `memory` — the research memory: recall before a lever is chosen, write what
+  each run measured, promote what holds wider at round close. It also sweeps
+  the box at rest (clocks, power policy, thermals, driver, kernel, image
+  digests) and writes what changed as a dated `[ENV]` memory — read-only, runs
+  no benchmark, refuses while the card is busy.
 
 ## Code rules
 
