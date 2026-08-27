@@ -90,7 +90,7 @@ judged on. Stamp it whenever the sweep saw it.
 
 Do not confuse it with `epoch.build_source`, the upstream digest sparkrun built
 that image *from*. That one lives in run archives, not in the sweep, and
-`regen.sh` and `experiment` are its producers. The sweep does not print it, so
+`experiment` is its producer. The sweep does not print it, so
 observe normally leaves it unset — never fill either key from the other. See
 [the two image keys](../memory/references/write.md).
 

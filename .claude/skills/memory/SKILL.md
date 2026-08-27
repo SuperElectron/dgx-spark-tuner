@@ -2,14 +2,14 @@
 name: memory
 description: The research memory — recall what earlier rounds measured before committing a run to a lever, write what this round measured in a form another round can judge, and promote the few findings that hold wider. Use before writing a hypothesis, at every RECORD, and at round close.
 when_to_use: Before writing a hypothesis or picking the next lever; at CREATE, to see whether this run has already been done; at RECORD, to write what the run measured; at round close, to promote or prune. Any question of the form "have we measured this before".
-allowed-tools: Bash(.claude/skills/memory/scripts/memory.sh:*) Bash(.claude/skills/memory/scripts/recall.sh:*) Bash(.claude/skills/memory/scripts/remember.sh:*) Bash(.claude/skills/memory/scripts/record-run.sh:*) Bash(.claude/skills/memory/scripts/forget.sh:*) Bash(.claude/skills/memory/scripts/prune-round.sh:*) Bash(.claude/skills/memory/scripts/migrate.sh:*) Bash(.claude/skills/memory/scripts/regen.sh:*) Bash(jq:*) Bash(cut:*) Bash(grep:*) Bash(head:*) Read Grep Glob
+allowed-tools: Bash(.claude/skills/memory/scripts/memory.sh:*) Bash(.claude/skills/memory/scripts/recall.sh:*) Bash(.claude/skills/memory/scripts/remember.sh:*) Bash(.claude/skills/memory/scripts/record-run.sh:*) Bash(.claude/skills/memory/scripts/forget.sh:*) Bash(.claude/skills/memory/scripts/prune-round.sh:*) Bash(jq:*) Bash(cut:*) Bash(grep:*) Bash(head:*) Read Grep Glob
 disallowed-tools: WebFetch WebSearch
 ---
 
 # memory
 
 This skill owns every memory capability in the repo: all recall forms, all four
-markers, deletion, the runs table, the embedder, and the migration tools. Every
+markers, deletion, the runs table, and the embedder. Every
 other skill holds a narrower scope —
 [references/access.md](references/access.md) is the matrix.
 

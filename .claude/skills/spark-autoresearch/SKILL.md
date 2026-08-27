@@ -2,7 +2,7 @@
 name: spark-autoresearch
 description: Run one round of an experiment — decide what the next run should test, dispatch it, record the result, then conclude the round and act on what it gave. Use when a round is open.
 allowed-tools: Bash(.claude/skills/spark-autoresearch/scripts/new-run.sh:*) Bash(.claude/skills/spark-autoresearch/scripts/show-run.sh:*) Bash(.claude/skills/memory/scripts/recall.sh:*) Bash(.claude/skills/memory/scripts/remember.sh:*) Bash(.claude/skills/memory/scripts/record-run.sh:*) Bash(.claude/skills/memory/scripts/prune-round.sh:*) Bash(.claude/skills/memory/scripts/memory.sh stop) Bash(jq:*) Bash(cut:*) Read Grep Glob
-disallowed-tools: Bash(.claude/skills/memory/scripts/forget.sh:*) Bash(.claude/skills/memory/scripts/migrate.sh:*) Bash(.claude/skills/memory/scripts/regen.sh:*)
+disallowed-tools: Bash(.claude/skills/memory/scripts/forget.sh:*)
 ---
 
 # spark-autoresearch

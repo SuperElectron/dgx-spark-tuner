@@ -117,8 +117,14 @@ for p in "${promoted[@]}"; do
   [ -n "$hits" ] || hits='[]'
   # basis= only. A memory that merely mentions the round in prose is not a
   # promotion of it, and this is the last guard before permanent deletion.
+  #
+  # The token must match WHOLE. A substring test would let a promotion whose
+  # basis names decode-tg/h10 unlock the pruning of decode-tg/h1, which bites
+  # from h10 up: no digit may follow, and no identifier character may precede.
   matched="$(jq -c --arg t "$token" '
-    map(select((.metadata.basis // "") | contains($t)))' <<<"$hits" 2>/dev/null)"
+    def esc: gsub("(?<c>[.^$|()\\[\\]{}*+?\\\\])"; "\\\(.c)");
+    ("(^|[^A-Za-z0-9_/-])" + ($t | esc) + "([^0-9]|$)") as $re
+    | map(select((.metadata.basis // "") | test($re)))' <<<"$hits" 2>/dev/null)"
   [ -n "$matched" ] || matched='[]'
   n="$(jq 'length' <<<"$matched")"
   if [ "$n" -gt 0 ]; then

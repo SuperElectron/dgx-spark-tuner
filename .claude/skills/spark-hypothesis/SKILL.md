@@ -2,7 +2,7 @@
 name: spark-hypothesis
 description: Open an experiment — its objective, strategy and held — and the rounds that chase it, then conclude each round and decide whether the target is met, the lever has more to give, or the next hypothesis is needed. Use when starting an experiment or finishing a round.
 allowed-tools: Bash(.claude/skills/spark-hypothesis/scripts/new-experiment.sh:*) Bash(.claude/skills/spark-hypothesis/scripts/new-round.sh:*) Bash(.claude/skills/spark-hypothesis/scripts/show-run.sh:*) Bash(.claude/skills/memory/scripts/recall.sh:*) Bash(.claude/skills/memory/scripts/remember.sh:*) Bash(.claude/skills/memory/scripts/memory.sh start) Bash(.claude/skills/memory/scripts/memory.sh stop) Bash(git checkout:*) Bash(git status:*) Bash(jq:*) Bash(grep:*) Bash(head:*) Read Write Edit Grep Glob
-disallowed-tools: Bash(.claude/skills/memory/scripts/forget.sh:*) Bash(.claude/skills/memory/scripts/prune-round.sh:*) Bash(.claude/skills/memory/scripts/migrate.sh:*) Bash(.claude/skills/memory/scripts/regen.sh:*)
+disallowed-tools: Bash(.claude/skills/memory/scripts/forget.sh:*) Bash(.claude/skills/memory/scripts/prune-round.sh:*)
 ---
 
 # spark-hypothesis

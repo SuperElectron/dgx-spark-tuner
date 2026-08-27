@@ -8,6 +8,12 @@ Every write is stamped `metadata.schema = "1"`. The entity is stored in the
 metadata, and the text's sha256 is the server's dedupe key — the same text
 posted twice returns the first memory's id rather than writing a second.
 
+As of 2026-08-26 the store holds 980 records. 881 carry the schema-1 stamp; the
+other 99 predate the contract and carry no stamp at all — 83 PARTIAL (their
+`basis` was not recoverable), 9 LEGACY, 7 legacy `[OBSERVATION]`s. Treat an
+unstamped record as a claim you cannot filter and cannot date by metadata: read
+its `created_at` and judge it by hand.
+
 ## Why the metadata exists
 
 A memory is a record of what one benchmark measured, under one protocol, on one
@@ -29,6 +35,11 @@ fields are required.
 | `[ENV]` | an environment fact: image, driver, clock policy, a box quirk | `date scope` |
 | `[LESSON]` | a takeaway not tied to one row | `date basis` |
 | `[IDEA]` | a candidate intervention | `date evidence` |
+
+`[OBSERVATION]` names one cell because a RECORD writes one run, and a run
+measures one cell. A claim spanning several cells, or fusing a `pp` and a `tg`
+figure, cannot name a single `test`/`depth`/`conc` and is not an observation —
+it is a `[LESSON]`, and its `basis` cites the bench ids it rests on.
 
 `[EXPERIMENT]` is **retired** and rejected. It was the old catch-all: it named
 the activity rather than the epistemic status, so measurements and judgements
@@ -52,7 +63,7 @@ scope basis evidence
 
 `--meta epoch.vllm=e85d1b69` is **not** a key called `"epoch.vllm"`. The dot is
 a path: the value lands inside an `epoch` object. Every writer emits this shape
-— `remember.sh`, `regen.sh`, and anything else that POSTs — and it is the shape
+— `remember.sh` and anything else that POSTs — and it is the shape
 `recall.sh --filter epoch.vllm=…` is built around.
 
 ```json
@@ -94,7 +105,7 @@ They name two different objects, and one is not a stand-in for the other.
 | key | names | who can supply it |
 |---|---|---|
 | `epoch.image` | the image the box **actually ran** — the digest of `ghcr.io/spark-arena/dgx-vllm-eugr-nightly`, read off the running container | `observe`, from its sweep |
-| `epoch.build_source` | the **upstream image sparkrun built from** — `container_dev_sparkrun_source_digest`, a digest of `docker.io/eugr/spark-vllm`, named by the sibling keys `..._source_image` and `..._source_tag` | anything reading a run archive: `regen.sh`, `experiment` |
+| `epoch.build_source` | the **upstream image sparkrun built from** — `container_dev_sparkrun_source_digest`, a digest of `docker.io/eugr/spark-vllm`, named by the sibling keys `..._source_image` and `..._source_tag` | anything reading a run archive: `experiment`, and the records rebuilt from the archives |
 
 `epoch.image` is the one an epoch break is judged on. It is the artifact that
 executed, so it is what "an image change is a new epoch, re-measure the
@@ -171,3 +182,7 @@ else is durable and is only reached by promotion. See
   the line and its config, nothing else.
 - A summary of several runs written as if it were one measurement. That is a
   `[LESSON]`, and it needs `basis=`.
+- Silent about which arm it measured. A bench that holds two arms in one cell —
+  two response sizes, say — yields records identical in metadata and different
+  only in the figure, because `test` does not name the arm. Name the arm in the
+  text.

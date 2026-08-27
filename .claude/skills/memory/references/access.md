@@ -20,15 +20,15 @@ every caller.
 
 ## The matrix
 
-| skill | recall | write | delete | record-run | embedder | migrate/regen |
-|---|---|---|---|---|---|---|
-| `memory` | all forms | all four markers | yes | yes | start + stop | yes |
-| `experiment` | none | `[ENV]` only | no | no | **never** | no |
-| `observe` | `--list` only | `[ENV]` only | no | no | **never** | no |
-| `spark-hypothesis` | all forms, incl. semantic | `[OBSERVATION]` at `round:` | no | no | start + stop | no |
-| `spark-autoresearch` | `--list` `--get` `--filter` | `[OBSERVATION]` at `round:`, `[LESSON]` at tier 2 | `prune-round.sh` only | yes | **stop only** | no |
-| `spark-model` | none | none | no | no | no | no |
-| `spark-board` | none | none | no | no | no | no |
+| skill | recall | write | delete | record-run | embedder |
+|---|---|---|---|---|---|
+| `memory` | all forms | all four markers | yes | yes | start + stop |
+| `experiment` | none | `[ENV]` only | no | no | **never** |
+| `observe` | `--list` only | `[ENV]` only | no | no | **never** |
+| `spark-hypothesis` | all forms, incl. semantic | `[OBSERVATION]` at `round:` | no | no | start + stop |
+| `spark-autoresearch` | `--list` `--get` `--filter` | `[OBSERVATION]` at `round:`, `[LESSON]` at tier 2 | `prune-round.sh` only | yes | **stop only** |
+| `spark-model` | none | none | no | no | no |
+| `spark-board` | none | none | no | no | no |
 
 Least privilege, derived from what each skill's workflow actually does. A blank
 is not an oversight — it means no documented step in that skill touches memory.
@@ -36,8 +36,8 @@ is not an oversight — it means no documented step in that skill touches memory
 ## Per skill, in words
 
 __`memory`__ — the owner. Every script, every form. It is the skill you invoke
-when the operation itself is the task: a migration, a regeneration, a semantic
-search, a considered deletion.
+when the operation itself is the task: a semantic search, a considered deletion,
+a runs row.
 
 __`experiment`__ — runs the benchmark and reports the figures. It writes exactly
 one thing: an `[ENV]` at `box:<alias>` when the box left its measurement band,
