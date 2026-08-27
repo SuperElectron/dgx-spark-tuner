@@ -106,7 +106,7 @@ call() {
       "curl -sS --max-time 30 -X $method -H 'Content-Type: application/json' \
        --data-binary @- 'http://127.0.0.1:${PORT}${path}'" 2>/dev/null
   else
-    ssh -o ConnectTimeout=10 -o BatchMode=yes "$host" \
+    ssh -n -o ConnectTimeout=10 -o BatchMode=yes "$host" \
       "curl -sS --max-time 30 -X $method 'http://127.0.0.1:${PORT}${path}'" 2>/dev/null
   fi
 }
