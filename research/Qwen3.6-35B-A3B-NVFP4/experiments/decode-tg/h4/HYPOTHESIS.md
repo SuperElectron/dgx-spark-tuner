@@ -85,14 +85,12 @@ against the 119.3 control (iqr 4.5%, ~5.4 tok/s): inside the spread. Acceptance
 was unmoved between the two arms that served, so the null is real, not an
 artifact of drafting something different.
 
-Two arms never served. `batched_triton` died in vLLM's own factory, a
-constructor missing required arguments; `flashinfer_trtllm` was refused by a
-kernel that declines SM121. Both are **permanent properties of this image**,
-closed for this epoch and reopened only by an image change. The rule
-**contradicted itself** on them, calling init failure both "spent" and "never
-measured"; it was recorded as written, not edited.
+Two arms never served. `batched_triton` died in vLLM's own factory on missing
+constructor arguments; `flashinfer_trtllm` was refused by a kernel that declines
+SM121. Both are **permanent properties of this image**, closed until it changes.
+The rule **contradicted itself** on them, calling init failure both "spent" and
+"never measured"; it was recorded as written, not edited.
 
-Every figure here is **cold-cache** by design, so none of them — the 119.3
-control included — is comparable to the warm standing best of 119.6. The
-round's reasoning is in the memory store: every record carries `decode-tg/h4`
-in its `basis`.
+Every figure is **cold-cache**, so none — the 119.3 control included — is
+comparable to the warm standing best of 119.6. The round's reasoning is in the
+memory store: every record carries `decode-tg/h4` in its `basis`.

@@ -90,14 +90,12 @@ Sampling does not govern decode on the board grid.
 
 **The mechanism fired and bought nothing** — a stronger refutation than one that
 fails to engage. The engine served `temperature 0.6`, acceptance moved as
-predicted (3.07 → 3.22, +4.9%, 401 samples), and `tg` moved 103.7 → 105.12
-(+1.4%) inside a cell spanning 94.43 to 106.91. That breaks the campaign's
-`tg ≈ 37 × acceptance` relation at fixed depth: the quotient *fell*, 33.8 →
-32.6, while acceptance rose.
+predicted (3.07 → 3.22, +4.9%, 401 samples), `tg` moved 103.7 → 105.12 (+1.4%)
+in a cell spanning 94.43 to 106.91. That breaks the campaign's `tg ≈ 37 ×
+acceptance` at fixed depth: the quotient *fell*, 33.8 → 32.6, as acceptance rose.
 
 Two qualifications, neither rescuing the prediction. The relation's 118.8 is
-**cross-epoch and cross-protocol** and must not be quoted bare; **the
-within-lane break is the part that counts.** Both moves are small against this
-cell's scatter, so what is established is a **bound, not a slope**: the relation
-survives as a normaliser in a depth ladder, never as a lever. Reasoning in the
-store, under `decode-tg/h6` in the `basis`.
+**cross-epoch and cross-protocol** and must not be quoted bare; **the within-lane
+break is the part that counts.** Both moves are small against this cell's
+scatter, so this is a **bound, not a slope**: the relation survives as a
+normaliser in a depth ladder, never as a lever. Store: `decode-tg/h6` in `basis`.
