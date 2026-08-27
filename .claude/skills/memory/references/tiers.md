@@ -84,11 +84,11 @@ rests on, so a later reader can check it instead of taking it.
 Then prune:
 
 ```bash
-M=.claude/skills/memory/scripts
+# the promotion landed?
+.claude/skills/memory/scripts/recall.sh --list flag:<lever> 50
 
-$M/recall.sh --list flag:<lever> 50                      # the promotion landed?
-$M/prune-round.sh round:decode-tg/h1 --promoted-to flag:<lever>
-$M/prune-round.sh round:decode-tg/h1 --promoted-to flag:<lever> --confirm-destructive
+.claude/skills/memory/scripts/prune-round.sh round:decode-tg/h1 --promoted-to flag:<lever>
+.claude/skills/memory/scripts/prune-round.sh round:decode-tg/h1 --promoted-to flag:<lever> --confirm-destructive
 ```
 
 The first `prune-round.sh` call is the review: it prints every memory it would

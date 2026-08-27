@@ -59,19 +59,21 @@ Every command runs from the **repo root**, in every skill. A permission rule
 matches the literal string of a command with no path resolution, so one cwd
 convention is what lets a single rule cover every caller.
 
-```
-M=.claude/skills/memory/scripts
+Paths are written out in full, never abbreviated through a shell variable: a
+rule matches what you typed, and an unexpanded variable matches no rule.
 
-$M/memory.sh     start|stop                       embedder up / card freed
-$M/recall.sh     "<query>" [entity] [k]           semantic — needs start
-$M/recall.sh     --list [entity] [limit]          no embedder needed
-$M/recall.sh     --get <id>                       one full record, JSON
+```
+.claude/skills/memory/scripts/memory.sh  start|stop        embedder up / card freed
+.claude/skills/memory/scripts/recall.sh  "<query>" [entity] [k]   semantic — needs start
+.claude/skills/memory/scripts/recall.sh  --list [entity] [limit]  no embedder needed
+.claude/skills/memory/scripts/recall.sh  --get <id>               one full record, JSON
                  ... [--json] [--filter k=v,k=v]
-$M/remember.sh   "<text>" <entity> [--meta k=v ...]
-$M/record-run.sh <HYPOTHESIS.md> --run <id> [--changed t --why t --cell t
-                 --pp n --tg n --ttfr n --bench id]
-$M/prune-round.sh <round-entity> --promoted-to <entity> [--confirm-destructive]
-$M/forget.sh     [--yes] <id>...                  the raw deleter
+.claude/skills/memory/scripts/remember.sh "<text>" <entity> [--meta k=v ...]
+.claude/skills/memory/scripts/record-run.sh <HYPOTHESIS.md> --run <id>
+                 [--changed t --why t --cell t --pp n --tg n --ttfr n --bench id]
+.claude/skills/memory/scripts/prune-round.sh <round-entity> --promoted-to <entity>
+                 [--confirm-destructive]
+.claude/skills/memory/scripts/forget.sh  [--yes] <id>...   the raw deleter
 ```
 
 **Prune a round with `prune-round.sh`, not `forget.sh`.** It prints the round's

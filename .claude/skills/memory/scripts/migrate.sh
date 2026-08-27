@@ -50,6 +50,26 @@
 # makes equality filtering over it unsound, so nothing is stamped — the tag
 # stays readable in the record's own text.
 #
+# LEGACY RECORDS ARE LEFT BEHIND
+# A record whose derivation recovers almost nothing gets verdict LEGACY, and
+# --create migrates FULL and PARTIAL only. LEGACY rows are not copied, not
+# stamped and not deleted: they stay exactly as they are, and --create prints
+# their ids so the operator sees what is being left in place rather than
+# discovering it later from a count that does not add up.
+#
+# THE BACKUP IS WRITTEN ONCE
+# --create REFUSES an existing --backup path. Run one's backup is the store
+# before any of this started and it is the only undo; a resume re-deriving over
+# a store that now holds interims would otherwise replace it with a mixture.
+# Resume with the same --map and a fresh --backup path.
+#
+# A RESUME DOES NOT RE-DERIVE ITS OWN INTERIMS
+# The interims from an earlier pass carry no sha256, and a PARTIAL one carries
+# no schema stamp either, so a plain re-derivation reads them as fresh legacy
+# rows. Every id already recorded as a `new` in the map is therefore excluded
+# from the plan; otherwise a record finds itself as its own keyless twin and
+# maps old == new.
+#
 # THE DERIVATION lives in migrate-derive.jq beside this script.
 #
 set -uo pipefail
@@ -71,7 +91,7 @@ while [ $# -gt 0 ]; do
               backup="$2"; shift 2 ;;
     --map)    [ $# -ge 2 ] || { echo 'migrate: --map needs a path' >&2; exit 2; }
               map="$2"; shift 2 ;;
-    --help)   sed -n '2,54p' "$0" >&2; exit 0 ;;
+    --help)   sed -n '2,74p' "$0" >&2; exit 0 ;;
     *) echo "migrate: unknown argument $1" >&2; exit 2 ;;
   esac
 done
@@ -124,6 +144,16 @@ create)
   need_map
   [ -n "$confirm_w" ] || { echo "migrate: REFUSED — --create needs --confirm-write." >&2; exit 3; }
   [ -n "$backup" ]    || { echo "migrate: REFUSED — --create needs --backup <file>." >&2; exit 3; }
+  # The backup is written once and never overwritten. On a resume this store
+  # already holds interims, so re-writing the same path would replace the only
+  # snapshot that means "before any of this started" with a mixture.
+  if [ -e "$backup" ]; then
+    echo "migrate: REFUSED — $backup already exists." >&2
+    echo "  That file is the store before this migration began, and it is the" >&2
+    echo "  only undo. Resuming reuses the same --map but needs a NEW --backup" >&2
+    echo "  path; move the existing one aside only on purpose." >&2
+    exit 3
+  fi
   # snapshot() already emits an array; -s here would wrap it in a second one and
   # the length check below could never pass.
   jq . <<<"$recs" > "$backup" || { echo "migrate: backup write failed" >&2; exit 3; }
@@ -135,10 +165,22 @@ create)
   # which --prune and --reseal can reach those records.
   [ -s "$map" ] && echo "migrate: resuming — $(wc -l <"$map" | tr -d ' ') rows already mapped" >&2
   [ -e "$map" ] || : > "$map"
+  legacy="$(jq -r 'select(.verdict == "LEGACY") | "  \(.id)  [\(.class)]  \(.entity)"' <<<"$plan")"
+  if [ -n "$legacy" ]; then
+    echo "migrate: SKIPPING $(wc -l <<<"$legacy" | tr -d ' ') LEGACY records — left in place, unstamped:" >&2
+    echo "$legacy" >&2
+  fi
+  # Ids this map already names as replacements. They are the keyless interims a
+  # previous pass created; re-deriving over them would map each to itself.
+  interims="$(jq -r '.new // empty' "$map" 2>/dev/null | sort -u)"
   while IFS= read -r row; do
     v="$(jq -r .verdict <<<"$row")"
     case "$v" in FULL|PARTIAL) ;; *) continue ;; esac
     old="$(jq -r .id <<<"$row")"; txt="$(jq -r .text <<<"$row")"
+    if [ -n "$interims" ] && grep -qxF -- "$old" <<<"$interims"; then
+      echo "migrate: ${old:0:8} is an interim from an earlier --create — not re-derived" >&2
+      continue
+    fi
     fp="$(fp_of "$txt")"
     jq -se --arg o "$old" 'any(.[]; .old == $o)' "$map" >/dev/null 2>&1 && continue
     # The interim carries no sha256, so the server will not dedupe it. A keyless

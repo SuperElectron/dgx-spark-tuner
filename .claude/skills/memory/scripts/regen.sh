@@ -150,7 +150,15 @@ def emit(unit, cell_depth, conc, entries):
             for k in ("quant", "runtime", "protocol"):
                 if unit.get(k):
                     meta[k] = unit[k]
-            n = unit.get("runs") or (len(vals) or None)
+            # runs= is the number of samples the figures were computed from, so
+            # the actual value count wins over the requested count in the recipe.
+            # A disagreement is a fact about the run — surfaced, not hidden.
+            asked = unit.get("runs")
+            n = len(vals) or asked or None
+            if asked and vals and asked != len(vals):
+                notes.append(f"{unit['unit']}: {test} @ d{depth} c{conc}: "
+                             f"recipe asked for {asked} runs, archive holds "
+                             f"{len(vals)} values; runs={len(vals)}")
             if n:
                 meta["runs"] = str(n)
             if unit["epoch"]:
@@ -254,9 +262,18 @@ for d in run_dirs:
         "protocol": protocol_of(args), "runs": args.get("runs"),
         "epoch": epoch_of(rti),
     }
-    bycell = {}
+    # No default cell. A d0/c1 fabricated for a missing key would read exactly
+    # like a measured one, so an entry that cannot say where it was taken is
+    # dropped instead.
+    bycell, shapeless = {}, 0
     for b in js.get("benchmarks") or []:
-        bycell.setdefault((b.get("context_size", 0), b.get("concurrency", 1)), []).append(b)
+        if b.get("context_size") is None or b.get("concurrency") is None:
+            shapeless += 1
+            continue
+        bycell.setdefault((b["context_size"], b["concurrency"]), []).append(b)
+    if shapeless:
+        skips.append({"unit": rel(d),
+                      "why": f"{shapeless} benchmarks[] entries lack context_size or concurrency"})
     if not bycell:
         skips.append({"unit": rel(d), "why": "results.yaml carries no benchmarks[]"})
         continue

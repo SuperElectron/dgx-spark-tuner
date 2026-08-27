@@ -17,8 +17,9 @@
 #
 # WHAT IT GUARANTEES
 #   - the round's memories are READ BACK AND PRINTED before anything is deleted
-#   - a promotion carrying this round in its basis must ALREADY EXIST at a wider
-#     entity, or nothing is deleted
+#   - a promotion carrying this round in its `basis=` must ALREADY EXIST at a
+#     wider entity, or nothing is deleted. The round named anywhere else in the
+#     promotion — its prose included — does not count.
 #   - deletion needs --confirm-destructive; without it this prints and stops
 #   - only `round:<exp>/h<N>` entities can be pruned, so a typo cannot aim it at
 #     a tier-2 entity
@@ -114,19 +115,18 @@ found=0
 for p in "${promoted[@]}"; do
   hits="$("$recall" --list "$p" 200 --json 2>/dev/null)"
   [ -n "$hits" ] || hits='[]'
+  # basis= only. A memory that merely mentions the round in prose is not a
+  # promotion of it, and this is the last guard before permanent deletion.
   matched="$(jq -c --arg t "$token" '
-    map(select(
-      ((.metadata.basis // "") | contains($t))
-      or ((.memory // "") | contains($t))
-    ))' <<<"$hits" 2>/dev/null)"
+    map(select((.metadata.basis // "") | contains($t)))' <<<"$hits" 2>/dev/null)"
   [ -n "$matched" ] || matched='[]'
   n="$(jq 'length' <<<"$matched")"
   if [ "$n" -gt 0 ]; then
     found=$((found + n))
-    echo "prune-round: promotion confirmed at $p ($n naming $token):" >&2
+    echo "prune-round: promotion confirmed at $p ($n with $token in basis=):" >&2
     jq -r '.[] | "  \(.id)  \(.memory | gsub("\\s+"; " ") | .[0:96])"' <<<"$matched" >&2
   else
-    echo "prune-round: nothing at $p names $token" >&2
+    echo "prune-round: nothing at $p carries $token in basis=" >&2
   fi
 done
 echo >&2
@@ -144,7 +144,7 @@ fi
 # --- dry run is the default ---------------------------------------------------
 if [ -z "$confirm" ]; then
   echo "prune-round: DRY RUN — would delete the $count memories at $round." >&2
-  echo "  $found promotion(s) name $token, so the round's findings survive." >&2
+  echo "  $found promotion(s) carry $token in basis=, so the findings survive." >&2
   echo "  Re-run with --confirm-destructive to delete. There is no undo." >&2
   exit 1
 fi
