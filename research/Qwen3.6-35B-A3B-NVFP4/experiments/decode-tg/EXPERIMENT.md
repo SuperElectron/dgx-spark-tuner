@@ -290,8 +290,12 @@ was short of:
    there, and we now know it by measurement rather than by assertion.
 2. **The 13% gap between our internal 119.6 and that board figure is still
    unexplained, and three of the four candidates are now eliminated.** Not warm
-   cache — the prefix cache reads 0.0% under every protocol we have run, nine
-   times confirmed. Not MTP acceptance — h5 measured it *higher* than greedy, and
+   cache — the prefix cache reads 0.0% under every protocol we have run, seven
+   times confirmed. (This read "nine times" until 2026-08-27, and the count was
+   inflated: two of the counted runs, `depth-curve/h1/run-0005` and `run-0006`,
+   logged one hit-rate sample each, and the engine's first sample is always
+   0.0%, so they assert nothing. `measure.py` now gates at n >= 2. Count
+   samples, not runs. Store `b5d0d64c`.) Not MTP acceptance — h5 measured it *higher* than greedy, and
    h6 raised it further to no effect. Not the served sampling config — h6. What
    remains conflated is the prompt (`adapt_prompt`'s random start against our
    fixed corpus), the absence of `exact_tg`, and mid-sweep thermal state. All
@@ -338,14 +342,51 @@ offset. Standing board-comparable figure: **105.12** (h6 run-0001).
 The prefix cache reads 0.0% on every sample of every run in this tree, under
 every protocol, with `--enable-prefix-caching` set and confirmed in the engine's
 own config line. h2 attributed it to our `post_run_cmd`; h5 ran without one and
-read 0.0% anyway. Nine confirmations. The leading candidate for the residue is
-`adapt_prompt` re-deriving the grid so each run draws a different prompt start,
-but that is unproven and it does not explain h5's own repeated cells. It is not
-worth a decode round — h2 priced it at +2.3% `tg` — but it removes "the board
-measures warm" as an explanation for anything until someone shows arena's runs
-hit, and it is the largest single unexplained thing this experiment found.
+read 0.0% anyway. It is not worth a decode round — h2 priced it at +2.3% `tg` —
+but it is the largest single unexplained thing this experiment found.
+
+That paragraph closed on three claims that do not hold. Corrected 2026-08-27:
+
+- It said **nine confirmations**. Seven. Two of the counted runs,
+  `depth-curve/h1/run-0005` and `run-0006`, logged one hit-rate sample each, and
+  the engine's first sample is always 0.0%, so they assert nothing. `measure.py`
+  now gates at n >= 2. Count samples, not runs. Store `b5d0d64c`.
+- It named **`adapt_prompt` as the leading candidate for the residue**. There is
+  no residue to explain. h5 ran MTP on, and MTP alone drives the reading to 0.0%
+  by controlled A/B, which accounts for the whole of it. Store `170b189b`.
+- It said the defect **removes "the board measures warm" as an explanation for
+  anything**. False for the board's non-MTP entries, which read roughly 47% hit
+  rate for free. The claim holds only where MTP is on. Store `c66c4092`.
 
 Second, smaller: a harness logging defect that writes one byte-identical
-duplicate `request_end` line for a cell, seen four times now (concurrency h1
-run-0003, concurrency h3 `06-d100000c2`, and twice in h6). Any analysis counting
-request records must deduplicate.
+duplicate `request_end` line for a cell, seen three times (concurrency h3
+`06-d100000c2`, and twice in h6). Any analysis counting request records must
+deduplicate.
+
+Corrected 2026-08-27. This read "seen four times now" and counted concurrency h1
+run-0003 among them. It does not belong. Verified against `bench_fbb28a3df00f`,
+that cell carries zero duplicate lines; its 30 ends against 29 first-tokens are
+real damage — request 27 returned `total_tokens: 1` at `decode_seconds: 0.0`,
+costing a sample and throwing a `pp` outlier of 817.95 against siblings at 580.
+Three genuine sightings remain. The discriminator: a double-flush has every
+record at full `total_tokens`, damage does not. Store `23dd5b3a`, `e4f4748b`.
+
+### Two corrections this experiment owes its own documents
+
+Added 2026-08-27. The Strategy above is left as written; these sit beneath it.
+
+- **The board prefill deficit never existed.** Strategy reads their prefill at
+  this cell as 1414.86 ± 7.14 against our 630.0 — 2.25x — and concludes "that is
+  where a 2.25x can plausibly come from". h2's Amendment corrected it: the
+  comparison was cold against warm, and it was not the same quantity either. We
+  were never behind on prefill. Measured the way theirs is, ours is 2593.0. The
+  phantom 2.25x is what motivated the `max_num_batched_tokens` and
+  `max_model_len` lever choices. Store `44e98158`, `b39b0d68`.
+- **Triton JIT is ruled out for one cell, not for the experiment.** Strategy
+  says the compilations "fire inside llama-benchy's warmup requests, before the
+  timed runs". That is true of h1's own cell, which ran a per-test warmup. It is
+  false of cells run with `--skip-coherence` and no per-test warmup: concurrency
+  h1 found nine triton kernels compiling inside c1's measurement window in
+  run-0001 and eight in run-0003, plus two inside c10's first run in both arms,
+  and h4 run-0004 here logged seven compilations during its first timed request,
+  with latency spiking to match. What was wrong is the scope of the claim.

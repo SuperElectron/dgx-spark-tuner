@@ -241,11 +241,18 @@ caching`. **Every figure in this experiment is a cold-cache figure**, including
 the 141.5. Nothing here is explained by caching and no round claimed it was. It
 remains not this experiment's to fix.
 
-A second defect is now a pattern rather than a one-off: `06-d100000c2.jsonl` in
-h3 run-0001 carries `request_end` 13 against `request_first_token` 12 — an extra
-completion with no matching first-token event — which is the same damage h1
-run-0003 carried. That cell is marked SUSPECT. It is read by no decision rule in
+A second defect: `06-d100000c2.jsonl` in h3 run-0001 carries `request_end` 13
+against `request_first_token` 12 — an extra completion with no matching
+first-token event. That cell is marked SUSPECT. It is read by no decision rule in
 this experiment, but the integrity check that caught it should stay.
+
+Corrected 2026-08-27. This said the cell carried "the same damage h1 run-0003
+carried". They are different shapes and the conflation is retracted.
+`06-d100000c2` is a double-flush: 13 ends against 12 first-tokens, with all 13
+records at `total_tokens 128`, so no sample was lost. h1 run-0003 is real damage
+— request 27 returned `total_tokens: 1` at `decode_seconds: 0.0`. Every record
+sitting at full `total_tokens` is what tells the two apart. Store `23dd5b3a`,
+`e4f4748b`.
 
 ### Deliverable
 

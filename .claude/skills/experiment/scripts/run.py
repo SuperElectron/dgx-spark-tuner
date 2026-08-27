@@ -486,7 +486,8 @@ def _write_corpus(tok, ids: list[int], url: str, pp: int, depth: int) -> int:
     # one's, so in a depth sweep the rungs donate prefix-cache blocks to each
     # other and the deeper rungs read faster than they should. The offset is
     # derived from the cell, so a rung still gets the same text every time it
-    # runs — deterministic within a cell, disjoint across cells.
+    # runs — deterministic within a cell. It does not make the spans disjoint;
+    # they still overlap freely. Rung isolation comes from one server per rung.
     room = len(ids) - need - 1
     off = 0
     if room > 0:
