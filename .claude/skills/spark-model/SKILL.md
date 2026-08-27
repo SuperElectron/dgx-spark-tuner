@@ -2,7 +2,7 @@
 name: spark-model
 description: Set up a model for tuning — its docs, its baseline recipe, its results table. Use once, when a model enters the research tree for the first time.
 allowed-tools: Bash(.claude/skills/spark-model/scripts/new-model.sh:*) Read Write Edit Grep Glob
-disallowed-tools: Bash(.claude/skills/memory/scripts/memory.sh:*) Bash(.claude/skills/memory/scripts/remember.sh:*) Bash(.claude/skills/memory/scripts/forget.sh:*) Bash(.claude/skills/memory/scripts/prune-round.sh:*) Bash(.claude/skills/memory/scripts/record-run.sh:*)
+disallowed-tools: Bash(.claude/skills/memory/scripts/memory.sh:*) Bash(.claude/skills/memory/scripts/remember.sh:*) Bash(.claude/skills/memory/scripts/forget.sh:*) Bash(.claude/skills/memory/scripts/prune-round.sh:*) Bash(.claude/skills/memory/scripts/record-run.sh:*) Bash(.claude/skills/memory/scripts/update.sh:*)
 ---
 
 # spark-model

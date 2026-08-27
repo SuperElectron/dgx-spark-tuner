@@ -2,7 +2,7 @@
 name: experiment
 description: Run one benchmark from a prepared run directory, read its archive, and return the figures and validity checks. Use when a run-000N directory holds a recipe and needs running.
 allowed-tools: Bash(uv:*) Bash(.claude/skills/experiment/scripts/reset-cache.sh:*) Bash(.claude/skills/memory/scripts/remember.sh:*) Bash(jq:*) Read Grep Glob
-disallowed-tools: WebFetch WebSearch Bash(.claude/skills/memory/scripts/memory.sh:*) Bash(.claude/skills/memory/scripts/recall.sh:*) Bash(.claude/skills/memory/scripts/forget.sh:*) Bash(.claude/skills/memory/scripts/prune-round.sh:*) Bash(.claude/skills/memory/scripts/record-run.sh:*)
+disallowed-tools: WebFetch WebSearch Bash(.claude/skills/memory/scripts/memory.sh:*) Bash(.claude/skills/memory/scripts/recall.sh:*) Bash(.claude/skills/memory/scripts/forget.sh:*) Bash(.claude/skills/memory/scripts/prune-round.sh:*) Bash(.claude/skills/memory/scripts/record-run.sh:*) Bash(.claude/skills/memory/scripts/update.sh:*)
 ---
 
 # experiment
@@ -122,8 +122,8 @@ value that left band:
 already read from the archive for the report block, so stamp all three.
 
 Never stamp `epoch.image`. That key means the digest of the image the box ran,
-and the archive does not record it — only `observe`, reading the running
-container, can supply it. Putting the build-source digest there would read as
+and the archive does not record it — only `memory`'s box sweep, reading the
+running container, can supply it. Putting the build-source digest there would read as
 an image change against every record that carries a real one.
 
 **Observation, not decision.** State the measurement and the band it left.

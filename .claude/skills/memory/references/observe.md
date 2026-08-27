@@ -1,19 +1,6 @@
----
-name: observe
-description: Sweep the box at rest — clocks, power policy, thermals, driver, kernel, image identity — and write what changed as a config-stamped [ENV] memory. Read-only; runs no benchmark. Use before an experiment opens, after a reboot or an image pull, and when a run's figures moved with no recipe change.
-when_to_use: Before opening an experiment or a round; after any reboot, driver bump, image pull or box maintenance; when figures shift under an unchanged recipe; when a hypothesis needs the box's state on a given date and the store has no [ENV] for it. Not while a benchmark is running.
-allowed-tools: Bash(.claude/skills/observe/scripts/sweep.sh:*) Bash(.claude/skills/memory/scripts/recall.sh --list:*) Bash(.claude/skills/memory/scripts/remember.sh:*) Bash(jq:*) Read Grep Glob
-disallowed-tools: WebFetch WebSearch Bash(.claude/skills/memory/scripts/memory.sh:*) Bash(.claude/skills/memory/scripts/forget.sh:*) Bash(.claude/skills/memory/scripts/prune-round.sh:*) Bash(.claude/skills/memory/scripts/record-run.sh:*)
----
+# Sweeping the box
 
-# observe
-
-Every benchmark measures the box through a model. This skill measures the box.
-
-**Memory:** `recall.sh --list` to read the box's last `[ENV]` back, and `[ENV]`
-writes at `box:<alias>`. Nothing else — no deletes, no runs table, and **never
-the embedder**, which shares the card with every benchmark. Matrix:
-[../memory/references/access.md](../memory/references/access.md).
+Every benchmark measures the box through a model. The sweep measures the box.
 
 It exists because the things that move underneath an experiment — a driver
 bump, a reboot that dropped persistence mode, a governor gone back to
@@ -21,12 +8,13 @@ bump, a reboot that dropped persistence mode, a governor gone back to
 until they change every figure, and by then nobody knows which run was the
 first one after the change. A dated `[ENV]` line closes that gap.
 
+Sweep before an experiment opens, after a reboot or an image pull, and when a
+run's figures moved with no recipe change. Never while a benchmark is running.
+
 ## Standing rules
 
-- **Run from the repo root.** Every command here assumes that cwd, which is why
-  scripts are reached as `.claude/skills/...`.
 - **Read-only on the box, always.** Clocks, power policy, driver, kernel and
-  `apt` are Mat's decisions. This skill measures them and records what it saw.
+  `apt` are Mat's decisions. The sweep measures them and records what it saw.
   It never sets, resets, installs, or reboots anything.
 - **No benchmarks.** Nothing here starts an engine, serves a model, or loads
   the GPU. If a question needs a run, it belongs to `experiment`.
@@ -47,7 +35,7 @@ first one after the change. A dated `[ENV]` line closes that gap.
 ## The sweep
 
 ```bash
-.claude/skills/observe/scripts/sweep.sh
+.claude/skills/memory/scripts/sweep.sh
 ```
 
 One ssh, one screenful: driver and CUDA, kernel and OS, current and max clocks,
@@ -80,8 +68,10 @@ against the sweep by eye, and write one memory per field that moved:
 idle sweep, one host, one moment — because an environment fact with no scope
 cannot be checked later.
 
-`epoch.image` is **the digest of the image the box actually ran**, and observe
-is the only producer that can supply it. The sweep's `images` block is
+## `memory` is the only producer of `epoch.image`
+
+`epoch.image` is **the digest of the image the box actually ran**, and the
+sweep is the only thing that can supply it. The sweep's `images` block is
 `docker images --digests`; its next line is `docker ps`, which names the image
 the running container was started from. Take the digest of that repository:tag
 pair — today `ghcr.io/spark-arena/dgx-vllm-eugr-nightly:latest` — and nothing
@@ -89,19 +79,18 @@ else. That is the artifact that executed, so it is what an epoch break is
 judged on. Stamp it whenever the sweep saw it.
 
 Do not confuse it with `epoch.build_source`, the upstream digest sparkrun built
-that image *from*. That one lives in run archives, not in the sweep, and
-`experiment` is its producer. The sweep does not print it, so
-observe normally leaves it unset — never fill either key from the other. See
-[the two image keys](../memory/references/write.md).
+that image *from* — `container_dev_sparkrun_source_digest`. That one lives in
+run archives, not in the sweep, and `experiment` is its producer. The sweep
+does not print it, so a sweep normally leaves it unset. Never fill either key
+from the other. See [the two image keys](write.md).
 
 `epoch.vllm` / `epoch.flashinfer` likewise only when a run archive gave them;
 the sweep alone does not know them.
 
 `box:` is the entity: a hardware fact belongs to the hardware, at the widest
 scope it is true for. Writing it directly is not a breach of the promotion rule
-in [memory tiers](../memory/references/tiers.md) — that rule bounds what a
-round may promote, and observe belongs to no round, which is exactly why it
-refuses to run inside one.
+in [tiers.md](tiers.md) — that rule bounds what a round may promote, and a
+sweep belongs to no round, which is exactly why it refuses to run inside one.
 
 A repeated sweep that finds nothing changed writes nothing. If it does write
 the same sentence twice, the store's sha256 on the text returns the first
@@ -109,5 +98,5 @@ memory's id instead of a second row, so a nervous re-sweep costs nothing.
 
 ## Detail
 
-- [references/fields.md](references/fields.md) — every field the sweep prints,
-  what moves it, and what a change under it does to a figure.
+- [env-fields.md](env-fields.md) — every field the sweep prints, what moves it,
+  and what a change under it does to a figure.

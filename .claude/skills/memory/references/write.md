@@ -104,7 +104,7 @@ They name two different objects, and one is not a stand-in for the other.
 
 | key | names | who can supply it |
 |---|---|---|
-| `epoch.image` | the image the box **actually ran** — the digest of `ghcr.io/spark-arena/dgx-vllm-eugr-nightly`, read off the running container | `observe`, from its sweep |
+| `epoch.image` | the image the box **actually ran** — the digest of `ghcr.io/spark-arena/dgx-vllm-eugr-nightly`, read off the running container | this skill's box sweep, and nothing else — see [observe.md](observe.md) |
 | `epoch.build_source` | the **upstream image sparkrun built from** — `container_dev_sparkrun_source_digest`, a digest of `docker.io/eugr/spark-vllm`, named by the sibling keys `..._source_image` and `..._source_tag` | anything reading a run archive: `experiment`, and the records rebuilt from the archives |
 
 `epoch.image` is the one an epoch break is judged on. It is the artifact that

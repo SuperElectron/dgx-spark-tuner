@@ -20,6 +20,11 @@ set -uo pipefail
 
 USER_ID="dgx-spark-tuner"
 PORT=8888
+# Whole-store scans (--get, and update.sh's twin and pointer sweeps) read this
+# many records. It must exceed the store's size: past it --get stops resolving
+# and update.sh's twin check can miss a twin, which silently reinstates a
+# delete-the-wrong-record bug. Raise it before the store gets near.
+SCAN_LIMIT=${MEMORY_SCAN_LIMIT:-5000}
 
 host="$(jq -r '.host // empty' "$(git rev-parse --show-toplevel)/.claude/box.json" 2>/dev/null)"
 [ -n "$host" ] || { echo "recall: no box configured" >&2; exit 0; }
@@ -31,7 +36,7 @@ call() {  # call <METHOD> <path> [body]
       "curl -sS --max-time 20 -X $method -H 'Content-Type: application/json' \
        --data-binary @- 'http://127.0.0.1:${PORT}${path}'" 2>/dev/null
   else
-    ssh -o ConnectTimeout=10 -o BatchMode=yes "$host" \
+    ssh -n -o ConnectTimeout=10 -o BatchMode=yes "$host" \
       "curl -sS --max-time 20 -X $method 'http://127.0.0.1:${PORT}${path}'" 2>/dev/null
   fi
 }
@@ -52,7 +57,7 @@ done
 
 # The server has no get-one route, so --get pulls the list and picks the id.
 if [ -n "$get" ]; then
-  body="$(jq -nc --arg u "$USER_ID" '{user_id: $u, limit: 2000}')"
+  body="$(jq -nc --arg u "$USER_ID" --argjson l "$SCAN_LIMIT" '{user_id: $u, limit: $l}')"
   out="$(call POST /memories/list "$body")"
   rec="$(jq -c --arg id "$get" '(if type == "array" then . else (.results // []) end)
          | map(select(.id == $id)) | first // empty' <<<"$out" 2>/dev/null)"
