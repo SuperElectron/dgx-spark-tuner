@@ -2,7 +2,8 @@
 name: spark-board
 description: Read the live Spark Arena leaderboard for a cell — the whole ranked field, not a stored scrape. Use before setting an Objective's target number, before claiming a result beats the board, and before publishing any figure.
 when_to_use: Choosing an Objective's target; concluding a round that claims to beat the board; writing up how our results compare; any question about board standings, ranks, competitors, or whether a cell is contested.
-allowed-tools: Bash(curl *) Bash(jq *) Bash(mkdir *)
+allowed-tools: Bash(curl -s --get 'https://spark-arena.com/*) Bash(curl -s --get https://spark-arena.com/*) Bash(jq:*) Bash(mkdir:*) Bash(date:*) Read Write
+disallowed-tools: Bash(.claude/skills/memory/scripts/memory.sh:*) Bash(.claude/skills/memory/scripts/remember.sh:*) Bash(.claude/skills/memory/scripts/forget.sh:*) Bash(.claude/skills/memory/scripts/prune-round.sh:*) Bash(.claude/skills/memory/scripts/record-run.sh:*)
 ---
 
 # spark-board
@@ -11,6 +12,12 @@ The board is the yardstick every experiment is judged against. Read it live.
 
 This skill only reads. The endpoint has no write path, and **nothing is ever
 submitted to Spark Arena**.
+
+**Memory:** nothing. No step here touches the store — the board is a live HTTP
+endpoint and the output goes to `.cache/results/`. The `curl` grant is pinned to
+`spark-arena.com` for that reason: a bare `curl` also reaches the store's own
+`http://127.0.0.1:8888/memories`, which is a write and delete path. Matrix:
+[../memory/references/access.md](../memory/references/access.md).
 
 ## Standing rules
 

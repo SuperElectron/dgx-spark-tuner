@@ -1,5 +1,23 @@
 # h<N> — <one line: the lever under test>
 
+This file is the contract for the round: hypothesis, method, decision rule,
+and runs. It is not the notebook — per-round analysis belongs in the memory
+store, not here.
+
+## Verdict
+
+<one line, filled at conclusion: TARGET MET / LEVER ALIVE / LEVER SPENT — the
+number that decided it>
+
+## Runs
+
+<!-- RUNS:BEGIN -->
+| run | changed | why | cell | pp | tg | ttfr | bench |
+|---|---|---|---|---|---|---|---|
+<!-- RUNS:END -->
+
+Script-written by `spark-autoresearch`'s CREATE/RECORD steps. Never hand-edit.
+
 ## Hypothesis
 
 <one falsifiable sentence, and the mechanism that argues for it>
@@ -34,14 +52,12 @@ Grid, from the recipe's `benchmark:` block:
 Sized against the scatter in Strategy — an effect smaller than the cell's
 spread cannot be read, whatever the medians say.
 
-## Runs
-
-One row per planned run. Figures blank until it is run.
-
-| run | changed | why | cell | pp t/s | tg t/s | ttfr ms | bench |
-|-----|---------|-----|------|--------|--------|---------|-------|
-| run-0001 | <what it varies> | <what it is for> | <the cell the rule reads> | | | | |
-
 ## Conclusion
 
 <pending>
+
+Budget: 15 lines. State which of the three the decision rule gave and the
+number that decided it; anything beyond that — per-run analysis, discarded
+theories, exploratory reasoning — goes to the memory store, not here. 15
+lines is enough to name the verdict, the deciding figure, and one line of
+why; it is not enough to re-derive the round.
