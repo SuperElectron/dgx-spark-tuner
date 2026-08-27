@@ -1,15 +1,16 @@
 ---
 name: memory
-description: The research memory — recall what earlier rounds measured before committing a run to a lever, write what this round measured in a form another round can judge, and promote the few findings that hold wider. Use before writing a hypothesis, at every RECORD, and at round close.
-when_to_use: Before writing a hypothesis or picking the next lever; at CREATE, to see whether this run has already been done; at RECORD, to write what the run measured; at round close, to promote or prune. Any question of the form "have we measured this before".
-allowed-tools: Bash(.claude/skills/memory/scripts/memory.sh:*) Bash(.claude/skills/memory/scripts/recall.sh:*) Bash(.claude/skills/memory/scripts/remember.sh:*) Bash(.claude/skills/memory/scripts/record-run.sh:*) Bash(.claude/skills/memory/scripts/forget.sh:*) Bash(.claude/skills/memory/scripts/prune-round.sh:*) Bash(jq:*) Bash(cut:*) Bash(grep:*) Bash(head:*) Read Grep Glob
+description: The research memory — recall what earlier rounds measured before committing a run to a lever, write what this round measured in a form another round can judge, and promote the few findings that hold wider. It also sweeps the box at rest — clocks, power policy, thermals, driver, kernel, image identity — and writes what moved as a dated [ENV]. Use before writing a hypothesis, at every RECORD, at round close, and whenever the box may have changed under an experiment.
+when_to_use: 'Before writing a hypothesis or picking the next lever; at CREATE, to see whether this run has already been done; at RECORD, to write what the run measured; at round close, to promote or prune. Any question of the form "have we measured this before". For the box sweep — before an experiment or round opens; after any reboot, driver bump, image pull or box maintenance; when figures shift under an unchanged recipe; when a hypothesis needs the box''s state on a given date and the store has no [ENV] for it. Never sweep while a benchmark is running.'
+allowed-tools: Bash(.claude/skills/memory/scripts/memory.sh:*) Bash(.claude/skills/memory/scripts/recall.sh:*) Bash(.claude/skills/memory/scripts/remember.sh:*) Bash(.claude/skills/memory/scripts/update.sh:*) Bash(.claude/skills/memory/scripts/record-run.sh:*) Bash(.claude/skills/memory/scripts/forget.sh:*) Bash(.claude/skills/memory/scripts/prune-round.sh:*) Bash(.claude/skills/memory/scripts/sweep.sh:*) Bash(jq:*) Bash(cut:*) Bash(grep:*) Bash(head:*) Read Grep Glob
 disallowed-tools: WebFetch WebSearch
 ---
 
 # memory
 
 This skill owns every memory capability in the repo: all recall forms, all four
-markers, deletion, the runs table, and the embedder. Every
+markers, correction, deletion, the runs table, the box sweep, and the embedder.
+It is standalone — it depends on no other skill. Every
 other skill holds a narrower scope —
 [references/access.md](references/access.md) is the matrix.
 
@@ -45,6 +46,16 @@ the same store, checked the dates and the cells, went at `max_num_seqs`, and got
 - **Promotion at round close is what bounds the bloat.** Volume rises through a
   round and falls at its end. Review tier 1, promote what holds wider, delete
   the rest.
+- **The store is CRD, not CRUD — there is no update route.** The service
+  offers create, search, list, delete and nothing else. `update.sh` is
+  therefore create-then-delete: the corrected record gets a **new id** and the
+  old one stops resolving. Every record whose text says `BOUNDS <old>` or
+  `BOUNDED BY <old>` is silently broken by that, so `update.sh` scans for
+  inbound pointers and warns; repairing them is part of the correction, not a
+  follow-up. Dry run is the default. A mutual pair cannot be repaired by chasing
+  ids — fixing A's pointer rewrites A and breaks B's — so the convention is that
+  the **bounding** record names its target in words and only the **bounded**
+  record carries a live id.
 - **The runs table is script-written.** `record-run.sh` owns the block between
   the RUNS markers. Never hand-edit a row.
 - **The embedder shares the card with every benchmark.** `memory.sh start` only
@@ -69,6 +80,9 @@ rule matches what you typed, and an unexpanded variable matches no rule.
 .claude/skills/memory/scripts/recall.sh  --get <id>               one full record, JSON
                  ... [--json] [--filter k=v,k=v]
 .claude/skills/memory/scripts/remember.sh "<text>" <entity> [--meta k=v ...]
+.claude/skills/memory/scripts/update.sh <id> --text "<new text>"
+                 [--meta k=v ...] [--backup <file>] [--confirm-write]
+.claude/skills/memory/scripts/sweep.sh                    the box at rest
 .claude/skills/memory/scripts/record-run.sh <HYPOTHESIS.md> --run <id>
                  [--changed t --why t --cell t --pp n --tg n --ttfr n --bench id]
 .claude/skills/memory/scripts/prune-round.sh <round-entity> --promoted-to <entity>
@@ -95,5 +109,10 @@ mechanism underneath it, for deleting ids you have already chosen by hand.
   and the discipline of questioning what comes back.
 - [references/tiers.md](references/tiers.md) — the three tiers, what each is
   written by and when, and how promotion at round close bounds the volume.
+- [references/observe.md](references/observe.md) — the box sweep: when to run
+  it, what it may never touch, and why `memory` is the only producer of
+  `epoch.image`.
+- [references/env-fields.md](references/env-fields.md) — every field the sweep
+  prints, what moves it, and what a change under it does to a figure.
 - [references/access.md](references/access.md) — which skill may do what, what
   enforces it, and why the embedder grants are what they are.

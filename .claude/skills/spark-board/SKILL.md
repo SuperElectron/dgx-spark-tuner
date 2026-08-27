@@ -3,7 +3,7 @@ name: spark-board
 description: Read the live Spark Arena leaderboard for a cell — the whole ranked field, not a stored scrape. Use before setting an Objective's target number, before claiming a result beats the board, and before publishing any figure.
 when_to_use: Choosing an Objective's target; concluding a round that claims to beat the board; writing up how our results compare; any question about board standings, ranks, competitors, or whether a cell is contested.
 allowed-tools: Bash(curl -s --get 'https://spark-arena.com/*) Bash(curl -s --get https://spark-arena.com/*) Bash(jq:*) Bash(mkdir:*) Bash(date:*) Read Write
-disallowed-tools: Bash(.claude/skills/memory/scripts/memory.sh:*) Bash(.claude/skills/memory/scripts/remember.sh:*) Bash(.claude/skills/memory/scripts/forget.sh:*) Bash(.claude/skills/memory/scripts/prune-round.sh:*) Bash(.claude/skills/memory/scripts/record-run.sh:*)
+disallowed-tools: Bash(.claude/skills/memory/scripts/memory.sh:*) Bash(.claude/skills/memory/scripts/remember.sh:*) Bash(.claude/skills/memory/scripts/forget.sh:*) Bash(.claude/skills/memory/scripts/prune-round.sh:*) Bash(.claude/skills/memory/scripts/record-run.sh:*) Bash(.claude/skills/memory/scripts/update.sh:*)
 ---
 
 # spark-board

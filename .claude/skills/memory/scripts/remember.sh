@@ -2,6 +2,7 @@
 # Write one memory, with the metadata that makes it comparable.
 #
 #   remember.sh "<text>" <entity> [--meta k=v ...]
+#   remember.sh --check "<text>" <entity> [--meta k=v ...]   guards only, no write
 #
 # Every write is stamped schema=1. The class marker at the head of the text
 # decides which fields are required; a write missing one is REFUSED (exit 3).
@@ -50,10 +51,11 @@ usage() {
   echo "  meta keys: $(echo $KEYS)" >&2
 }
 
-text="" entity="" pairs=()
+text="" entity="" check="" pairs=()
 while [ $# -gt 0 ]; do
   case "$1" in
     --meta) [ $# -ge 2 ] || { usage; exit 2; }; pairs+=("$2"); shift 2 ;;
+    --check) check=1; shift ;;
     --help) usage; exit 0 ;;
     -*)     echo "remember: unknown flag $1" >&2; usage; exit 2 ;;
     *)      if [ -z "$text" ]; then text="$1"; elif [ -z "$entity" ]; then entity="$1";
@@ -89,6 +91,8 @@ if [ "${#missing[@]}" -gt 0 ]; then
   echo "remember: REFUSED — [$class] needs ${missing[*]} (pass --meta k=v)" >&2
   exit 3
 fi
+
+[ -z "$check" ] || { echo "remember: guards pass ([$class] $entity)" >&2; exit 0; }
 
 host="$(jq -r '.host // empty' "$(git rev-parse --show-toplevel)/.claude/box.json" 2>/dev/null)"
 [ -n "$host" ] || { echo "remember: no box configured, not written" >&2; exit 0; }

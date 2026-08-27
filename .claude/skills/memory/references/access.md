@@ -20,35 +20,46 @@ every caller.
 
 ## The matrix
 
-| skill | recall | write | delete | record-run | embedder |
-|---|---|---|---|---|---|
-| `memory` | all forms | all four markers | yes | yes | start + stop |
-| `experiment` | none | `[ENV]` only | no | no | **never** |
-| `observe` | `--list` only | `[ENV]` only | no | no | **never** |
-| `spark-hypothesis` | all forms, incl. semantic | `[OBSERVATION]` at `round:` | no | no | start + stop |
-| `spark-autoresearch` | `--list` `--get` `--filter` | `[OBSERVATION]` at `round:`, `[LESSON]` at tier 2 | `prune-round.sh` only | yes | **stop only** |
-| `spark-model` | none | none | no | no | no |
-| `spark-board` | none | none | no | no | no |
+| skill | recall | write | update | delete | sweep | record-run | embedder |
+|---|---|---|---|---|---|---|---|
+| `memory` | all forms | all four markers | yes | yes | yes | yes | start + stop |
+| `experiment` | none | `[ENV]` only | no | no | no | no | **never** |
+| `spark-hypothesis` | all forms, incl. semantic | `[OBSERVATION]` at `round:` | no | no | no | no | start + stop |
+| `spark-autoresearch` | `--list` `--get` `--filter` | `[OBSERVATION]` at `round:`, `[LESSON]` at tier 2 | no | `prune-round.sh` only | no | yes | **stop only** |
+| `spark-model` | none | none | no | no | no | no | no |
+| `spark-board` | none | none | no | no | no | no | no |
 
 Least privilege, derived from what each skill's workflow actually does. A blank
 is not an oversight — it means no documented step in that skill touches memory.
 
+**Only `memory` may update or delete.** `update.sh` and `forget.sh` are the two
+destructive tools in the tree, and no other skill holds either. The one
+exception is narrow and wrapped: `prune-round.sh` wraps `forget.sh` for the
+single round-close case `spark-autoresearch` needs, and grants nothing beyond
+it. Sweeping the box is `memory`'s alone for the same reason — it is the write
+path for `epoch.image`.
+
 ## Per skill, in words
 
 __`memory`__ — the owner. Every script, every form. It is the skill you invoke
-when the operation itself is the task: a semantic search, a considered deletion,
-a runs row.
+when the operation itself is the task: a semantic search, a correction, a
+considered deletion, a runs row. It also sweeps the box at rest through
+`sweep.sh` and writes what moved as `[ENV]` at `box:<alias>`, diffing against a
+`--list` read-back on the box entity — which needs no embedder, and semantic
+search would buy it nothing there while costing the card.
+
+__`memory` is the sole producer of `epoch.image`__ — the digest of the image the
+box actually **ran**, read from `docker ps` and `docker images --digests` by the
+sweep. It is not `epoch.build_source`, which is sparkrun's
+`container_dev_sparkrun_source_digest` and is written by `experiment`. The two
+keys name different objects and can disagree; a reader comparing them across
+records must know that before drawing an epoch boundary from either.
 
 __`experiment`__ — runs the benchmark and reports the figures. It writes exactly
 one thing: an `[ENV]` at `box:<alias>` when the box left its measurement band,
-and only then. It does not recall, because it must not see the expected answer —
+and only then — carrying `epoch.build_source`, never `epoch.image`. It does not recall, because it must not see the expected answer —
 an agent that can read what the round hopes for can steer toward it. It never
 deletes, never writes a runs row, and **never raises the embedder**.
-
-__`observe`__ — sweeps the box at rest and writes what moved as `[ENV]` at
-`box:<alias>`. Its recall is the read-back it diffs against: `--list` on the
-box entity, which needs no embedder. Semantic search would buy it nothing and
-cost the card.
 
 __`spark-hypothesis`__ — the only skill with a legitimate reason to bring the
 embedder up. It opens an experiment, and the recall that precedes a hypothesis
@@ -124,6 +135,28 @@ to write is this document's job.
 __Bash permission rules are not a security boundary__, and the docs say so. The
 mechanism for a genuinely constrained destructive operation is a purpose-built
 wrapper.
+
+## The store is CRD, not CRUD
+
+The service exposes five routes and no more: `POST /memories`, `POST /search`,
+`POST /memories/list`, `DELETE /memories/{id}`, `GET /health`. There is no
+update route. Nothing in this tree can edit a record in place, and any doc or
+habit that implies otherwise is wrong.
+
+`update.sh` is therefore **create-then-delete**. The corrected record is a new
+record with a **new id**; the old id stops resolving. That makes it destructive
+in the same sense `forget.sh` is, which is why only `memory` holds it.
+
+The hazard is the pointers. Every record whose text says `BOUNDS <old>` or
+`BOUNDED BY <old>` goes dead the moment the target is replaced, and it goes dead
+**silently** — nothing errors, the recall simply returns a record naming an id
+that no longer exists. Six such pointers needed hand repair on 2026-08-27.
+
+A mutual pair cannot be repaired by chasing ids at all: fixing A's pointer to B
+rewrites A under a new id, which breaks B's pointer to A, and so on forever. The
+convention that ends the chase: **the bounding record names its target in words;
+only the bounded record carries a live id.** One live pointer per pair, in one
+direction, and a correction has one thing to fix instead of a cycle.
 
 ## The wrapper is the real guard
 

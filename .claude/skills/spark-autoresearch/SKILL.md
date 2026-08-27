@@ -2,7 +2,7 @@
 name: spark-autoresearch
 description: Run one round of an experiment — decide what the next run should test, dispatch it, record the result, then conclude the round and act on what it gave. Use when a round is open.
 allowed-tools: Bash(.claude/skills/spark-autoresearch/scripts/new-run.sh:*) Bash(.claude/skills/spark-autoresearch/scripts/show-run.sh:*) Bash(.claude/skills/memory/scripts/recall.sh:*) Bash(.claude/skills/memory/scripts/remember.sh:*) Bash(.claude/skills/memory/scripts/record-run.sh:*) Bash(.claude/skills/memory/scripts/prune-round.sh:*) Bash(.claude/skills/memory/scripts/memory.sh stop) Bash(jq:*) Bash(cut:*) Read Grep Glob
-disallowed-tools: Bash(.claude/skills/memory/scripts/forget.sh:*)
+disallowed-tools: Bash(.claude/skills/memory/scripts/forget.sh:*) Bash(.claude/skills/memory/scripts/update.sh:*)
 ---
 
 # spark-autoresearch
@@ -164,7 +164,9 @@ effect at this cell, so go at Y" and nobody should have to re-derive it.
 - **Bench ids come from `run-000N/id.txt`**, read, never reconstructed.
 - **`epoch.build_source` is the digest the agent reported**, sparkrun's upstream
   build source. It is not `epoch.image`, which means the image the box ran and
-  which only `observe` can supply. Never write one under the other.
+  which only `memory`'s box sweep can supply
+  ([../memory/references/observe.md](../memory/references/observe.md)). Never
+  write one under the other.
 - **Every `<...>` above is a placeholder** — substitute the value, never the
   brackets. `test=` takes one of `tg128`, `pp2048`, `ctx_tg`; a stray
   `test=<tg128>` matches no filter and the CREATE dedupe scan then finds
