@@ -269,6 +269,13 @@ existed, on h2's evidence, and the numbers landed in it.
 - **Prefix cache.** Hit rate max 0.0% over 527 samples, and `run.py` itself flags
   `SUSPECT: recipe asks for prefix caching`. Eighth confirmation of the standing
   campaign defect. **Every figure here is cold-cache**, including the 141.5.
+  **Corrected 2026-08-27: "eighth" is inflated — it is the seventh.** Two of the
+  counted runs (`depth-curve/h1/run-0005`, `run-0006`) logged a single hit-rate
+  sample each, and the engine's first sample is always 0.0%, so they assert
+  nothing; `measure.py` now gates at n >= 2. Count samples, not runs. This tally
+  is the prefix-cache defect; it must not be added to the three sightings of the
+  `request_end` double-flush, which is a different defect with its own count.
+
 - **Integrity: 27 of 28 cells clean** — `request_end == request_first_token` and
   every request `total_tokens == 128`. **One failure:** `06-d100000c2.jsonl` has
   `request_end` 13 against `request_first_token` 12 — one extra completion with no
@@ -277,7 +284,15 @@ existed, on h2's evidence, and the numbers landed in it.
   tg 58.3) is **SUSPECT** and is marked so. It is not a cell either branch of the
   rule reads and it does not touch the outcome; it is the same shape of damage h1
   run-0003 carried and it is now the second sighting, which makes it a pattern
-  worth naming rather than a one-off.
+  worth naming rather than a one-off. **Corrected 2026-08-27: that conflation is
+  retracted — the two are different shapes.** `06-d100000c2` is a writer
+  double-flush: 13 ends against 12 first-tokens with all 13 records at
+  `total_tokens 128`, so no sample was lost. h1 run-0003 is real damage —
+  request 27 returned `total_tokens: 1` at `decode_seconds: 0.0`, verified
+  against `bench_fbb28a3df00f`, which carries zero duplicate lines. The
+  discriminator: every record at full `total_tokens` means double-flush, anything
+  short means damage. The sentence above is left as written; this note stands
+  beneath it.
 - **Known noise.** `SSH script <- spark-6f0e... FAILED rc=1 (0.4s)` fires at the
   start of every run in this tree, is unexplained, and is not fatal. The
   `HF_TOKEN` warning is benign.

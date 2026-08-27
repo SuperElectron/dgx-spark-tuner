@@ -295,7 +295,7 @@ was short of:
    inflated: two of the counted runs, `depth-curve/h1/run-0005` and `run-0006`,
    logged one hit-rate sample each, and the engine's first sample is always
    0.0%, so they assert nothing. `measure.py` now gates at n >= 2. Count
-   samples, not runs. Store `b5d0d64c`.) Not MTP acceptance — h5 measured it *higher* than greedy, and
+   samples, not runs.) Not MTP acceptance — h5 measured it *higher* than greedy, and
    h6 raised it further to no effect. Not the served sampling config — h6. What
    remains conflated is the prompt (`adapt_prompt`'s random start against our
    fixed corpus), the absence of `exact_tg`, and mid-sweep thermal state. All
@@ -350,13 +350,35 @@ That paragraph closed on three claims that do not hold. Corrected 2026-08-27:
 - It said **nine confirmations**. Seven. Two of the counted runs,
   `depth-curve/h1/run-0005` and `run-0006`, logged one hit-rate sample each, and
   the engine's first sample is always 0.0%, so they assert nothing. `measure.py`
-  now gates at n >= 2. Count samples, not runs. Store `b5d0d64c`.
-- It named **`adapt_prompt` as the leading candidate for the residue**. There is
-  no residue to explain. h5 ran MTP on, and MTP alone drives the reading to 0.0%
-  by controlled A/B, which accounts for the whole of it. Store `170b189b`.
+  now gates at n >= 2. Count samples, not runs. See the store record establishing
+  that the engine's first hit-rate sample is always 0.0%.
+- It named **`adapt_prompt` as the leading candidate for the residue**. A
+  correction written earlier on 2026-08-27 retired that on the ground that "MTP
+  alone drives the reading to 0.0% by controlled A/B", and concluded "there is no
+  residue to explain". **That retirement is withdrawn, later the same day.** MTP
+  is not sufficient. `decode-tg/h1/run-0001/recipe.yaml` and
+  `decode-tg/h2/run-0005/recipe.yaml` are byte-identical across the whole `vllm
+  serve` command — MTP depth 3 on triton in both, `--enable-prefix-caching` in
+  both, no `post_run_cmd` in either, same grid at `pp2048 · tg128 · d16384 · c1 ·
+  runs 7` — and differ only in `book_url`, `exact_tg`, `extra_body` and
+  `no_adapt_prompt`. They read 0.0% and 69.2%. The four rows on disk:
+
+      MTP on,  pinned,   reset       0.0%   (h2 arm A, run-0001..run-0004)
+      MTP on,  pinned,   no reset   69.2%   (h2 run-0005)
+      MTP on,  unpinned, no reset    0.0%   (h1 run-0001)
+      MTP off, unpinned, no reset   42.1%   (h1 run-0003)
+
+  h2's Amendment A/B was unpinned in **both** arms, so it never isolated MTP —
+  what it measured is an interaction. The 0.0% needs MTP *and* an unpinned
+  prompt, and a pinned corpus recovers cross-run hits with MTP still on. So the
+  residue question is **open**, and `no_adapt_prompt` is the better-supported
+  half of it, not the retired one.
 - It said the defect **removes "the board measures warm" as an explanation for
   anything**. False for the board's non-MTP entries, which read roughly 47% hit
-  rate for free. The claim holds only where MTP is on. Store `c66c4092`.
+  rate for free. The claim holds only where MTP is on. See the `stack:llama-benchy`
+  record establishing the 47% free-hit figure for non-MTP entries; the raw id it
+  cited was deleted and replaced, and ids churn on every correction, so records
+  here are named by what they say.
 
 Second, smaller: a harness logging defect that writes one byte-identical
 duplicate `request_end` line for a cell, seen three times (concurrency h3
@@ -369,7 +391,8 @@ that cell carries zero duplicate lines; its 30 ends against 29 first-tokens are
 real damage — request 27 returned `total_tokens: 1` at `decode_seconds: 0.0`,
 costing a sample and throwing a `pp` outlier of 817.95 against siblings at 580.
 Three genuine sightings remain. The discriminator: a double-flush has every
-record at full `total_tokens`, damage does not. Store `23dd5b3a`, `e4f4748b`.
+record at full `total_tokens`, damage does not. See the store records separating
+the writer double-flush from real sample damage.
 
 ### Two corrections this experiment owes its own documents
 
@@ -381,12 +404,20 @@ Added 2026-08-27. The Strategy above is left as written; these sit beneath it.
   comparison was cold against warm, and it was not the same quantity either. We
   were never behind on prefill. Measured the way theirs is, ours is 2593.0. The
   phantom 2.25x is what motivated the `max_num_batched_tokens` and
-  `max_model_len` lever choices. Store `44e98158`, `b39b0d68`.
+  `max_model_len` lever choices. See the store records retiring the board prefill
+  deficit, which hold the cold-against-warm arithmetic.
 - **Triton JIT is ruled out for one cell, not for the experiment.** Strategy
   says the compilations "fire inside llama-benchy's warmup requests, before the
-  timed runs". That is true of h1's own cell, which ran a per-test warmup. It is
-  false of cells run with `--skip-coherence` and no per-test warmup: concurrency
-  h1 found nine triton kernels compiling inside c1's measurement window in
-  run-0001 and eight in run-0003, plus two inside c10's first run in both arms,
-  and h4 run-0004 here logged seven compilations during its first timed request,
-  with latency spiking to match. What was wrong is the scope of the claim.
+  timed runs". That is true of h1's own cell. It is false in general, and — this
+  bullet corrected a second time, 2026-08-27 — **a per-test warmup is not what
+  bounds it: JIT fires inside the measurement window even in cells that ran
+  one.** The bullet first read that the refuting compilations came "in cells run
+  with `--skip-coherence` and no per-test warmup". `concurrency/h1/HYPOTHESIS.md`
+  says the opposite: "Only the c1 cell ran a per-test warmup and the coherence
+  test; c10, c5 and c2 ran with `--skip-coherence`" — and the nine triton kernels
+  in run-0001 and the eight in run-0003 fired inside **c1**, the warmed cell;
+  only "two more" landed in c10. `decode-tg/h4/run-0004` is a single-cell c1 run
+  — no recipe in this tree sets `skip_coherence` — so it warmed too, and still
+  logged seven compilations during its **first timed request**, with latency
+  spiking to match. What was wrong is the scope of the claim; what is still wrong
+  is treating warmup as the fix.

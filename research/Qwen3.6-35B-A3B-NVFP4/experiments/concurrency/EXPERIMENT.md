@@ -241,6 +241,17 @@ caching`. **Every figure in this experiment is a cold-cache figure**, including
 the 141.5. Nothing here is explained by caching and no round claimed it was. It
 remains not this experiment's to fix.
 
+Corrected 2026-08-27. "An eighth time" counted runs, and two of the runs it
+counted — `depth-curve/h1/run-0005` and `run-0006` — logged a single hit-rate
+sample each, and the engine's first sample is always 0.0%, so they assert
+nothing. `measure.py` now gates at n >= 2. Campaign-wide the count is **seven**
+0.0% confirmations that survive that gate, and h3's 527 samples are one of them.
+Count samples, not runs. The same inflated "eighth confirmation" wording stands
+uncorrected inside the h3 row of the Rounds table above; it means the seventh,
+and this correction governs it. This counts readings of the prefix-cache defect; the
+three sightings of the `request_end` double-flush below are a different defect
+and a different tally, and the two must not be added together.
+
 A second defect: `06-d100000c2.jsonl` in h3 run-0001 carries `request_end` 13
 against `request_first_token` 12 — an extra completion with no matching
 first-token event. That cell is marked SUSPECT. It is read by no decision rule in
