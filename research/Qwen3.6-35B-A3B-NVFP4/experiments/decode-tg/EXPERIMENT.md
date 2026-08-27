@@ -290,8 +290,12 @@ was short of:
    there, and we now know it by measurement rather than by assertion.
 2. **The 13% gap between our internal 119.6 and that board figure is still
    unexplained, and three of the four candidates are now eliminated.** Not warm
-   cache — the prefix cache reads 0.0% under every protocol we have run, nine
-   times confirmed. Not MTP acceptance — h5 measured it *higher* than greedy, and
+   cache — the prefix cache reads 0.0% under every protocol we have run, seven
+   times confirmed. (This read "nine times" until 2026-08-27, and the count was
+   inflated: two of the counted runs, `depth-curve/h1/run-0005` and `run-0006`,
+   logged one hit-rate sample each, and the engine's first sample is always
+   0.0%, so they assert nothing. `measure.py` now gates at n >= 2. Count
+   samples, not runs.) Not MTP acceptance — h5 measured it *higher* than greedy, and
    h6 raised it further to no effect. Not the served sampling config — h6. What
    remains conflated is the prompt (`adapt_prompt`'s random start against our
    fixed corpus), the absence of `exact_tg`, and mid-sweep thermal state. All
@@ -338,14 +342,82 @@ offset. Standing board-comparable figure: **105.12** (h6 run-0001).
 The prefix cache reads 0.0% on every sample of every run in this tree, under
 every protocol, with `--enable-prefix-caching` set and confirmed in the engine's
 own config line. h2 attributed it to our `post_run_cmd`; h5 ran without one and
-read 0.0% anyway. Nine confirmations. The leading candidate for the residue is
-`adapt_prompt` re-deriving the grid so each run draws a different prompt start,
-but that is unproven and it does not explain h5's own repeated cells. It is not
-worth a decode round — h2 priced it at +2.3% `tg` — but it removes "the board
-measures warm" as an explanation for anything until someone shows arena's runs
-hit, and it is the largest single unexplained thing this experiment found.
+read 0.0% anyway. It is not worth a decode round — h2 priced it at +2.3% `tg` —
+but it is the largest single unexplained thing this experiment found.
+
+That paragraph closed on three claims that do not hold. Corrected 2026-08-27:
+
+- It said **nine confirmations**. Seven. Two of the counted runs,
+  `depth-curve/h1/run-0005` and `run-0006`, logged one hit-rate sample each, and
+  the engine's first sample is always 0.0%, so they assert nothing. `measure.py`
+  now gates at n >= 2. Count samples, not runs. See the store record establishing
+  that the engine's first hit-rate sample is always 0.0%.
+- It named **`adapt_prompt` as the leading candidate for the residue**. A
+  correction written earlier on 2026-08-27 retired that on the ground that "MTP
+  alone drives the reading to 0.0% by controlled A/B", and concluded "there is no
+  residue to explain". **That retirement is withdrawn, later the same day.** MTP
+  is not sufficient. `decode-tg/h1/run-0001/recipe.yaml` and
+  `decode-tg/h2/run-0005/recipe.yaml` are byte-identical across the whole `vllm
+  serve` command — MTP depth 3 on triton in both, `--enable-prefix-caching` in
+  both, no `post_run_cmd` in either, same grid at `pp2048 · tg128 · d16384 · c1 ·
+  runs 7` — and differ only in `book_url`, `exact_tg`, `extra_body` and
+  `no_adapt_prompt`. They read 0.0% and 69.2%. The four rows on disk:
+
+      MTP on,  pinned,   reset       0.0%   (h2 arm A, run-0001..run-0004)
+      MTP on,  pinned,   no reset   69.2%   (h2 run-0005)
+      MTP on,  unpinned, no reset    0.0%   (h1 run-0001)
+      MTP off, unpinned, no reset   42.1%   (h1 run-0003)
+
+  h2's Amendment A/B was unpinned in **both** arms, so it never isolated MTP —
+  what it measured is an interaction. The 0.0% needs MTP *and* an unpinned
+  prompt, and a pinned corpus recovers cross-run hits with MTP still on. So the
+  residue question is **open**, and `no_adapt_prompt` is the better-supported
+  half of it, not the retired one.
+- It said the defect **removes "the board measures warm" as an explanation for
+  anything**. False for the board's non-MTP entries, which read roughly 47% hit
+  rate for free. The claim holds only where MTP is on. See the `stack:llama-benchy`
+  record establishing the 47% free-hit figure for non-MTP entries; the raw id it
+  cited was deleted and replaced, and ids churn on every correction, so records
+  here are named by what they say.
 
 Second, smaller: a harness logging defect that writes one byte-identical
-duplicate `request_end` line for a cell, seen four times now (concurrency h1
-run-0003, concurrency h3 `06-d100000c2`, and twice in h6). Any analysis counting
-request records must deduplicate.
+duplicate `request_end` line for a cell, seen three times (concurrency h3
+`06-d100000c2`, and twice in h6). Any analysis counting request records must
+deduplicate.
+
+Corrected 2026-08-27. This read "seen four times now" and counted concurrency h1
+run-0003 among them. It does not belong. Verified against `bench_fbb28a3df00f`,
+that cell carries zero duplicate lines; its 30 ends against 29 first-tokens are
+real damage — request 27 returned `total_tokens: 1` at `decode_seconds: 0.0`,
+costing a sample and throwing a `pp` outlier of 817.95 against siblings at 580.
+Three genuine sightings remain. The discriminator: a double-flush has every
+record at full `total_tokens`, damage does not. See the store records separating
+the writer double-flush from real sample damage.
+
+### Two corrections this experiment owes its own documents
+
+Added 2026-08-27. The Strategy above is left as written; these sit beneath it.
+
+- **The board prefill deficit never existed.** Strategy reads their prefill at
+  this cell as 1414.86 ± 7.14 against our 630.0 — 2.25x — and concludes "that is
+  where a 2.25x can plausibly come from". h2's Amendment corrected it: the
+  comparison was cold against warm, and it was not the same quantity either. We
+  were never behind on prefill. Measured the way theirs is, ours is 2593.0. The
+  phantom 2.25x is what motivated the `max_num_batched_tokens` and
+  `max_model_len` lever choices. See the store records retiring the board prefill
+  deficit, which hold the cold-against-warm arithmetic.
+- **Triton JIT is ruled out for one cell, not for the experiment.** Strategy
+  says the compilations "fire inside llama-benchy's warmup requests, before the
+  timed runs". That is true of h1's own cell. It is false in general, and — this
+  bullet corrected a second time, 2026-08-27 — **a per-test warmup is not what
+  bounds it: JIT fires inside the measurement window even in cells that ran
+  one.** The bullet first read that the refuting compilations came "in cells run
+  with `--skip-coherence` and no per-test warmup". `concurrency/h1/HYPOTHESIS.md`
+  says the opposite: "Only the c1 cell ran a per-test warmup and the coherence
+  test; c10, c5 and c2 ran with `--skip-coherence`" — and the nine triton kernels
+  in run-0001 and the eight in run-0003 fired inside **c1**, the warmed cell;
+  only "two more" landed in c10. `decode-tg/h4/run-0004` is a single-cell c1 run
+  — no recipe in this tree sets `skip_coherence` — so it warmed too, and still
+  logged seven compilations during its **first timed request**, with latency
+  spiking to match. What was wrong is the scope of the claim; what is still wrong
+  is treating warmup as the fix.
