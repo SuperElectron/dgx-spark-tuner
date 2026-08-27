@@ -1,5 +1,35 @@
 # h1 — decode is flat with depth
 
+This file is the contract for the round: hypothesis, method, decision rule,
+and runs. It is not the notebook — per-round analysis belongs in the memory
+store, not here.
+
+## Verdict
+
+TARGET MET — **Flat**. D = 4.5% from d0 to the deep anchor (114.6 → 109.5),
+against a threshold of 10%.
+
+## Runs
+
+<!-- RUNS:BEGIN -->
+| run | changed | why | cell | pp | tg | ttfr | bench |
+|---|---|---|---|---|---|---|---|
+| run-0001 | depth 0 | the intercept: no KV term, single phase, and the rule reads it — runs 9, tg iqr 5.1% UNSTABLE, true prefill 5610.5 t/s, hit 0.0% | pp2048 · tg128 · c1 · d0 | 5695.1 | 114.6 | 377.0 | bench_594c47d62013 |
+| run-0002 | depth 4096 | first rung with a context — runs 7, tg iqr 4.2%, true prefill 5933.4 t/s, hit 0.0% | pp2048 · tg128 · c1 · d4096 | 1995.5 | 110.1 | 1049.4 | bench_a0c409874de1 |
+| run-0003 | depth 8192 | witnesses monotonicity — runs 7, tg iqr 5.6% UNSTABLE, true prefill 5796.0 t/s, hit 0.0% | pp2048 · tg128 · c1 · d8192 | 1165.8 | 127.0 | 1779.2 | bench_fa59c397c082 |
+| run-0004 | depth 16384 | re-bases the incumbent under the new corpus offset — runs 7, tg iqr 2.6%, true prefill 5639.4 t/s, hit 0.0% | pp2048 · tg128 · c1 · d16384 | 628.6 | 117.8 | 3279.0 | bench_c003c48ede71 |
+| run-0005 | depth 30592 | runs 9. The deepest legal context at max_model_len 32768; the rule reads it — HTTP 400, one token over: prompt 32641 + tg 128 = 32769 vs max_model_len 32768 | pp2048 · tg128 · c1 · d30592 | — | — | — | bench_5330c0302d07 |
+| run-0006 | depth 30591 | runs 9. One token shallower than run-0005 — HTTP 400 again, at the same 32641 input tokens. The endpoint adds a token of its own, so the served prompt is pp + depth + 2 | pp2048 · tg128 · c1 · d30591 | — | — | — | bench_f574047b8c2e |
+| run-0007 | depth 30464 | measured ceiling is d30590 with zero margin; this takes 126 tokens of headroom for the same rung. Stands in as the rule's deep anchor — runs 9, tg iqr 4.3% (±2.1%), true prefill 5195.9 t/s, hit 0.0% | pp2048 · tg128 · c1 · d30464 | 327.1 | 109.5 | 6270.8 | bench_6bd19fe9a3c2 |
+<!-- RUNS:END -->
+
+One row per planned run. Figures blank until it is run.
+
+run-0001 is also the first end-to-end run of the harness rewritten on
+2026-08-23 — per-cell corpora, rolled progress files, schedule-aware grid
+checking. It is the cheapest cell in the tree, so it proves the instrument
+before the ladder spends anything on it.
+
 ## Hypothesis
 
 `tg` at c1 declines by less than 10% from d0 to d30592, matching the shape the
@@ -114,26 +144,6 @@ a bare 10% threshold, with no branch for a decline that clears 10% while
 sitting inside the rungs' own spread — the outcome the prior evidence makes
 most likely, since the nearest measurement on this box declines 5.3% across
 four times this span. A threshold that can be met by noise is not a rule.)
-
-## Runs
-
-One row per planned run. Figures blank until it is run.
-
-| run | depth | runs | why | tg t/s | iqr | pp t/s | prefill t/s | ttfr ms | hit % | bench |
-|-----|-------|------|-----|--------|-----|--------|-------------|---------|-------|-------|
-| run-0001 | 0 | 9 | the intercept: no KV term, single phase, and the rule reads it | 114.6 | 5.1% UNSTABLE | 5695.1 | 5610.5 | 377.0 | 0.0 | bench_594c47d62013 |
-| run-0002 | 4096 | 7 | first rung with a context | 110.1 | 4.2% | 1995.5 | 5933.4 | 1049.4 | 0.0 | bench_a0c409874de1 |
-| run-0003 | 8192 | 7 | witnesses monotonicity | 127.0 | 5.6% UNSTABLE | 1165.8 | 5796.0 | 1779.2 | 0.0 | bench_fa59c397c082 |
-| run-0004 | 16384 | 7 | re-bases the incumbent under the new corpus offset | 117.8 | 2.6% | 628.6 | 5639.4 | 3279.0 | 0.0 | bench_c003c48ede71 |
-| run-0005 | 30592 | 9 | the deepest legal context at max_model_len 32768; the rule reads it — HTTP 400, one token over: prompt 32641 + tg 128 = 32769 vs max_model_len 32768 | — | — | — | — | — | — | bench_5330c0302d07 |
-
-| run-0006 | 30591 | 9 | one token shallower than run-0005 — HTTP 400 again, at the same 32641 input tokens. The endpoint adds a token of its own, so the served prompt is pp + depth + 2 | — | — | — | — | — | — | bench_f574047b8c2e |
-| run-0007 | 30464 | 9 | measured ceiling is d30590 with zero margin; this takes 126 tokens of headroom for the same rung. Stands in as the rule's deep anchor | 109.5 | 4.3% (±2.1%) | 327.1 | 5195.9 | 6270.8 | 0.0 | bench_6bd19fe9a3c2 |
-
-run-0001 is also the first end-to-end run of the harness rewritten on
-2026-08-23 — per-cell corpora, rolled progress files, schedule-aware grid
-checking. It is the cheapest cell in the tree, so it proves the instrument
-before the ladder spends anything on it.
 
 ## Conclusion
 

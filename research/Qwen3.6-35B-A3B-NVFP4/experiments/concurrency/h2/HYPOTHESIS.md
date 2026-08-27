@@ -1,5 +1,28 @@
 # h2 — four slots serve ten requests, and the c10 aggregate pays for the queue
 
+This file is the contract for the round: hypothesis, method, decision rule, and
+runs. It is not the notebook — per-round analysis belongs in the memory store,
+not here.
+
+## Verdict
+
+**TARGET MET** on the screen; the screen cannot close it — `max_num_seqs` 4 →
+10 takes `d16384 c10` from 49.0 to 137.5, clearing the Objective's 102.31 by
+34%, and the round's own outcome token is `target-met-pending-validation`.
+
+## Runs
+
+<!-- RUNS:BEGIN -->
+| run | changed | why | cell | pp | tg | ttfr | bench |
+|---|---|---|---|---|---|---|---|
+| run-0001 | baseline, `max_num_seqs` 4 | the control, on this round's schedule and session; pp t/s, tg t/s, ttfr ms | d16384 c10, guard d16384 c1 | 583.9 | 49.0 ±0.2% | 21430 | bench_270c9926d658 |
+| run-0002 | `max_num_seqs` 4 → 10 | the queue disappears at exactly the primary cell's concurrency; pp t/s, tg t/s, ttfr ms | d16384 c10, guard d16384 c1 | 577.6 | **137.5 ±1.8%** | 8127 | bench_8ced4b0ea3c2 |
+| run-0003 | `max_num_seqs` 4 → 16 | separates "the queue was the cost" from "more slots always help"; pp t/s, tg t/s, ttfr ms | d16384 c10, guard d16384 c1 | 668.6 | **139.8 ±0.4%** | 29047 | bench_4363a52d9d21 |
+<!-- RUNS:END -->
+
+One row per planned run. Figures blank until it is run. Script-written by
+`spark-autoresearch`'s CREATE/RECORD steps. Never hand-edit.
+
 ## Hypothesis
 
 Raising `max_num_seqs` from 4 to 10 raises `tg` at `d16384 c10` above h1's
@@ -182,15 +205,9 @@ Three values per arm at c10 means no interquartile range; the rule is stated on
 medians and a 5% threshold for exactly that reason, and this is said before the
 numbers exist rather than after.
 
-## Runs
+## Conclusion
 
-One row per planned run. Figures blank until it is run.
-
-| run | changed | why | cell | pp t/s | tg t/s | ttfr ms | bench |
-|-----|---------|-----|------|--------|--------|---------|-------|
-| run-0001 | baseline, `max_num_seqs` 4 | the control, on this round's schedule and session | d16384 c10, guard d16384 c1 | 583.9 | 49.0 ±0.2% | 21430 | bench_270c9926d658 |
-
-Full cell menu: c1 107.0 ±4.9% (n=7), c2 136.3 ±5.1%, c5 84.2 ±1.7%,
+run-0001's full cell menu: c1 107.0 ±4.9% (n=7), c2 136.3 ±5.1%, c5 84.2 ±1.7%,
 c10 49.0 ±0.2%. `running max 4`, `waiting max 6`, prefix cache 0.0% over 44
 samples. Integrity check passed on all four cells — `request_end` and
 `request_first_token` counts agree (14/14, 60/60, 30/30, 12/12); one c5 request
@@ -221,14 +238,13 @@ evidence; this is the direct replicate that closes it.
 
 Consequence for this round, recorded before the arms run: **c1 cannot function
 as a guard at better than about ±11%**, whatever `runs` it is given, so a guard
-stated on a few percent of c1 is unreadable. The rule below reads c1 against
+stated on a few percent of c1 is unreadable. The rule above reads c1 against
 this control and against that reproducibility figure, not against a tighter
 band.
-| run-0002 | `max_num_seqs` 4 → 10 | the queue disappears at exactly the primary cell's concurrency | d16384 c10, guard d16384 c1 | 577.6 | **137.5 ±1.8%** | 8127 | bench_8ced4b0ea3c2 |
 
-Full cell menu: c1 102.1 ±4.2% (n=7), c2 137.9 ±3.2%, c5 **172.0** ±1.9%,
-c10 **137.5** ±1.8%. Integrity clean on all four cells — `request_end` and
-`request_first_token` agree (14/14, 60/60, 30/30, 12/12) and every request
+run-0002's full cell menu: c1 102.1 ±4.2% (n=7), c2 137.9 ±3.2%, c5 **172.0**
+±1.9%, c10 **137.5** ±1.8%. Integrity clean on all four cells — `request_end`
+and `request_first_token` agree (14/14, 60/60, 30/30, 12/12) and every request
 returned a full 128 tokens with an empty error string.
 
 Three qualifications on those numbers:
@@ -285,9 +301,8 @@ separates us. That reasoning is sound about the *reference* and wrong about the
 The Strategy sentence stands as written with this correction beneath it, and
 `max_num_seqs` was deliberately left out of Held, which is what made this round
 legal to run.
-| run-0003 | `max_num_seqs` 4 → 16 | separates "the queue was the cost" from "more slots always help" | d16384 c10, guard d16384 c1 | 668.6 | **139.8 ±0.4%** | 29047 | bench_4363a52d9d21 |
 
-Full cell menu: c1 114.1 ±3.2% (n=7), c2 133.4 ±0.6%, c5 171.5 ±1.9%,
+run-0003's full cell menu: c1 114.1 ±3.2% (n=7), c2 133.4 ±0.6%, c5 171.5 ±1.9%,
 c10 **139.8** ±0.4%. Integrity clean on all four cells (14/14, 60/60, 30/30,
 12/12, every request 128 tokens), and **no LOOPING raised on any cell** — so
 this arm's c5 is the clean one, where run-0002's carried an inflating loop.
@@ -332,8 +347,6 @@ prefix cache hit rate and samples, LOOPING counts per cell, and MTP acceptance.
 `waiting max` is this round's mechanism check — if it does not fall toward zero
 at c10 as the slot count rises, the field did not do what it was raised to do,
 whatever `tg` says.
-
-## Conclusion
 
 **Target met on the screen, and the screen cannot close it. Outcome:
 target-met-pending-validation.** `max_num_seqs` 4 → 10 → 16, one engine start

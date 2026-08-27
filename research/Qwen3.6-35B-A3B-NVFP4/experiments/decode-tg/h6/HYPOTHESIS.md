@@ -1,5 +1,26 @@
 # h6 — the checkpoint's own `temperature 1.0` is costing decode on the board grid
 
+This file is the contract for the round: hypothesis, method, decision rule,
+and runs. It is not the notebook — per-round analysis belongs in the memory
+store, not here.
+
+## Verdict
+
+LEVER SPENT, by the rule as written — `tg` median at `d16384 c1` is 105.12,
+below the rule's 110.7 floor. The mechanism did fire: acceptance rose 3.07 →
+3.22 and bought no throughput.
+
+## Runs
+
+<!-- RUNS:BEGIN -->
+| run | changed | why | cell | pp | tg | ttfr | bench |
+|---|---|---|---|---|---|---|---|
+| run-0001 | `--override-generation-config` temperature 0.6 | the last untested field in the reference diff; tg is the median of n=3, max/min 1.132, values 105.12 94.43 106.91; accept len 3.22 median over 401 samples | d16384 c1 | 633.71 | 105.12 | 3243.59 ms | bench_44dd96bddd72 |
+<!-- RUNS:END -->
+
+Script-written by `spark-autoresearch`'s CREATE/RECORD steps. Never hand-edit.
+One row per planned run. Figures blank until it is run.
+
 ## Hypothesis
 
 Overriding the served generation config to `temperature 0.6` raises `tg` at
@@ -93,7 +114,7 @@ Two things h5 found are deliberately left alone:
 sparkrun derives the bench id from the recipe. This recipe differs from h5's by
 one flag, so it gets a different id and **will not overwrite h5 run-0001** —
 which is what h5 did to the partial sweep before it. Record the id from
-`state.yaml` in the Runs table below, and check before dispatching that it is
+`state.yaml` in the Runs table above, and check before dispatching that it is
 not `bench_e86574ff0e1e`.
 
 ### Running it
@@ -129,21 +150,6 @@ that a genuine 5% win would be reported as a spent lever. That is the cost of
 `runs: 3`, it is inherent to arena's grid, and this round accepts it rather
 than diverging from the grid to fix it.
 
-## Runs
-
-One row per planned run. Figures blank until it is run.
-
-| run | changed | why | cell | pp t/s | tg t/s median | ttfr ms | accept len | bench |
-|-----|---------|-----|------|--------|---------------|---------|------------|-------|
-| run-0001 | `--override-generation-config` temperature 0.6 | the last untested field in the reference diff | d16384 c1 | 633.71 | **105.12** (n=3, max/min 1.132; 105.12 94.43 106.91) | 3243.59 | 3.22 median over 401 samples | bench_44dd96bddd72 |
-
-For reference, the control this is read against — h5 run-0001, same grid, same
-schedule, same epoch, served generation config `temperature 1.0`:
-
-| | cell | pp t/s | tg t/s median | ttfr ms | accept len | bench |
-|-|------|--------|---------------|---------|------------|-------|
-| h5 run-0001 | d16384 c1 | 636.7 | 103.7 (n=3, max/min 1.14) | 3242.6 | 3.07 median | bench_e86574ff0e1e |
-
 ## Conclusion
 
 **Lever spent, by the rule as written.** `tg` median at `d16384 c1`, cell phase,
@@ -154,6 +160,17 @@ spent*: the served sampling config does not govern decode on the board grid, and
 
 `bench_44dd96bddd72`, distinct from h5's `bench_e86574ff0e1e` as the round
 required, so nothing was overwritten.
+
+### The control this is read against
+
+For reference, the control this is read against — h5 run-0001, same grid, same
+schedule, same epoch, served generation config `temperature 1.0`. It is h5's
+control row, carried here for comparison; it is a cross-round row and does not
+belong in this round's script-written table above.
+
+| | cell | pp t/s | tg t/s median | ttfr ms | accept len | bench |
+|-|------|--------|---------------|---------|------------|-------|
+| h5 run-0001 | d16384 c1 | 636.7 | 103.7 (n=3, max/min 1.14) | 3242.6 | 3.07 median | bench_e86574ff0e1e |
 
 ### The mechanism fired and bought nothing
 

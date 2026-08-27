@@ -1,5 +1,27 @@
 # h5 — our recipe, measured on the board's own grid
 
+This file is the contract for the round: hypothesis, method, decision rule,
+and runs. It is not the notebook — per-round analysis belongs in the memory
+store, not here.
+
+## Verdict
+
+LEVER SPENT, by the rule as written — `tg` median at `d16384 c1` is 103.7,
+below the rule's 110 floor. But the round's mechanism never engaged: prefix
+cache hit rate read 0.0%, so the hypothesis was not refuted, it was never
+tested.
+
+## Runs
+
+<!-- RUNS:BEGIN -->
+| run | changed | why | cell | pp | tg | ttfr | bench |
+|---|---|---|---|---|---|---|---|
+| run-0001 | arena-v2 grid, `max_model_len` 262144 | the board-comparable figure; tg is the median of 115.1, 103.7, 101.1, ±5.2% at n=3; pp ±0.8% | d16384 c1 | 636.7 | 103.7 | 3242.6 ms | bench_e86574ff0e1e |
+<!-- RUNS:END -->
+
+Script-written by `spark-autoresearch`'s CREATE/RECORD steps. Never hand-edit.
+One row per planned run. Figures blank until it is run.
+
 ## Hypothesis
 
 Our tuned recipe, run on `@official/spark-arena-v2` unmodified, reads above
@@ -248,65 +270,6 @@ Cells that completed before the failure are kept. If `d16384 c1` is among them
 the decision rule still evaluates, since that cell sits at index 13 of 28 and
 the deep cells that would fail come later.
 
-## Runs
-
-Nothing has been run and `run-0001` does not exist yet. To open it:
-
-    .claude/skills/spark-autoresearch/scripts/new-run.sh \
-        research/Qwen3.6-35B-A3B-NVFP4/experiments/decode-tg/h5
-
-Then write its `recipe.yaml`: decode-tg's `recipe.yaml` with `max_model_len`
-262144 in `defaults:`, and its `benchmark:` block replaced by the one above.
-Carry nothing else over — no `book_url`, no `exact_tg`, no `no_adapt_prompt`,
-no `extra_body`, no `post_run_cmd`.
-
-One row per planned run. Figures blank until it is run.
-
-| run | changed | why | d16384 c1 tg | d16384 c1 pp | ttfr ms | bench |
-|-----|---------|-----|--------------|--------------|---------|-------|
-| run-0001 | arena-v2 grid, `max_model_len` 262144 | the board-comparable figure | 103.7 ±5.2% (n=3) | 636.7 ±0.8% | 3242.6 | bench_e86574ff0e1e |
-
-`tg` is the median of 115.1, 103.7, 101.1. run.py's own table prints 106.7 for
-the same cell because that column is the arithmetic mean of a rate, which
-overweights the fast sample; the rule reads the median. Both sit below 116.03
-and below the rule's 110 floor.
-
-The other 27 cells, `tg` medians, since one run returned the whole menu:
-
-| depth | c1 | c2 | c5 | c10 |
-|-------|------|-------|-------|------|
-| 0 | 96.6 | 152.3 | 170.6 | 154.2 |
-| 4096 | 109.6 | 138.6 | 131.8 | 105.8 |
-| 8192 | 103.0 | 129.3 | 107.9 | 77.7 |
-| 16384 | 103.7 | 130.9 | 84.2 | 48.9 |
-| 32768 | 106.1 | 125.0 | 53.1 | 25.8 |
-| 65535 | 95.6 | 107.7 | 19.7 | 10.5 |
-| 100000 | 82.4 | 58.2 | 8.3 | 5.4 |
-
-Conditions that qualify the table, from the archive:
-
-- **Prefix caching never engaged.** `hit rate max 0.0% over 544 samples`, with
-  `--enable-prefix-caching` set and the engine confirming
-  `enable_prefix_caching=True`. Cell-phase `pp` reads 636.7 against 5907.5 for
-  the context phase — h2's 0%-hit signature was 633.9. Every cell is affected,
-  and the warm cache this round was built to inherit does not exist.
-- **`running max 4, waiting max 7`.** `max_num_seqs 4` queues the c5 and c10
-  cells rather than batching them, which is what the right-hand columns are
-  measuring.
-- `kv max 9.8%`, peak 99.0 W, peak clock 2398 MHz, 0 preemptions. The memory
-  sizing above predicted 36% of the pool at the worst cell and it never passed
-  10%.
-- Sampling was the checkpoint's own — `temperature 1.0, top_p 0.95, top_k 20`,
-  logged as overriding vLLM's defaults. That is arena's protocol, as declared.
-- `d65535 c10` had 1 of 60 requests looping, which inflates that one cell.
-- Dispersion at c5/c10 for depth >= 8192 is severe (iqr to 377%, max/min to
-  53). The c1 and c2 columns are the tight ones at ±3.2-9.3%.
-- Archive provenance: sparkrun derives the bench id from the recipe, so this
-  run **overwrote** the 12-cell partial sweep of 2026-08-23 that shared
-  `bench_e86574ff0e1e`. depth-curve's Strategy cites that id for figures the
-  directory no longer holds. Its substance survives — it quoted 96.2 at
-  d65535 c1 and this complete run reads 95.6.
-
 ## Conclusion
 
 **Lever spent, by the rule as written.** `tg` median at `d16384 c1` is 103.7,
@@ -456,3 +419,62 @@ that the prefix cache is inert for this model under *any* protocol we have run,
 and the knowledge that `max_num_seqs 4` makes the milestone's c10 target
 unmeasurable as currently configured. Three of those are findings the internal
 yardstick could not have produced.
+
+### The other 27 cells
+
+Read against the run-0001 row above: `tg` is the median of 115.1, 103.7, 101.1.
+run.py's own table prints 106.7 for the same cell because that column is the
+arithmetic mean of a rate, which overweights the fast sample; the rule reads the
+median. Both sit below 116.03 and below the rule's 110 floor.
+
+The other 27 cells, `tg` medians, since one run returned the whole menu:
+
+| depth | c1 | c2 | c5 | c10 |
+|-------|------|-------|-------|------|
+| 0 | 96.6 | 152.3 | 170.6 | 154.2 |
+| 4096 | 109.6 | 138.6 | 131.8 | 105.8 |
+| 8192 | 103.0 | 129.3 | 107.9 | 77.7 |
+| 16384 | 103.7 | 130.9 | 84.2 | 48.9 |
+| 32768 | 106.1 | 125.0 | 53.1 | 25.8 |
+| 65535 | 95.6 | 107.7 | 19.7 | 10.5 |
+| 100000 | 82.4 | 58.2 | 8.3 | 5.4 |
+
+Conditions that qualify the table, from the archive:
+
+- **Prefix caching never engaged.** `hit rate max 0.0% over 544 samples`, with
+  `--enable-prefix-caching` set and the engine confirming
+  `enable_prefix_caching=True`. Cell-phase `pp` reads 636.7 against 5907.5 for
+  the context phase — h2's 0%-hit signature was 633.9. Every cell is affected,
+  and the warm cache this round was built to inherit does not exist.
+- **`running max 4, waiting max 7`.** `max_num_seqs 4` queues the c5 and c10
+  cells rather than batching them, which is what the right-hand columns are
+  measuring.
+- `kv max 9.8%`, peak 99.0 W, peak clock 2398 MHz, 0 preemptions. The memory
+  sizing above predicted 36% of the pool at the worst cell and it never passed
+  10%.
+- Sampling was the checkpoint's own — `temperature 1.0, top_p 0.95, top_k 20`,
+  logged as overriding vLLM's defaults. That is arena's protocol, as declared.
+- `d65535 c10` had 1 of 60 requests looping, which inflates that one cell.
+- Dispersion at c5/c10 for depth >= 8192 is severe (iqr to 377%, max/min to
+  53). The c1 and c2 columns are the tight ones at ±3.2-9.3%.
+- Archive provenance: sparkrun derives the bench id from the recipe, so this
+  run **overwrote** the 12-cell partial sweep of 2026-08-23 that shared
+  `bench_e86574ff0e1e`. depth-curve's Strategy cites that id for figures the
+  directory no longer holds. Its substance survives — it quoted 96.2 at
+  d65535 c1 and this complete run reads 95.6.
+
+### Scaffolding, as it stood before the round ran
+
+Kept verbatim, moved here on 2026-08-27 from the head of `## Runs`, where it
+had gone stale the moment run-0001 existed. It is the instruction the round
+carried before it was run, not a statement about the round's result.
+
+> Nothing has been run and `run-0001` does not exist yet. To open it:
+>
+>     .claude/skills/spark-autoresearch/scripts/new-run.sh \
+>         research/Qwen3.6-35B-A3B-NVFP4/experiments/decode-tg/h5
+>
+> Then write its `recipe.yaml`: decode-tg's `recipe.yaml` with `max_model_len`
+> 262144 in `defaults:`, and its `benchmark:` block replaced by the one above.
+> Carry nothing else over — no `book_url`, no `exact_tg`, no `no_adapt_prompt`,
+> no `extra_body`, no `post_run_cmd`.

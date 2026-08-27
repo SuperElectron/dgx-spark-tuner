@@ -1,5 +1,32 @@
 # h1 — the three numeric fields the reference recipe differs on
 
+This file is the contract for the round: hypothesis, method, decision rule,
+and runs. It is not the notebook — per-round analysis belongs in the memory
+store, not here.
+
+## Verdict
+
+**LEVER SPENT** — the combined arm read `tg` 111.3 against the control's 109.3,
+2.0 apart against interquartile ranges of 11.3 and 9.8.
+
+## Runs
+
+<!-- RUNS:BEGIN -->
+| run | changed | why | cell | pp | tg | ttfr | bench |
+|---|---|---|---|---|---|---|---|
+| run-0001 | none — the baseline as shipped | control, and this epoch's spread | d16384 c1 | 633.1 | 109.3 | 3246.4 | bench_c9518e3e96a3 |
+| run-0002 | `gpu_memory_utilization: 0.8 → 0.65`, `max_model_len: 32768 → 262144`, `max_num_batched_tokens: 65536 → 32768` | the whole diff at once: is it the gap? | d16384 c1 | 636.1 | 111.3 | 3231.2 | bench_00f6e273f26c |
+| run-0003 | `--speculative-config` removed | diagnostic: what is the 25% `tg` spread made of? | d16384 c1 | 2420.2 | 70.3 | 858.0 | bench_0a988a464b5a |
+| run-0004 | `exact_tg`, `temperature 0`, cache reset added | harness verification, not an arm | d16384 c1 | 635.9 | 116.2 | 3232.1 | bench_7d27a25ac7f2 |
+| run-0005 | `post_run_cmd` fixed, `emit_progress` added | harness verification, not an arm | d16384 c1 | 632.7 | 118.9 | 3248.7 | bench_c77f38339d26 |
+| run-0006 | fixed corpus installed | harness verification, not an arm | d16384 c1 | 633.2 | 115.8 | 3246.0 | bench_7e811800d715 |
+| run-0007 | `seed=42` added | discriminator: is decode greedy? | d16384 c1 | 635.0 | 122.8 | 3244.9 | bench_26c64e5c27b8 |
+| run-0008 | `no_adapt_prompt: true` | pin the prompt for real | d16384 c1 | 635.4 | 119.6 | 3234.9 | bench_ff46b9fac055 |
+<!-- RUNS:END -->
+
+One row per planned run. Figures blank until it is run. Script-written by
+`spark-autoresearch`'s CREATE/RECORD steps. Never hand-edit.
+
 ## Hypothesis
 
 Adopting `gpu_memory_utilization 0.65`, `max_model_len 262144` and
@@ -78,20 +105,45 @@ Record `pp` at every run whatever `tg` does. Their prefill advantage is 2.25x,
 far outside any spread here, so it will read clearly even where `tg` does not —
 and if `pp` moves while `tg` does not, that is the finding.
 
-## Runs
+## Conclusion
 
-One row per planned run. Figures blank until it is run.
+**Lever spent.** The three fields are not the gap.
 
-| run | changed | why | pp t/s | tg t/s | ttfr ms | bench |
-|-----|---------|-----|--------|--------|---------|-------|
-| run-0001 | none — the baseline as shipped | control, and this epoch's spread | 633.1 | 109.3 | 3246.4 | bench_c9518e3e96a3 |
-| run-0002 | `gpu_memory_utilization: 0.8 → 0.65`, `max_model_len: 32768 → 262144`, `max_num_batched_tokens: 65536 → 32768` | the whole diff at once: is it the gap? | 636.1 | 111.3 | 3231.2 | bench_00f6e273f26c |
-| run-0003 | `--speculative-config` removed | diagnostic: what is the 25% `tg` spread made of? | 2420.2 | 70.3 | 858.0 | bench_0a988a464b5a |
-| run-0004 | `exact_tg`, `temperature 0`, cache reset added | harness verification, not an arm | 635.9 | 116.2 | 3232.1 | bench_7d27a25ac7f2 |
-| run-0005 | `post_run_cmd` fixed, `emit_progress` added | harness verification, not an arm | 632.7 | 118.9 | 3248.7 | bench_c77f38339d26 |
-| run-0006 | fixed corpus installed | harness verification, not an arm | 633.2 | 115.8 | 3246.0 | bench_7e811800d715 |
-| run-0007 | `seed=42` added | discriminator: is decode greedy? | 635.0 | 122.8 | 3244.9 | bench_26c64e5c27b8 |
-| run-0008 | `no_adapt_prompt: true` | pin the prompt for real | 635.4 | 119.6 | 3234.9 | bench_ff46b9fac055 |
+The combined arm (run-0002) read `tg` 111.3 against the control's 109.3 — 2.0
+apart, against interquartile ranges of 11.3 and 9.8. The rule as written calls
+that spent: a difference smaller than the larger IQR is not a result. Nothing
+gets split, because there is nothing to attribute.
+
+`pp` is the stronger finding and it points the same way. The mechanism argued in
+the Hypothesis ran through prefill: halving `max_num_batched_tokens` should
+change how a 16384-token prompt is chunked, and the reference recipe's 2.25x
+prefill advantage was the evidence it mattered. `pp` moved 633.1 → 636.1. Half a
+percent, inside the 1.02 max/min this cell shows with the field untouched. The
+chunking mechanism did not fire, so the prefill gap is not made of these three
+numbers and no decode win was ever going to arrive downstream of it.
+
+Two things this round settled that outlast it:
+
+- **The spread is speculation.** run-0003 removed `--speculative-config` and
+  `tg` standard deviation fell 8.6 → 0.24 while `pp` did not move. Triton JIT
+  was the earlier suspect and is ruled out — the compilations fire inside
+  llama-benchy's warmup requests, before the timed runs. Every `tg` figure this
+  experiment records is a sample from a distribution MTP widens, and MTP stays
+  because it is worth 36% of decode and 3.8x on prefill and ttfr.
+- **The 116.03 target was the wrong quantity**, not the wrong number. Seven
+  documented protocol differences, and its `±` is a population standard
+  deviation over three requests inside one invocation against our across-
+  invocation spread. The Objective now carries a board-comparable figure
+  instead, measured by running their profile.
+
+run-0004 through run-0006 are harness verification, not arms. They belong to
+this round only because it was open while the measurement protocol was built.
+The standing best they leave behind — 118.9 at run-0005 — is not a claim this
+round earned; it is what the baseline reads under a protocol that pins output
+length, sampling and cache state.
+
+What follows is not a split of these three fields. h2 takes the prefix cache,
+which the harness runs showed never hits at all.
 
 Figures are medians of the seven values from the `tg128 @ d16384` phase. The
 result carries two phases; the other is `ctx_tg`, a different cell.
@@ -139,43 +191,3 @@ nominal size, and this experiment wants the reproducibility. And the ctx phase
 stays unstable by construction — it needs only 16384 tokens from an
 18433-token corpus, leaving `max_start` 2049, so its prompts really are random
 slices. The Objective's cell is unaffected.
-
-## Conclusion
-
-**Lever spent.** The three fields are not the gap.
-
-The combined arm (run-0002) read `tg` 111.3 against the control's 109.3 — 2.0
-apart, against interquartile ranges of 11.3 and 9.8. The rule as written calls
-that spent: a difference smaller than the larger IQR is not a result. Nothing
-gets split, because there is nothing to attribute.
-
-`pp` is the stronger finding and it points the same way. The mechanism argued in
-the Hypothesis ran through prefill: halving `max_num_batched_tokens` should
-change how a 16384-token prompt is chunked, and the reference recipe's 2.25x
-prefill advantage was the evidence it mattered. `pp` moved 633.1 → 636.1. Half a
-percent, inside the 1.02 max/min this cell shows with the field untouched. The
-chunking mechanism did not fire, so the prefill gap is not made of these three
-numbers and no decode win was ever going to arrive downstream of it.
-
-Two things this round settled that outlast it:
-
-- **The spread is speculation.** run-0003 removed `--speculative-config` and
-  `tg` standard deviation fell 8.6 → 0.24 while `pp` did not move. Triton JIT
-  was the earlier suspect and is ruled out — the compilations fire inside
-  llama-benchy's warmup requests, before the timed runs. Every `tg` figure this
-  experiment records is a sample from a distribution MTP widens, and MTP stays
-  because it is worth 36% of decode and 3.8x on prefill and ttfr.
-- **The 116.03 target was the wrong quantity**, not the wrong number. Seven
-  documented protocol differences, and its `±` is a population standard
-  deviation over three requests inside one invocation against our across-
-  invocation spread. The Objective now carries a board-comparable figure
-  instead, measured by running their profile.
-
-run-0004 through run-0006 are harness verification, not arms. They belong to
-this round only because it was open while the measurement protocol was built.
-The standing best they leave behind — 118.9 at run-0005 — is not a claim this
-round earned; it is what the baseline reads under a protocol that pins output
-length, sampling and cache state.
-
-What follows is not a split of these three fields. h2 takes the prefix cache,
-which the harness runs showed never hits at all.

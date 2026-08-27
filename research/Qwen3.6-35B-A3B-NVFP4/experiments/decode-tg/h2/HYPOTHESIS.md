@@ -1,5 +1,30 @@
 # h2 — the prefix cache never hits, and one flag is why
 
+This file is the contract for the round: hypothesis, method, decision rule,
+and runs. It is not the notebook — per-round analysis belongs in the memory
+store, not here.
+
+## Verdict
+
+**LEVER SPENT** — no flag was disabling the cache; removing our own
+`post_run_cmd` reset took the hit rate from 0.0% to 69.2%, and `tg` moved only
+2.3%.
+
+## Runs
+
+<!-- RUNS:BEGIN -->
+| run | changed | why | cell | pp | tg | ttfr | bench |
+|---|---|---|---|---|---|---|---|
+| run-0001 | none — arm A | control: confirm 0.0% under the new instrument; hit rate 0.0% | d16384 c1 | 633.9 | 112.3 | 3252.9 | bench_9db1360b8e5e |
+| run-0002 | `--kv-cache-dtype` removed — arm B | fp8 KV is the most-cited APC blocker; never run — the premise was refuted by run-0005 | d16384 c1 | | | | |
+| run-0003 | `--speculative-config` removed — arm C | MTP verify may bypass the cache path; never run — the premise was refuted by run-0005 | d16384 c1 | | | | |
+| run-0004 | `--async-scheduling` removed — arm D | last of the three, and the least likely; never run — the premise was refuted by run-0005 | d16384 c1 | | | | |
+| run-0005 | `post_run_cmd` removed | diagnostic: does the cache work at all? hit rate 69.2% | d16384 c1 | 2593.0 | 114.9 | 803.3 | bench (see id.txt) |
+<!-- RUNS:END -->
+
+One row per planned run. Figures blank until it is run. Script-written by
+`spark-autoresearch`'s CREATE/RECORD steps. Never hand-edit.
+
 ## Hypothesis
 
 The recipe asks for `--enable-prefix-caching` and the engine reports
@@ -87,48 +112,6 @@ rate that `run.py` now prints beside it, not against `pp_throughput` — which
 credits 2048 tokens for work done on 18446 and would read as a 9x change for a
 cache fix that only really removed 16398 tokens of recompute.
 
-## Runs
-
-One row per planned run. Figures blank until it is run.
-
-| run | changed | why | hit % | pp t/s | tg t/s | ttfr ms | bench |
-|-----|---------|-----|-------|--------|--------|---------|-------|
-| run-0001 | none — arm A | control: confirm 0.0% under the new instrument | 0.0 | 633.9 | 112.3 | 3252.9 | bench_9db1360b8e5e |
-| run-0002 | `--kv-cache-dtype` removed — arm B | fp8 KV is the most-cited APC blocker | | | | | |
-| run-0003 | `--speculative-config` removed — arm C | MTP verify may bypass the cache path | | | | | |
-| run-0004 | `--async-scheduling` removed — arm D | last of the three, and the least likely | | | | | |
-| run-0005 | `post_run_cmd` removed | diagnostic: does the cache work at all? | 69.2 | 2593.0 | 114.9 | 803.3 | bench (see id.txt) |
-
-run-0001 confirms the control: 0.0% on all seven samples, and phase 2 sends
-18447 prompt tokens on every run — a full recompute, not the ~2048 a working
-cache would leave. `tg` median 112.3 at 5.8% IQR, which the new verdict calls
-UNSTABLE where the old `max/min` gate would have passed it at 1.07; the values
-split between a ~110 cluster and a ~118 one.
-
-Its startup log carries the fact that reframes the round:
-
-    Setting attention block size to 2144 tokens to ensure that attention
-    page size is >= mamba page size
-
-Block size is 2144, not the default 16, forced up so attention pages align with
-the mamba pages this hybrid needs. Hits are granted per whole block, so no
-prefix shorter than 2144 matching tokens can ever register — and the engine also
-logs `Mamba cache mode is set to 'align' ... when prefix caching is enabled`.
-
-run-0005 is a diagnostic in the sense h1's run-0003 was: it answers a question
-the arms depend on rather than testing the round's variable. Every run sends an
-identical prompt, so runs 2-7 should reuse run 1's blocks — except the reset
-wipes them. Removing it separates two failures we have been reading as one:
-
-- **hit rate above 0** — caching works across requests, and what fails is the
-  phase-1-to-phase-2 hop within a run, on block alignment. No flag in B, C or D
-  is the cause and those three arms are unnecessary.
-- **still 0.0%** — caching is inert for this model whatever the flags do, and
-  B, C and D would be three wasted runs.
-
-The reset stays in the recipe either way. It is removed here to read the cache,
-not because it was ever suspected.
-
 ## Conclusion
 
 **The hypothesis was wrong in its premise, and the round is answered without
@@ -179,7 +162,37 @@ Recorded for the record: the 2144-token attention block size, forced up so
 attention pages align with mamba pages, does not prevent hits. It was a
 reasonable suspect and it is cleared.
 
-### Amendment, 2026-08-25
+run-0001 confirms the control: 0.0% on all seven samples, and phase 2 sends
+18447 prompt tokens on every run — a full recompute, not the ~2048 a working
+cache would leave. `tg` median 112.3 at 5.8% IQR, which the new verdict calls
+UNSTABLE where the old `max/min` gate would have passed it at 1.07; the values
+split between a ~110 cluster and a ~118 one.
+
+Its startup log carries the fact that reframes the round:
+
+    Setting attention block size to 2144 tokens to ensure that attention
+    page size is >= mamba page size
+
+Block size is 2144, not the default 16, forced up so attention pages align with
+the mamba pages this hybrid needs. Hits are granted per whole block, so no
+prefix shorter than 2144 matching tokens can ever register — and the engine also
+logs `Mamba cache mode is set to 'align' ... when prefix caching is enabled`.
+
+run-0005 is a diagnostic in the sense h1's run-0003 was: it answers a question
+the arms depend on rather than testing the round's variable. Every run sends an
+identical prompt, so runs 2-7 should reuse run 1's blocks — except the reset
+wipes them. Removing it separates two failures we have been reading as one:
+
+- **hit rate above 0** — caching works across requests, and what fails is the
+  phase-1-to-phase-2 hop within a run, on block alignment. No flag in B, C or D
+  is the cause and those three arms are unnecessary.
+- **still 0.0%** — caching is inert for this model whatever the flags do, and
+  B, C and D would be three wasted runs.
+
+The reset stays in the recipe either way. It is removed here to read the cache,
+not because it was ever suspected.
+
+## Amendment, 2026-08-25
 
 Everything above stands for the pair it compares. Arm A and run-0005 differ
 only by the reset, both carry a pinned corpus, and between those two the reset

@@ -1,5 +1,35 @@
 # h3 — validation: `max_num_seqs 10` on arena's own unmodified 28-cell grid
 
+This file is the contract for the round: hypothesis, method, decision rule, and
+runs. It is not the notebook — per-round analysis belongs in the memory store,
+not here.
+
+## Verdict
+
+**TARGET MET, guard unresolved** — `d16384 c10` reads 141.5 against the
+Objective's floor of 102.31, +38%; the guard `d16384 c1` reads 95.8, 7.6% below
+103.7 and inside the pre-registered ±11% band, so it neither held nor regressed.
+
+## Runs
+
+<!-- RUNS:BEGIN -->
+| run | changed | why | cell | pp | tg | ttfr | bench |
+|---|---|---|---|---|---|---|---|
+| run-0001 | `recipe-new.yaml`: `max_num_seqs` 10, full 28-cell arena-v2 schedule | the only measurement that can close the Objective | d16384 c10 | 677.9 | **141.5** ±0.2% (141.5 140.8 141.7) | 28636.2 | bench_95fdfa8922a3 |
+| run-0001 | `recipe-new.yaml`: `max_num_seqs` 10, full 28-cell arena-v2 schedule | the guard cell of the same run | d16384 c1 | 628.0 | **95.8** ±15.0% (95.8 124.2 86.1) | 3281.9 | bench_95fdfa8922a3 |
+<!-- RUNS:END -->
+
+One row per planned run and cell; `pp` and `tg` in t/s, `ttfr` in ms. Figures
+blank until it is run. Script-written by `spark-autoresearch`'s CREATE/RECORD
+steps. Never hand-edit.
+
+Record, as h2 did: the container image tag and digest, the vLLM and flashinfer
+commits, `running max`, `waiting max`, `kv max`, preemptions, prefix cache hit
+rate and samples, LOOPING counts per cell, MTP acceptance, and the full 28-cell
+menu — the grid produces the whole board row, not just the two cells the rule
+reads, and the other twenty-six are the record of what `max_num_seqs 10` costs
+and buys everywhere else.
+
 ## Hypothesis
 
 `recipe-new.yaml` — `max_num_seqs: 10`, every other field identical to
@@ -141,21 +171,6 @@ before the run rather than after.
 One run means one value per cell and no interquartile range at all. Every branch
 above reads a single median against a fixed external number, which is the only
 form of rule a single validation run can support, and this is said in advance.
-
-## Runs
-
-One row per planned run. Figures blank until it is run.
-
-| run | changed | why | cell | pp t/s | tg t/s | ttfr ms | bench |
-|-----|---------|-----|------|--------|--------|---------|-------|
-| run-0001 | `recipe-new.yaml`: `max_num_seqs` 10, full 28-cell arena-v2 schedule | the only measurement that can close the Objective | d16384 c10, guard d16384 c1 | 677.9 | **141.5** ±0.2% (141.5 140.8 141.7) · guard c1 **95.8** ±15.0% (95.8 124.2 86.1), pp 628.0 | 28636.2 · guard c1 3281.9 | bench_95fdfa8922a3 |
-
-Record, as h2 did: the container image tag and digest, the vLLM and flashinfer
-commits, `running max`, `waiting max`, `kv max`, preemptions, prefix cache hit
-rate and samples, LOOPING counts per cell, MTP acceptance, and the full 28-cell
-menu — the grid produces the whole board row, not just the two cells the rule
-reads, and the other twenty-six are the record of what `max_num_seqs 10` costs
-and buys everywhere else.
 
 ## Conclusion
 

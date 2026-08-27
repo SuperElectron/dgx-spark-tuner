@@ -1,5 +1,35 @@
 # h1 — our token budget is twice the reference's and starves decode under load
 
+This file is the contract for the round: hypothesis, method, decision rule, and
+runs. It is not the notebook — per-round analysis belongs in the memory store,
+not here.
+
+## Verdict
+
+**Lever spent** — c10 falls monotonically as the token budget falls, 49.0 →
+48.0 → 44.2, so the hypothesis is refuted with the sign reversed.
+
+## Runs
+
+<!-- RUNS:BEGIN -->
+| run | changed | why | cell | pp | tg | ttfr | bench |
+|---|---|---|---|---|---|---|---|
+| run-0001 | baseline, `mnbt` 65536 | the control, on this screen's schedule | d16384 c10 | — | 49.0 ±0.3% | — | bench_685e42bde522 |
+| run-0001 | baseline, `mnbt` 65536 | the control, on this screen's schedule | d16384 c1 | — | 96.0 ±4.1% (n=7) | — | bench_685e42bde522 |
+| run-0001 | baseline, `mnbt` 65536 | the control, on this screen's schedule | d16384 c5 | — | 84.3 ±0.6% | — | bench_685e42bde522 |
+| run-0001 | baseline, `mnbt` 65536 | the control, on this screen's schedule | d16384 c2 | — | 136.1 ±1.6% | — | bench_685e42bde522 |
+| run-0002 | `mnbt` 65536 → 32768 | the reference recipe's value | d16384 c10 | — | 48.0 ±0.6% | — | bench_da8989775690 |
+| run-0002 | `mnbt` 65536 → 32768 | the reference recipe's value | d16384 c1 | — | 107.2 ±4.1% (n=7) | — | bench_da8989775690 |
+| run-0002 | `mnbt` 65536 → 32768 | the reference recipe's value | d16384 c5 | — | 80.8 ±0.5% | — | bench_da8989775690 |
+| run-0002 | `mnbt` 65536 → 32768 | the reference recipe's value | d16384 c2 | — | 131.3 ±2.9% | — | bench_da8989775690 |
+| run-0003 | `mnbt` 65536 → 16384 | is the mechanism monotone | d16384 c10 | — | 44.2 ±0.5% | — | bench_fbb28a3df00f |
+| run-0003 | `mnbt` 65536 → 16384 | is the mechanism monotone | d16384 c1 | — | 106.2 ±2.9% (n=7) | — | bench_fbb28a3df00f |
+| run-0003 | `mnbt` 65536 → 16384 | is the mechanism monotone — this cell is DAMAGED, do not quote | d16384 c5 | — | 61.3 | — | bench_fbb28a3df00f |
+| run-0003 | `mnbt` 65536 → 16384 | is the mechanism monotone | d16384 c2 | — | 130.5 ±1.6% | — | bench_fbb28a3df00f |
+<!-- RUNS:END -->
+
+Script-written by `spark-autoresearch`'s CREATE/RECORD steps. Never hand-edit.
+
 ## Hypothesis
 
 Lowering `max_num_batched_tokens` from 65536 to the reference recipe's 32768
@@ -133,13 +163,7 @@ Three values per arm at c10 means no interquartile range; the rule is stated on
 medians and a 5% threshold for exactly that reason, and this is said before the
 numbers exist rather than after.
 
-## Runs
-
-| run | changed | why | c10 tg | c1 tg | c5 tg | c2 tg | bench |
-|-----|---------|-----|--------|-------|-------|-------|-------|
-| run-0001 | baseline, `mnbt` 65536 | the control, on this screen's schedule | 49.0 ±0.3% | 96.0 ±4.1% (n=7) | 84.3 ±0.6% | 136.1 ±1.6% | bench_685e42bde522 |
-| run-0002 | `mnbt` 65536 → 32768 | the reference recipe's value | 48.0 ±0.6% | 107.2 ±4.1% (n=7) | 80.8 ±0.5% | 131.3 ±2.9% | bench_da8989775690 |
-| run-0003 | `mnbt` 65536 → 16384 | is the mechanism monotone | 44.2 ±0.5% | 106.2 ±2.9% (n=7) | 61.3 — DAMAGED, do not quote | 130.5 ±1.6% | bench_fbb28a3df00f |
+## Conclusion
 
 run-0003's c5 cell is damaged and its 61.3 must not be quoted. Verified in the
 archive: request 27 returned **1 token in 0.0 s** and the cell logged 29
@@ -260,8 +284,6 @@ Two further observations from the arms:
 run-0001 is not h5's number and does not inherit it: h5 ran the full 28-cell
 sweep and this is a four-cell screen, so the control must be measured on the
 same schedule as the arms it is compared against.
-
-## Conclusion
 
 **Lever spent. The hypothesis is refuted with the sign reversed.**
 

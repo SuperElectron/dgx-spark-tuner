@@ -1,5 +1,27 @@
 # h3 — is `tg128` measuring a transient?
 
+This file is the contract for the round: hypothesis, method, decision rule,
+and runs. It is not the notebook — per-round analysis belongs in the memory
+store, not here.
+
+## Verdict
+
+**LEVER SPENT** — transient bounded: `tg` 127.3 at tg128 against 120.6 at
+tg2048, but throughput inside a single generation is flat, so `tg128` is not
+measuring a warm-up transient.
+
+## Runs
+
+<!-- RUNS:BEGIN -->
+| run | changed | why | cell | pp | tg | ttfr | bench |
+|---|---|---|---|---|---|---|---|
+| run-0001 | `tg: 128` | the short cell at d0 — the baseline this round needs; runs 7, iqr 3.0%, trace varied, no repetition | pp128 d0 c1 | | 127.3 | | bench (see id.txt) |
+| run-0002 | `tg: 2048` | 16x longer: is steady state different? runs 7, iqr 2.4%, trace 4 of 7 degenerate | pp128 d0 c1 | | 120.6 | | bench_02f9548d80da |
+<!-- RUNS:END -->
+
+One row per planned run. Figures blank until it is run. Script-written by
+`spark-autoresearch`'s CREATE/RECORD steps. Never hand-edit.
+
 ## Hypothesis
 
 `tg 128` is too short to reach steady-state decode, so the figure the board
@@ -167,16 +189,62 @@ where it settles. A flat trace with a different median would mean the difference
 is a fixed per-request cost rather than a transient, which is a different finding
 and points at the scheduler rather than at MTP.
 
-## Runs
+## Conclusion
 
-One row per planned run. Figures blank until it is run.
+**The hypothesis is refuted as stated, and the observation it predicted is real
+for a different reason.**
 
-| run | tg | runs | why | tg t/s | iqr | trace shape | bench |
-|-----|----|------|-----|--------|-----|-------------|-------|
-| run-0001 | 128 | 7 | the short cell at d0 — the baseline this round needs | 127.3 | 3.0% | varied, no repetition | bench (see id.txt) |
-| run-0002 | 2048 | 7 | 16x longer: is steady state different? | 120.6 | 2.4% | 4 of 7 degenerate | bench_02f9548d80da |
+`tg` does change with generation length, in the predicted direction and past the
+rule's threshold: 127.3 at tg128 against 120.6 at tg2048, a gap of 6.7 against a
+larger IQR of 3.8. Restricted to the three requests that did not degenerate the
+gap is wider still, ~118.2. So the round's observable holds.
 
-## Runs so far
+Its mechanism does not. The hypothesis argued that MTP acceptance is a running
+statistic which has not settled at 128 tokens, so `tg128` would be a warm-up
+measurement. The timeseries refutes that directly: recomputed from raw token
+timestamps in one-second bins, throughput inside a single 2048-token generation
+is flat — 101 to 141 tok/s with no trend, no sag and no saw-tooth — and the
+first bin is 128 against 118 for the remainder, marginally **faster**. There is
+no warm-up transient to find.
+
+What is left is arithmetic. A 2048-token generation carries its own output as
+context: at d0 the sequence grows from 138 tokens to ~2186, and every decode
+step reads the KV accumulated so far. The average over 2048 tokens is therefore
+taken at a larger average context than the average over 128. **This is the same
+mechanism as depth, sourced from the model's own output rather than from the
+prompt** — which means h3 and depth-curve are measuring one effect, not two, and
+depth-curve is the experiment that can size it properly.
+
+So `tg128` is not measuring a transient. It is measuring decode at a small
+average context, which is exactly what it claims to measure. The board
+comparison is not compromised.
+
+**run-0003 was not run.** The decision rule's third branch anticipated this: at
+tg2048 four of seven requests already degenerated, with onset as early as token
+283, so at 8192 the run would measure how fast the model loops rather than how
+fast it decodes. An eighth data point bought at the cost of near-total
+degeneration cannot corroborate anything. The direction is already established
+by two cells and explained by a mechanism that predicts it monotonically.
+
+Two things this round leaves behind for the instrument:
+
+- **Degeneration is now a first-class check.** `measure.py` reports the worst
+  100-word sliding-window repeat ratio per run and names the looping requests.
+  Whole-output uniqueness cannot do this job — it is length-dependent, scoring
+  2048 tokens of clean prose the same as short looping text. Replayed on these
+  archives it flags exactly requests 3, 4, 5 and 6 of run-0002 and passes
+  run-0001 at 0.20.
+- **The throughput timeseries is a trailing one-second token count, not an
+  instantaneous rate.** Below t=1.0 it is the cumulative token index. Anything
+  read off its first second is the window filling. Recompute from raw token
+  timestamps instead.
+
+And one defect recorded rather than fixed: `exact_tg` did not hold — two
+requests returned 2046 tokens instead of 2048, confirmed against the streamed
+token counts. The effect here is ~0.1%, and the cause is upstream of the recipe,
+but a flag whose purpose is exactness should not be assumed to deliver it.
+
+Runs so far, kept from the round's working notes:
 
 run-0001 gives the baseline this round is measured against, and one result that
 belongs to depth-curve rather than here:
@@ -253,58 +321,3 @@ sourced from the model's own output rather than the prompt.
 `report()` shadowed the module-level `spread()`. The benchmark and archive are
 unaffected and every figure above was computed from the archive; the bug is
 fixed and `report()` now replays this run cleanly.
-
-## Conclusion
-
-**The hypothesis is refuted as stated, and the observation it predicted is real
-for a different reason.**
-
-`tg` does change with generation length, in the predicted direction and past the
-rule's threshold: 127.3 at tg128 against 120.6 at tg2048, a gap of 6.7 against a
-larger IQR of 3.8. Restricted to the three requests that did not degenerate the
-gap is wider still, ~118.2. So the round's observable holds.
-
-Its mechanism does not. The hypothesis argued that MTP acceptance is a running
-statistic which has not settled at 128 tokens, so `tg128` would be a warm-up
-measurement. The timeseries refutes that directly: recomputed from raw token
-timestamps in one-second bins, throughput inside a single 2048-token generation
-is flat — 101 to 141 tok/s with no trend, no sag and no saw-tooth — and the
-first bin is 128 against 118 for the remainder, marginally **faster**. There is
-no warm-up transient to find.
-
-What is left is arithmetic. A 2048-token generation carries its own output as
-context: at d0 the sequence grows from 138 tokens to ~2186, and every decode
-step reads the KV accumulated so far. The average over 2048 tokens is therefore
-taken at a larger average context than the average over 128. **This is the same
-mechanism as depth, sourced from the model's own output rather than from the
-prompt** — which means h3 and depth-curve are measuring one effect, not two, and
-depth-curve is the experiment that can size it properly.
-
-So `tg128` is not measuring a transient. It is measuring decode at a small
-average context, which is exactly what it claims to measure. The board
-comparison is not compromised.
-
-**run-0003 was not run.** The decision rule's third branch anticipated this: at
-tg2048 four of seven requests already degenerated, with onset as early as token
-283, so at 8192 the run would measure how fast the model loops rather than how
-fast it decodes. An eighth data point bought at the cost of near-total
-degeneration cannot corroborate anything. The direction is already established
-by two cells and explained by a mechanism that predicts it monotonically.
-
-Two things this round leaves behind for the instrument:
-
-- **Degeneration is now a first-class check.** `measure.py` reports the worst
-  100-word sliding-window repeat ratio per run and names the looping requests.
-  Whole-output uniqueness cannot do this job — it is length-dependent, scoring
-  2048 tokens of clean prose the same as short looping text. Replayed on these
-  archives it flags exactly requests 3, 4, 5 and 6 of run-0002 and passes
-  run-0001 at 0.20.
-- **The throughput timeseries is a trailing one-second token count, not an
-  instantaneous rate.** Below t=1.0 it is the cumulative token index. Anything
-  read off its first second is the window filling. Recompute from raw token
-  timestamps instead.
-
-And one defect recorded rather than fixed: `exact_tg` did not hold — two
-requests returned 2046 tokens instead of 2048, confirmed against the streamed
-token counts. The effect here is ~0.1%, and the cause is upstream of the recipe,
-but a flag whose purpose is exactness should not be assumed to deliver it.

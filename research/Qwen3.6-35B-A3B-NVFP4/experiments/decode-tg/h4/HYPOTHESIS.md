@@ -1,5 +1,28 @@
 # h4 — the draft path is the fattest target left at c1
 
+This file is the contract for the round: hypothesis, method, decision rule,
+and runs. It is not the notebook — per-round analysis belongs in the memory
+store, not here.
+
+## Verdict
+
+LEVER SPENT — the only alternative that ran, `flashinfer_cutlass` at 116.5
+tg, lands 2.8 below the 119.3 control, inside the control's 4.5% IQR.
+
+## Runs
+
+<!-- RUNS:BEGIN -->
+| run | changed | why | cell | pp | tg | ttfr | bench |
+|---|---|---|---|---|---|---|---|
+| run-0001 | draft `moe_backend: triton` | control, measured in the same sitting as the arms; iqr 4.5%; accept 3.11–3.32; engine backend line `Using TRITON Unquantized MoE backend` | d16384 c1 | 636.2 | 119.3 |  | bench_bcde52479f68 |
+| run-0002 | draft `moe_backend: batched_triton` | crash at init, no request served, none served for accept; engine backend line `Using BATCHED_TRITON Unquantized MoE backend` so selection is proved | d16384 c1 |  |  |  | bench_8a8ec2d89fe9 |
+| run-0003 | draft `moe_backend: flashinfer_trtllm` | unsupported on device, no request served, none served for accept; engine backend line `ValueError: ... does not support current device cuda` | d16384 c1 |  |  |  | — |
+| run-0004 | draft `moe_backend: flashinfer_cutlass` | iqr 2.5%; accept 3.05–3.35; engine backend line `Using FlashInfer CUTLASS Unquantized MoE backend` | d16384 c1 | 633.9 | 116.5 |  | bench_99d4f92d70a2 |
+<!-- RUNS:END -->
+
+Script-written by `spark-autoresearch`'s CREATE/RECORD steps. Never hand-edit.
+One row per planned run. Figures blank until it is run.
+
 ## Hypothesis
 
 The MTP draft runs on an unquantized Triton MoE kernel because nothing else was
@@ -95,16 +118,31 @@ around 3%.
 An arm that crashes at init is recorded with the engine's error and does not
 count toward "spent" — it was never measured.
 
-## Runs
+## Conclusion
 
-One row per planned run. Figures blank until it is run.
+**Lever spent.** The draft's MoE backend is not a tuning lever on this box.
 
-| run | draft moe_backend | tg t/s | iqr | pp t/s | accept | engine backend line | bench |
-|-----|-------------------|--------|-----|--------|--------|---------------------|-------|
-| run-0001 | `triton` — control | 119.3 | 4.5% | 636.2 | 3.11–3.32 | `Using TRITON Unquantized MoE backend` | bench_bcde52479f68 |
-| run-0002 | `batched_triton` | crash at init | — | — | none served | `Using BATCHED_TRITON Unquantized MoE backend` | bench_8a8ec2d89fe9 |
-| run-0003 | `flashinfer_trtllm` | unsupported on device | — | — | none served | `ValueError: ... does not support current device cuda` | — |
-| run-0004 | `flashinfer_cutlass` | 116.5 | 2.5% | 633.9 | 3.05–3.35 | `Using FlashInfer CUTLASS Unquantized MoE backend` | bench_99d4f92d70a2 |
+Of the three alternatives the dispatcher advertises, two cannot run here at all
+and the third is not better:
+
+| arm | backend | tg | vs control |
+|-----|---------|----|-----------|
+| run-0001 | `triton` (control) | 119.3, iqr 4.5% | — |
+| run-0002 | `batched_triton` | never served | factory `TypeError` |
+| run-0003 | `flashinfer_trtllm` | never served | kernel refuses SM121 |
+| run-0004 | `flashinfer_cutlass` | 116.5, iqr 2.5% | −2.8 |
+
+run-0004 is the only measured alternative and it lands 2.8 below the control,
+against a larger control IQR of 4.5% (~5.4 tok/s). That is inside the spread:
+not a loss, not a win, no difference to read. The hypothesis — that one of the
+three beats `triton` — is refuted for the two that cannot start and unsupported
+for the one that can.
+
+Acceptance behaved exactly as the method required it to. Control steady-state
+3.11–3.32, run-0004 3.05–3.35, first-sample 3.81 in both from the same
+low-volume startup window. The backend changed how the draft is computed and
+left what is drafted alone, so the `tg` figures are comparable and the null
+result is a real null rather than an artifact of drafting something different.
 
 ### run-0002 — `batched_triton` crashed at init
 
@@ -153,32 +191,6 @@ The dispatcher lists what it *could* build, not what this device can run. Two
 of four listed options are unreachable here for two different reasons: one the
 factory cannot construct, one the kernel refuses. That leaves
 `flashinfer_cutlass` as the only untested alternative to the `triton` default.
-
-## Conclusion
-
-**Lever spent.** The draft's MoE backend is not a tuning lever on this box.
-
-Of the three alternatives the dispatcher advertises, two cannot run here at all
-and the third is not better:
-
-| arm | backend | tg | vs control |
-|-----|---------|----|-----------|
-| run-0001 | `triton` (control) | 119.3, iqr 4.5% | — |
-| run-0002 | `batched_triton` | never served | factory `TypeError` |
-| run-0003 | `flashinfer_trtllm` | never served | kernel refuses SM121 |
-| run-0004 | `flashinfer_cutlass` | 116.5, iqr 2.5% | −2.8 |
-
-run-0004 is the only measured alternative and it lands 2.8 below the control,
-against a larger control IQR of 4.5% (~5.4 tok/s). That is inside the spread:
-not a loss, not a win, no difference to read. The hypothesis — that one of the
-three beats `triton` — is refuted for the two that cannot start and unsupported
-for the one that can.
-
-Acceptance behaved exactly as the method required it to. Control steady-state
-3.11–3.32, run-0004 3.05–3.35, first-sample 3.81 in both from the same
-low-volume startup window. The backend changed how the draft is computed and
-left what is drafted alone, so the `tg` figures are comparable and the null
-result is a real null rather than an artifact of drafting something different.
 
 ### What this closes, and what it points at
 
