@@ -14,6 +14,7 @@ number that decided it>
 <!-- RUNS:BEGIN -->
 | run | changed | why | cell | pp | tg | ttfr | bench |
 |---|---|---|---|---|---|---|---|
+| run-0001 | max_num_seqs: 4 -> 4 (control, baseline unchanged) | CRASH before engine launch: image distribution failed, 'pull access denied for vllm-node' — recipe_version '2' with no builder key leaves the vllm-node alias unresolved | d0 c10 | — | — | — | bench_d71964e4722e |
 <!-- RUNS:END -->
 
 Script-written by `spark-autoresearch`'s CREATE/RECORD steps. Never hand-edit.

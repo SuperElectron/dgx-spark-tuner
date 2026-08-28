@@ -23,7 +23,7 @@ benchmark:
   concurrency: [10]
   runs: 3
   prefix_caching: true
-recipe_version: '1'
+recipe_version: '2'
 model: LiquidAI/LFM2.5-350M
 solo_only: false
 container: vllm-node
