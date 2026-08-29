@@ -1,0 +1,20 @@
+framework: llama-benchy
+metadata:
+  description: Spark Arena tg128 at concurrency 4, all seven arena depths
+args:
+  depth: [ 0, 4096, 8192, 16384, 32768, 65535, 100000 ]
+  pp: [ 2048 ]
+  tg: [ 128 ]
+  concurrency: [ 4 ]
+  prefix_caching: true
+  runs: 3
+
+# Ascending depth, matching what c4/EXPERIMENT.md holds fixed for every arm.
+schedule:
+  - { depth: 0, concurrency: 4 }
+  - { depth: 4096, concurrency: 4 }
+  - { depth: 8192, concurrency: 4 }
+  - { depth: 16384, concurrency: 4 }
+  - { depth: 32768, concurrency: 4 }
+  - { depth: 65535, concurrency: 4 }
+  - { depth: 100000, concurrency: 4 }
