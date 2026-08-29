@@ -1,0 +1,35 @@
+bench      bench_166566165efe
+regime     default
+epoch      vllm 0.27.2rc1.dev360+ge85d1b69c.d20260821  flashinfer 0.6.18
+
+cells
+  pp2048 (c10)                  89499.37  sd 2092.37  cv   2.3%
+  tg128 (c10)                    1916.46  sd  108.94  cv   5.7%
+  ctx_pp @ d4096 (c10)          90506.00  sd 4325.65  cv   4.8%
+  ctx_tg @ d4096 (c10)           1477.96  sd   59.26  cv   4.0%
+  pp2048 @ d4096 (c10)          30373.59  sd  428.32  cv   1.4%
+  tg128 @ d4096 (c10)            1142.92  sd   45.50  cv   4.0%
+  ctx_pp @ d8192 (c10)          89065.50  sd  597.68  cv   0.7%
+  ctx_tg @ d8192 (c10)            850.83  sd   47.46  cv   5.6%
+  pp2048 @ d8192 (c10)          18239.53  sd  688.66  cv   3.8%
+  tg128 @ d8192 (c10)             791.52  sd    3.21  cv   0.4%
+  ctx_pp @ d16384 (c10)         79419.46  sd  878.06  cv   1.1%
+  ctx_tg @ d16384 (c10)           406.98  sd   19.72  cv   4.8%
+  pp2048 @ d16384 (c10)          8571.94  sd   55.55  cv   0.6%
+  tg128 @ d16384 (c10)            386.32  sd   15.41  cv   4.0%
+
+served     matches recipe defaults (6 fields)
+queue      max running 9, max waiting 7, 4 frames
+cache      max 1.2% over 4 samples
+cudagraph  [1, 2, 4, 8, 16]
+
+tg repeats
+  tg128 @ d0 (c10)        median   1854.76  1825.05 1854.76 2069.58
+  ctx_tg @ d4096 (c10)    median   1491.21  1399.67 1491.21 1543.01
+  tg128 @ d4096 (c10)     median   1168.31  1079.03 1168.31 1181.42
+  ctx_tg @ d8192 (c10)    median    875.71  784.41 875.71 892.37
+  tg128 @ d8192 (c10)     median    790.96  787.91 790.96 795.70
+  ctx_tg @ d16384 (c10)   median    419.46  379.15 419.46 422.34
+  tg128 @ d16384 (c10)    median    396.00  364.56 396.00 398.39
+
+box        no telemetry captured — box state under load is unknown

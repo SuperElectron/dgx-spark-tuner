@@ -26,8 +26,10 @@ field nothing can move is not worth a memory.
 Two GB10 power-delivery faults pin the GPU at 513 or 721 MHz while reporting an
 all-clear throttle bitmask — plausible numbers, roughly 3x wrong. At rest the
 card sits near 200 MHz, so an idle sweep cannot see the fault. It is caught
-under load, by `experiment`, against the band in
-`.claude/skills/experiment/scripts/measure.py`.
+under load, by `experiment`, by reading the clock out of the run's
+`telemetry.jsonl`. Note the clock has read a constant 208 MHz in every frame of
+every run so far, including frames at 96% utilisation — so it is currently
+unmeasured under load, not measured in band.
 
 What the idle sweep contributes is the before-and-after: a dated record of the
 box's resting state on either side of the day the fault first appeared.
