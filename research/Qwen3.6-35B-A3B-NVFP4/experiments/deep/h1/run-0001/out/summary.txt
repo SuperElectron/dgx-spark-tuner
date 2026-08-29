@@ -1,0 +1,50 @@
+bench      bench_89e329cc4d8e
+regime     default
+epoch      vllm 0.27.2rc1.dev360+ge85d1b69c.d20260821  flashinfer 0.6.18
+
+cells
+  ctx_pp @ d32768 (c5)           5366.63  sd    2.21  cv   0.0%
+  ctx_tg @ d32768 (c5)             73.24  sd    0.52  cv   0.7%
+  pp2048 @ d32768 (c5)            312.88  sd    0.13  cv   0.0%
+  tg128 @ d32768 (c5)             125.62  sd    3.24  cv   2.6%
+  ctx_pp @ d32768 (c10)          5325.95  sd    8.28  cv   0.2%
+  ctx_tg @ d32768 (c10)            31.09  sd    0.21  cv   0.7%
+  pp2048 @ d32768 (c10)           309.10  sd    0.16  cv   0.1%
+  tg128 @ d32768 (c10)             37.82  sd    0.14  cv   0.4%
+  ctx_pp @ d65535 (c5)           4162.89  sd    2.21  cv   0.1%
+  ctx_tg @ d65535 (c5)             14.18  sd    0.49  cv   3.4%
+  pp2048 @ d65535 (c5)            125.01  sd    0.03  cv   0.0%
+  tg128 @ d65535 (c5)              20.72  sd    0.01  cv   0.0%
+  ctx_pp @ d65535 (c10)          4146.50  sd    1.12  cv   0.0%
+  ctx_tg @ d65535 (c10)            10.22  sd    0.02  cv   0.2%
+  pp2048 @ d65535 (c10)           124.20  sd    0.02  cv   0.0%
+  tg128 @ d65535 (c10)             11.06  sd    0.02  cv   0.2%
+  ctx_pp @ d100000 (c5)          3383.55  sd    0.79  cv   0.0%
+  ctx_tg @ d100000 (c5)             7.29  sd    0.01  cv   0.2%
+  pp2048 @ d100000 (c5)            67.26  sd    0.01  cv   0.0%
+  tg128 @ d100000 (c5)              8.57  sd    0.03  cv   0.3%
+  ctx_pp @ d100000 (c10)         3370.44  sd    0.50  cv   0.0%
+  ctx_tg @ d100000 (c10)            5.35  sd    0.01  cv   0.2%
+  pp2048 @ d100000 (c10)           66.95  sd    0.08  cv   0.1%
+  tg128 @ d100000 (c10)             5.55  sd    0.00  cv   0.0%
+
+served     matches recipe defaults (6 fields)
+queue      max running 10, max waiting 7, 385 frames
+cache      max 0.0% over 385 samples
+cudagraph  [1, 2, 4, 8, 16, 24, 32, 40, 48, 56, 64, 72, 80]
+
+tg repeats
+  ctx_tg @ d32768 (c5)    median     73.07  72.70 73.07 73.94
+  tg128 @ d32768 (c5)     median    125.61  121.65 125.61 129.59
+  ctx_tg @ d32768 (c10)   median     31.20  30.80 31.20 31.27
+  tg128 @ d32768 (c10)    median     37.89  37.62 37.89 37.94
+  ctx_tg @ d65535 (c5)    median     14.45  13.49 14.45 14.59
+  tg128 @ d65535 (c5)     median     20.72  20.72 20.72 20.73
+  ctx_tg @ d65535 (c10)   median     10.23  10.19 10.23 10.24
+  tg128 @ d65535 (c10)    median     11.06  11.05 11.06 11.09
+  ctx_tg @ d100000 (c5)   median      7.29  7.29 7.29 7.31
+  tg128 @ d100000 (c5)    median      8.57  8.53 8.57 8.60
+  ctx_tg @ d100000 (c10)  median      5.35  5.34 5.35 5.36
+  tg128 @ d100000 (c10)   median      5.55  5.55 5.55 5.55
+
+box        no telemetry captured — box state under load is unknown

@@ -1,0 +1,23 @@
+bench      bench_71141c480b98
+regime     default
+epoch      vllm 0.27.2rc1.dev360+ge85d1b69c.d20260821  flashinfer 0.6.18
+
+cells
+  pp2048 (c10)                  33134.55  sd  314.47  cv   0.9%
+  tg128 (c10)                     665.46  sd    1.53  cv   0.2%
+  ctx_pp @ d4096 (c10)          30394.11  sd  391.36  cv   1.3%
+  ctx_tg @ d4096 (c10)            463.57  sd   10.47  cv   2.3%
+  pp2048 @ d4096 (c10)          22473.94  sd  159.02  cv   0.7%
+  tg128 @ d4096 (c10)             472.12  sd    0.48  cv   0.1%
+
+served     matches recipe defaults (8 fields)
+queue      max running 10, max waiting 3, 4 frames
+cache      max 31.5% over 4 samples
+cudagraph  [1, 2, 4, 8, 16, 24, 32, 40, 48, 56, 64, 72, 80, 88, 96, 104, 112, 120, 128]
+
+tg repeats
+  tg128 @ d0 (c10)        median    664.43  664.33 664.43 667.62
+  ctx_tg @ d4096 (c10)    median    458.08  454.40 458.08 478.21
+  tg128 @ d4096 (c10)     median    471.96  471.64 471.96 472.77
+
+box        no telemetry captured — box state under load is unknown
