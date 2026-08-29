@@ -1,0 +1,52 @@
+benchmark_id: bench_5191e7d34c56
+cluster_id: sparkrun_55e0583fe6b308a0_313596140c4f
+recipe_qualified_name: research/Qwen3.6-35B-A3B-NVFP4/experiments/deep/h2/run-0001/recipe.yaml
+framework: llama-benchy
+profile: null
+base_args:
+  pp:
+  - 2048
+  depth:
+  - 32768
+  - 65535
+  - 100000
+  prefix_caching: true
+  tg:
+  - 128
+  concurrency:
+  - 5
+  - 10
+  runs: 3
+schedule:
+- depth: 32768
+  concurrency: 5
+- depth: 32768
+  concurrency: 10
+- depth: 65535
+  concurrency: 5
+- depth: 65535
+  concurrency: 10
+- depth: 100000
+  concurrency: 5
+- depth: 100000
+  concurrency: 10
+intent_id: 55e0583fe6b308a0
+completed_indices:
+- 0
+- 1
+- 2
+- 3
+- 4
+- 5
+failed_indices: []
+crash_count: 0
+session_count: 1
+sessions:
+- session: 1
+  started_at: '2026-08-29T19:47:47.256332+00:00'
+  status: completed
+  ended_at: '2026-08-29T21:10:08.043060+00:00'
+extras:
+  framework_version: 0.4.0
+created_at: '2026-08-29T19:47:47.256373+00:00'
+updated_at: '2026-08-29T21:10:08.043066+00:00'
