@@ -128,4 +128,11 @@ list did not follow the truncate-at-2x-mns rule recorded on another model.
 
 What this does not settle: every figure is cold-cache and none was measured on
 the board's own epoch, so a claim against the board crosses a build boundary.
-Submission is Mat's call, not this experiment's.
+
+Submitted 2026-08-29 as `sub1788019477321`, seven c4 cells, `bench_5d49b3869817`,
+via `--arena --profile profile-c4.yaml`. `--arena` alone replaces the grid with
+the standard 1/2/5/10 profile and `-b concurrency=4` does not survive that
+override; a custom profile does. The submission adds d65535 (37.45) and d100000
+(11.93), never measured before on this model at c4 — the c5/c10 collapse to
+20.56 and 5.50 is roughly halved there, but does not vanish, so queueing is not
+the whole account of it.
