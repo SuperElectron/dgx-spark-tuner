@@ -23,7 +23,7 @@ every caller.
 | skill | recall | write | update | delete | sweep | record-run | embedder |
 |---|---|---|---|---|---|---|---|
 | `memory` | all forms | all four markers | yes | yes | yes | yes | start + stop |
-| `experiment` | none | `[ENV]` only | no | no | no | no | **never** |
+| `experiment` | `--list` `--get` `--filter` | `[OBSERVATION]` at `round:`, `[ENV]` at `box:` | no | no | no | yes | start + stop |
 | `spark-hypothesis` | all forms, incl. semantic | `[OBSERVATION]` at `round:` | no | no | no | no | start + stop |
 | `spark-autoresearch` | `--list` `--get` `--filter` | `[OBSERVATION]` at `round:`, `[LESSON]` at tier 2 | no | `prune-round.sh` only | no | yes | **stop only** |
 | `spark-model` | none | none | no | no | no | no | no |
@@ -55,11 +55,16 @@ sweep. It is not `epoch.build_source`, which is sparkrun's
 keys name different objects and can disagree; a reader comparing them across
 records must know that before drawing an epoch boundary from either.
 
-__`experiment`__ — runs the benchmark and reports the figures. It writes exactly
-one thing: an `[ENV]` at `box:<alias>` when the box left its measurement band,
-and only then — carrying `epoch.build_source`, never `epoch.image`. It does not recall, because it must not see the expected answer —
-an agent that can read what the round hopes for can steer toward it. It never
-deletes, never writes a runs row, and **never raises the embedder**.
+__`experiment`__ — runs the benchmark with the `sparkrun` CLI and reports the
+figures. It writes an `[ENV]` at `box:<alias>` when the box left its
+measurement band — carrying `epoch.build_source`, never `epoch.image` — and an
+`[OBSERVATION]` at `round:` for what each run measured, stamped with the
+protocol. It recalls to see whether a run has been done before. It never
+deletes.
+
+It **may** raise the embedder, but only between runs, never while one is in
+flight: the embedder is a vLLM instance holding ~6 GB on the card being timed.
+Up to write, down before the next measurement.
 
 __`spark-hypothesis`__ — the only skill with a legitimate reason to bring the
 embedder up. It opens an experiment, and the recall that precedes a hypothesis
@@ -96,8 +101,9 @@ shared card, and nothing in the results says so.
 
 That single fact sets the whole column:
 
-- a skill that **runs benchmarks** must never raise it — `experiment`, and
-  `spark-autoresearch`, whose loop dispatches them
+- a skill that **runs benchmarks** must never raise it *while one is running* —
+  `experiment` may cycle it between runs to write, `spark-autoresearch`, whose
+  loop dispatches them, may only stop it
 - a skill that **needs semantic search before any run exists** may raise it, and
   must lower it again — `spark-hypothesis`, at START only
 - a skill that dispatches runs gets **`stop`**, so it can assert the card is
