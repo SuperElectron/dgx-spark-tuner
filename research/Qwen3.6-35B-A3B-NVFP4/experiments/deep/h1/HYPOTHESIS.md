@@ -6,8 +6,8 @@ store, not here.
 
 ## Verdict
 
-<one line, filled at conclusion: TARGET MET / LEVER ALIVE / LEVER SPENT — the
-number that decided it>
+LEVER SPENT — the peer configuration is worse in all six cells, 0.33x to 0.87x
+of our own control. The gap is not this configuration.
 
 ## Runs
 
@@ -106,7 +106,32 @@ and must be labelled as one.
 
 ## Conclusion
 
-<pending>
+Refuted, and in the opposite direction to the hypothesis. Our checkpoint under
+all six peer fields at once gives 41.99 / 25.49 / 12.06 / 9.24 / 5.88 / 4.80
+against a control of 125.62 / 37.82 / 20.72 / 11.06 / 8.57 / 5.55 — worse
+everywhere, 0.33x at d32768 c5. No cell approached its leader, so the Objective
+did not move.
+
+The control reproduced the 2026-08-24 grid to within 1.5% in every cell
+(125.62 vs 125.87, 37.82 vs 37.28, 5.55 vs 5.50), so the comparison is sound
+and `bf2cf33a`'s reproducibility claim holds a third time.
+
+The decision rule could not resolve this and that is a fault in the rule, not
+in the data. It offered "lever spent if the arm is within 25% of the control in
+every cell", which assumed a large move would be an improvement. The arm moved
+far outside 25% while failing, so no branch fits. The verdict is entered as
+LEVER SPENT on the substance: six fields moved together and the configuration
+is refuted as the explanation. A rule written for a two-sided outcome would have
+said so directly. The rule is left as written.
+
+What this does not establish: which field did the damage. Six moved at once, and
+the round cannot attribute. Dropping `max_num_seqs` alone expanded the cudagraph
+capture list from 13 sizes to 51, topping out at 512 — visible in the engine log
+and a candidate for the d32768 c5 collapse, but a candidate only.
+
+Since configuration is refuted and the checkpoint is closed by Held, the
+remaining lever inside this experiment is the memory shape `7bd4c673` named and
+nobody has tested: `max_model_len 262144`. h2 takes it.
 
 Budget: 15 lines. State which of the three the decision rule gave and the
 number that decided it; anything beyond that — per-run analysis, discarded
