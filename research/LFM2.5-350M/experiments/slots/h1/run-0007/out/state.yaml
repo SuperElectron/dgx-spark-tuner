@@ -1,0 +1,125 @@
+benchmark_id: bench_69e12ab66a0a
+cluster_id: sparkrun_1619e2a9952c9dee_313596140c4f
+recipe_qualified_name: research/LFM2.5-350M/experiments/slots/h1/run-0007/recipe.yaml
+framework: llama-benchy
+profile: '@official/spark-arena-v2'
+base_args:
+  pp:
+  - 2048
+  depth:
+  - 0
+  - 4096
+  - 8192
+  - 16384
+  - 32768
+  - 65535
+  - 100000
+  prefix_caching: true
+  tg:
+  - 128
+  concurrency:
+  - 1
+  - 2
+  - 5
+  - 10
+  runs: 3
+schedule:
+- depth: 8192
+  concurrency: 5
+- depth: 4096
+  concurrency: 5
+- depth: 8192
+  concurrency: 10
+- depth: 8192
+  concurrency: 2
+- depth: 4096
+  concurrency: 2
+- depth: 100000
+  concurrency: 5
+- depth: 100000
+  concurrency: 2
+- depth: 65535
+  concurrency: 10
+- depth: 65535
+  concurrency: 1
+- depth: 0
+  concurrency: 1
+- depth: 65535
+  concurrency: 5
+- depth: 32768
+  concurrency: 2
+- depth: 4096
+  concurrency: 10
+- depth: 16384
+  concurrency: 1
+- depth: 8192
+  concurrency: 1
+- depth: 32768
+  concurrency: 5
+- depth: 0
+  concurrency: 10
+- depth: 16384
+  concurrency: 10
+- depth: 32768
+  concurrency: 1
+- depth: 0
+  concurrency: 5
+- depth: 16384
+  concurrency: 5
+- depth: 100000
+  concurrency: 1
+- depth: 32768
+  concurrency: 10
+- depth: 16384
+  concurrency: 2
+- depth: 0
+  concurrency: 2
+- depth: 65535
+  concurrency: 2
+- depth: 4096
+  concurrency: 1
+- depth: 100000
+  concurrency: 10
+intent_id: 1619e2a9952c9dee
+completed_indices:
+- 0
+- 1
+- 2
+- 3
+- 4
+- 5
+- 6
+- 7
+- 8
+- 9
+- 10
+- 11
+- 12
+- 13
+- 14
+- 15
+- 16
+- 17
+- 18
+- 19
+- 20
+- 21
+- 22
+- 23
+- 24
+- 25
+- 26
+- 27
+failed_indices: []
+crash_count: 0
+session_count: 1
+sessions:
+- session: 1
+  started_at: '2026-08-29T01:08:04.329100+00:00'
+  status: completed
+  ended_at: '2026-08-29T01:10:52.347646+00:00'
+extras:
+  submission_id: sub1787965681732
+  framework_version: 0.4.0
+created_at: '2026-08-29T01:08:04.329121+00:00'
+updated_at: '2026-08-29T01:10:52.347663+00:00'
