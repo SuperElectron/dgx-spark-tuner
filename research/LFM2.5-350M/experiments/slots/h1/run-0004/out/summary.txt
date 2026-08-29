@@ -1,0 +1,31 @@
+bench      bench_a7d67751eda9
+regime     default
+epoch      vllm ?  flashinfer ?
+
+cells
+  pp2048 (c10)                  89812.86  sd 1768.48  cv   2.0%
+  tg128 (c10)                    2096.19  sd   85.04  cv   4.1%
+  ctx_pp @ d4096 (c10)          92228.98  sd 3241.55  cv   3.5%
+  ctx_tg @ d4096 (c10)           1565.72  sd   35.23  cv   2.3%
+  pp2048 @ d4096 (c10)          31448.39  sd 1141.34  cv   3.6%
+  tg128 @ d4096 (c10)            1168.50  sd   35.23  cv   3.0%
+  ctx_pp @ d8192 (c10)          88808.95  sd  455.13  cv   0.5%
+  ctx_tg @ d8192 (c10)            949.08  sd   25.21  cv   2.7%
+  pp2048 @ d8192 (c10)          17318.45  sd  119.92  cv   0.7%
+  tg128 @ d8192 (c10)             698.45  sd   65.62  cv   9.4%
+  ctx_pp @ d16384 (c10)         79288.36  sd  778.43  cv   1.0%
+  ctx_tg @ d16384 (c10)           460.05  sd   19.68  cv   4.3%
+  pp2048 @ d16384 (c10)          8594.36  sd   36.35  cv   0.4%
+  tg128 @ d16384 (c10)            404.79  sd   21.21  cv   5.2%
+
+served     matches recipe defaults (6 fields)
+queue      max running 9, max waiting 7, 5 frames
+cache      max 1.0% over 5 samples
+cudagraph  [1, 2, 4, 8, 16, 24, 32]
+
+short generations
+
+box        no telemetry captured
+  gpu      util 0%  power 0.0 W  temp 0 C
+  mem      0 MB  swap 0 MB
+  clock    []

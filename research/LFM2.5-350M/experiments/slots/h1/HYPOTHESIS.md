@@ -6,8 +6,8 @@ store, not here.
 
 ## Verdict
 
-<one line, filled at conclusion: TARGET MET / LEVER ALIVE / LEVER SPENT — the
-number that decided it>
+TARGET MET — `mns 16` measures 2197.72 t/s at `tg128 @ d0 (c10)`, against the
+1042.20 t/s target. `mns 10` clears it too, at 1911.16.
 
 ## Runs
 
@@ -15,6 +15,10 @@ number that decided it>
 | run | changed | why | cell | pp | tg | ttfr | bench |
 |---|---|---|---|---|---|---|---|
 | run-0001 | max_num_seqs: 4 -> 4 (control, baseline unchanged) | CRASH before engine launch: image distribution failed, 'pull access denied for vllm-node' — recipe_version '2' with no builder key leaves the vllm-node alias unresolved | d0 c10 | — | — | — | bench_d71964e4722e |
+| run-0002 | max_num_seqs: 4 -> 4 (control, baseline unchanged) | run-0001 crashed before engine launch; recipe_version 1 fix (11d9722) makes the control runnable | d0 c10 | 21799.2 | 1020.7 | 510 | bench_3e383b29d978 |
+| run-0003 | max_num_seqs: 4 -> 10 | run-0002 control reproduced the field at 1021.87 t/s and ran Running 4 / Waiting 6-7, so six of ten offered requests were queued and unadmitted | d0 c10 | 89754.2 | 1927.2 | 204 | bench_356582688687 |
+| run-0004 | max_num_seqs: 4 -> 16 | run-0003 at mns 10 moved tg128 d0 c10 +87.0% over the control, so the Method calls for 16 to find the smallest sufficient value | d0 c10 | 91831.4 | 2188.4 | 199 | bench_4d8f02ff6b65 |
+| run-0005 | none — recipe-new.yaml verbatim (max_num_seqs: 16) | post-close verification of the promoted recipe on a fresh boot; not an arm, decides nothing | d0 c10 | 88475.9 | 2229.8 | 173.6 | bench_97c6be259d27 |
 <!-- RUNS:END -->
 
 Script-written by `spark-autoresearch`'s CREATE/RECORD steps. Never hand-edit.
@@ -119,10 +123,22 @@ are ties.
 
 ## Conclusion
 
-<pending>
+TARGET MET. `max_num_seqs` ran 4 / 10 / 16 at `tg128 @ d0 (c10)`, n=3 each:
+1021.87 (sd 2.97), 1911.16 (sd 30.49), 2197.72 (sd 32.24) t/s, spreads not
+overlapping. The control sits inside the 700-1042 validity band, so the arms
+read; 16 clears the 1042.20 target by 110.9%, and 10 clears it too.
 
-Budget: 15 lines. State which of the three the decision rule gave and the
-number that decided it; anything beyond that — per-run analysis, discarded
-theories, exploratory reasoning — goes to the memory store, not here. 15
-lines is enough to name the verdict, the deciding figure, and one line of
-why; it is not enough to re-derive the round.
+The hypothesised mechanism holds only for 4 -> 10 — control Running 4 /
+Waiting 6, `mns 10` Running 10 / Waiting 0. At 16 Running never passed 9, so
+slots 11-16 admitted nothing and the +15.0% over 10 is a different effect;
+16 is an exact `cudagraph_capture_size` and 10 is not, which is h2's to test.
+That kills `0dfb65f1` and `65527b17` outside the 35B MoE they came from.
+
+Two caveats the precondition does not cover: prefix cache was inert in every
+arm (0.0 / 0.7 / 0.0% hit, llama-benchy's prompts share no prefix) so every
+figure is cold-cache, and the 1042.20 entry pins an image absent from this box.
+The arms compare to each other cleanly; against the board they cross a build.
+
+Where the rule fits badly: its "lever spent" clause reads 16-over-10 as proof
+the queue is fully admitted. It was fully admitted at 10, and 16 still gained
+15.0%. Target met resolves first, so the clause never fired.

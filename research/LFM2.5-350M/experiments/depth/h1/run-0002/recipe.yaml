@@ -1,0 +1,41 @@
+command: |
+  vllm serve LiquidAI/LFM2.5-350M \
+    --host {host} \
+    --port {port} \
+    --language-model-only \
+    --max-model-len {max_model_len} \
+    --max-num-batched-tokens {max_num_batched_tokens} \
+    --max-num-seqs {max_num_seqs} \
+    --gpu-memory-utilization {gpu_memory_utilization} \
+    --load-format fastsafetensors \
+    --attention-backend FLASHINFER \
+    --enable-prefix-caching \
+    --enable-chunked-prefill \
+    --trust-remote-code \
+    --dtype auto \
+    --kv-cache-dtype fp8 \
+    --quantization fp8 \
+benchmark:
+  framework: llama-benchy
+  pp: [2048]
+  tg: [128]
+  depth: [0, 4096, 8192, 16384]
+  concurrency: [10]
+  runs: 3
+  prefix_caching: true
+recipe_version: '1'
+model: LiquidAI/LFM2.5-350M
+solo_only: false
+container: vllm-node
+cluster_only: false
+env:
+  VLLM_MARLIN_USE_ATOMIC_ADD: '1'
+description: LFM2.5-350M — depth/h1 run-0002, max_num_batched_tokens 32768 arm
+name: LFM2.5-350M
+defaults:
+  port: 8000
+  host: 0.0.0.0
+  gpu_memory_utilization: 0.8
+  max_model_len: 32768
+  max_num_batched_tokens: 32768
+  max_num_seqs: 16

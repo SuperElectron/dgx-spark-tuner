@@ -35,8 +35,8 @@ Invoke the skill; do not reimplement it from memory.
   rounds that chase it; concludes each round and decides what follows.
 - `spark-autoresearch` — the loop inside one round: create a run, dispatch it,
   record it, then conclude and act.
-- `experiment` — runs one run directory and reports the figures. Sees no
-  hypothesis.
+- `experiment` — runs one run directory with the `sparkrun` CLI and reports
+  the figures, each stamped with the protocol that produced it.
 - `memory` — the research memory: recall before a lever is chosen, write what
   each run measured, promote what holds wider at round close. It also sweeps
   the box at rest (clocks, power policy, thermals, driver, kernel, image

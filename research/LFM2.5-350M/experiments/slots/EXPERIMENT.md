@@ -133,8 +133,24 @@ says so in its own Method. Anything named here is closed to every round.
 
 | round | hypothesis | outcome |
 |-------|------------|---------|
-| h1 | lifting `max_num_seqs` above 4 claims the offered-but-unadmitted load at c10 | pending |
+| h1 | lifting `max_num_seqs` above 4 claims the offered-but-unadmitted load at c10 | TARGET MET — `mns 16` 2197.72 t/s at `tg128 d0 c10` vs 1042.20 target |
 
 ## Conclusion
 
-<pending — written when the objective is reached or the levers are exhausted>
+Objective reached in h1, on the first lever of the ladder. `max_num_seqs` 4 ->
+16 takes `tg128 d0 c10` from 1021.87 to 2197.72 t/s (+115.1%, n=3, spreads not
+overlapping), against a target of 1042.20. `mns 10` also clears it, at 1911.16.
+`recipe-new.yaml` carries `max_num_seqs: 16`; nothing else moved.
+
+Half the win is the mechanism the Strategy argued: at `mns 4` the engine held
+Running 4 / Waiting 6 of the ten offered, and `mns 10` emptied that queue. The
+other half is not — at `mns 16` Running never passed 9, so the extra slots
+admitted nothing and the +15.0% over 10 has another cause. h2's CUDA-graph
+lever is the standing candidate and is now motivated by a measured row rather
+than by the ladder's ordering.
+
+Two things the figures do not claim. Every arm ran cold-cache (prefix-cache hit
+rate ~0% throughout, a property of llama-benchy's prompts), and none ran the
+image the 1042.20 entry pins. The arms are comparable to each other; a claim
+against the board crosses a vLLM build boundary and would need re-measuring on
+the board's own epoch to be clean. Submission is Mat's call, not this round's.
