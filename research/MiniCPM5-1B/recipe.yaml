@@ -1,0 +1,45 @@
+command: |
+  vllm serve openbmb/MiniCPM5-1B \
+    --host {host} \
+    --port {port} \
+    --served-model-name {served_model_name} \
+    --tensor-parallel-size {tensor_parallel} \
+    --trust-remote-code \
+    --dtype bfloat16 \
+    --gpu-memory-utilization {gpu_memory_utilization} \
+    --max-model-len {max_model_len} \
+    --max-num-batched-tokens {max_num_batched_tokens} \
+    --max-num-seqs {max_num_seqs} \
+    --enable-prefix-caching \
+    --enable-chunked-prefill
+model: openbmb/MiniCPM5-1B
+recipe_version: '1'
+name: MiniCPM5-1B
+container: vllm-node
+runtime: vllm
+builder: eugr
+cluster_only: false
+solo_only: true
+mods: []
+env: {}
+defaults:
+  host: 0.0.0.0
+  port: 8000
+  served_model_name: minicpm5-1b
+  tensor_parallel: 1
+  gpu_memory_utilization: 0.5
+  max_model_len: 8192
+  max_num_batched_tokens: 4096
+  max_num_seqs: 64
+benchmark:
+  framework: llama-benchy
+  args:
+    depth: [0, 4096]
+    pp: [2048]
+    tg: [128]
+    concurrency: [10]
+    prefix_caching: true
+    runs: 3
+  schedule:
+    - { depth: 0,    concurrency: 10 }
+    - { depth: 4096, concurrency: 10 }
