@@ -6,8 +6,7 @@ store, not here.
 
 ## Verdict
 
-<one line, filled at conclusion: TARGET MET / LEVER ALIVE / LEVER SPENT — the
-number that decided it>
+LEVER SPENT — every cell within 1.1% of the control. The window is inert.
 
 ## Runs
 
@@ -92,7 +91,25 @@ at all, not to resolve a small effect.
 
 ## Conclusion
 
-<pending>
+Inert. Halving `max_model_len` to 131072 gives 125.27 / 38.23 / 20.88 / 11.07 /
+8.63 / 5.54 against a control of 125.62 / 37.82 / 20.72 / 11.06 / 8.57 / 5.55 —
+ratios 0.997 to 1.011, every cell inside 1.1% and far inside the +/-10% band.
+The rule's two-sided form was not needed but cost nothing.
+
+The engine confirms the arm was real: `non-default args:` shows
+`max_model_len 131072`, and the log records `Overriding draft model max model
+len from 262144 to 131072`, so the MTP draft followed the main engine down.
+`gpu_memory_utilization` stayed 0.8 and `max_num_seqs` stayed 10 as Method
+required. No request was rejected, which is what the 131072 choice was for.
+
+So the suspect `7bd4c673` named in July is cleared. Of the triple it accused —
+window, `gpu_memory_utilization`, `max_num_seqs` — h1 moved the latter two (in
+a set of six) and made things worse, and h2 moved the window alone and changed
+nothing.
+
+That exhausts the levers this experiment can reach. Everything left is closed
+by Held: the checkpoint, and the two mods the peer carries. The experiment
+closes without meeting its Objective, and says so.
 
 Budget: 15 lines. State which of the three the decision rule gave and the
 number that decided it; anything beyond that — per-run analysis, discarded

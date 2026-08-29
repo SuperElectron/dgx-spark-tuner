@@ -99,8 +99,30 @@ candidate and a later round must be able to reach it.
 
 | round | hypothesis | outcome |
 |-------|------------|---------|
-| h1 | the gap is configuration, not checkpoint: our checkpoint under the peer's configuration recovers their range | |
+| h1 | the gap is configuration, not checkpoint: our checkpoint under the peer's configuration recovers their range | LEVER SPENT — worse in all six cells, 0.33x to 0.87x of control |
+| h2 | halving `max_model_len` to 131072 lifts the deep cells | LEVER SPENT — 0.997x to 1.011x of control; inert |
 
 ## Conclusion
 
-Open.
+Closed as exhausted. The Objective was not met: no cell approached its leader,
+and our figures are where they were on 2026-08-24.
+
+Two rounds spent the reachable levers. h1 served our checkpoint under all six
+fields separating us from `sub1779001966608` and every deep cell got worse —
+0.33x at d32768 c5 — so the 21x gap is not this configuration. h2 halved
+`max_model_len` alone and moved nothing, 0.997x to 1.011x, clearing the last
+suspect `7bd4c673` named.
+
+What remains is closed by Held: the checkpoint (`RedHatAI` vs `nvidia`) and the
+two mods the peer carries, `fix-qwen3-coder-next` and `fix-qwen3.6-chat-template`.
+An experiment that wants those has to open the checkpoint, which this one
+deliberately did not.
+
+Worth carrying forward. The control reproduced the 2026-08-24 grid to within
+1.5% in all six cells, a third confirmation that the collapsed corner is a
+stable property and not a bad run. And the collapse is roughly halved at c4
+(37.45 and 11.93 at d65535/d100000 against 20.56 and 8.51 at c5), so admission
+is part of the mechanism — but c4 still falls an order of magnitude from d32768
+to d100000 with nothing queued, so it is not the whole of it.
+
+No submission. Nothing here beats a board leader.

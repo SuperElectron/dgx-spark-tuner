@@ -108,10 +108,19 @@ elif not os.path.isfile(rp):
 else:
     served = ast.literal_eval(nd.group(1))
     decl = (yaml.safe_load(open(rp)) or {}).get("defaults") or {}
+    # vLLM renders some scalars as one-element lists, and omits any field left
+    # at its own default. Neither is the engine serving something else.
+    def same(a, b):
+        if isinstance(b, list) and len(b) == 1:
+            b = b[0]
+        return str(a) == str(b)
+    # tensor_parallel only: vLLM omits tensor_parallel_size when it is 1.
+    # Never ignore a field whose silent absence would change the measurement.
+    ignore = ("host", "port", "image", "tensor_parallel")
     bad = [f"{k}: recipe {v} -> served {served.get(k)}"
-           for k, v in decl.items() if k in served and str(served[k]) != str(v)]
+           for k, v in decl.items() if k in served and not same(v, served[k])]
     bad += [f"{k}: declared, absent from served"
-            for k in decl if k not in served and k not in ("host", "port", "image")]
+            for k in decl if k not in served and k not in ignore]
     if bad:
         print("served     MISMATCH — figures are void")
         for b in bad: print(f"           {b}")
