@@ -1,0 +1,41 @@
+bench      bench_0ad4a95ab512
+regime     default
+epoch      vllm 0.27.2rc1.dev360+ge85d1b69c.d20260821  flashinfer 0.6.18
+
+cells
+  pp2048 (c4)                    6420.25  sd   41.10  cv   0.6%
+  tg128 (c4)                      222.00  sd   14.11  cv   6.4%
+  ctx_pp @ d4096 (c4)            6443.41  sd  184.98  cv   2.9%
+  ctx_tg @ d4096 (c4)             182.94  sd    6.96  cv   3.8%
+  pp2048 @ d4096 (c4)            2180.30  sd   20.70  cv   0.9%
+  tg128 @ d4096 (c4)              190.06  sd   10.92  cv   5.7%
+  ctx_pp @ d8192 (c4)            6586.00  sd   46.24  cv   0.7%
+  ctx_tg @ d8192 (c4)             185.31  sd    8.09  cv   4.4%
+  pp2048 @ d8192 (c4)            1287.14  sd   10.04  cv   0.8%
+  tg128 @ d8192 (c4)              181.75  sd    6.10  cv   3.4%
+  ctx_pp @ d16384 (c4)           6178.06  sd   64.62  cv   1.0%
+  ctx_tg @ d16384 (c4)            166.90  sd    6.75  cv   4.0%
+  pp2048 @ d16384 (c4)            678.04  sd    0.25  cv   0.0%
+  tg128 @ d16384 (c4)             179.12  sd    4.06  cv   2.3%
+  ctx_pp @ d32768 (c4)           5376.56  sd   23.35  cv   0.4%
+  ctx_tg @ d32768 (c4)             88.37  sd    1.22  cv   1.4%
+  pp2048 @ d32768 (c4)            313.03  sd    0.52  cv   0.2%
+  tg128 @ d32768 (c4)             136.46  sd    3.59  cv   2.6%
+
+served     matches recipe defaults (6 fields)
+queue      max running 4, max waiting 0, 33 frames
+cache      max 0.0% over 33 samples
+cudagraph  [1, 2, 4, 8, 16, 24, 32, 40, 48, 56, 64, 72, 80]
+
+tg repeats
+  tg128 @ d0 (c4)         median    217.57  207.36 217.57 241.07
+  ctx_tg @ d4096 (c4)     median    183.80  174.02 183.80 191.00
+  tg128 @ d4096 (c4)      median    183.58  181.17 183.58 205.44
+  ctx_tg @ d8192 (c4)     median    182.31  177.24 182.31 196.37
+  tg128 @ d8192 (c4)      median    184.23  173.36 184.23 187.67
+  ctx_tg @ d16384 (c4)    median    168.86  157.82 168.86 174.01
+  tg128 @ d16384 (c4)     median    178.29  174.62 178.29 184.46
+  ctx_tg @ d32768 (c4)    median     88.60  86.77 88.60 89.74
+  tg128 @ d32768 (c4)     median    138.78  131.39 138.78 139.20
+
+box        no telemetry captured — box state under load is unknown
