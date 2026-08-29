@@ -69,8 +69,26 @@ Deliberately not held: `max_num_seqs`, `max_model_len`,
 
 | round | hypothesis | outcome |
 |-------|------------|---------|
-| h1 | a model already at `max_num_seqs: 64` gains nothing from more slot capacity | |
+| h1 | a model already at `max_num_seqs: 64` gains nothing from more slot capacity | LEVER SPENT — 0.998x and 0.996x of control; null |
 
 ## Conclusion
 
-Open.
+Closed. The control did its job and returned a null: `max_model_len` 8192 ->
+32768 moved `tg128 (c10)` by 0.2% at d0 and 0.4% at d4096, against a model
+whose own cv is 0.1-0.3%.
+
+That supports the admission reading of `LFM2.5-350M slots/h1`. There, four
+slots against ten offered requests held `Running 4 / Waiting 6` and lifting the
+cap bought +96%. Here, 64 slots against ten offered leaves nothing queued, and
+capacity added on top does nothing. The mechanism behaves as a mechanism should:
+present where the precondition holds, absent where it does not.
+
+No submission, by construction. `tg128 (c10)` d0 is held by our own
+LFM2.5-350M at 2044.66; this model measured 667.05, below even its own best
+published entry of 704.63. It was never a contender and the Objective said so
+before the runs.
+
+One finding worth carrying out of this track: prefix cache hit rate read 31.5%
+here against 0.0% on LFM2.5-350M and Qwen3.6-35B-A3B-NVFP4 — the first non-zero
+cache on this box. Any cross-model comparison involving this model has to
+account for it.

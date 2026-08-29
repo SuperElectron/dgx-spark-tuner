@@ -13,3 +13,4 @@ contender: `tg128 (c10)` is held by our own LFM2.5-350M submission at 2044.66.
 | experiment | date | varied | won | pp t/s | tg t/s | ttfr ms | bench | outcome |
 |---|---|---|---|---:|---:|---:|---|---|
 | <name> | <YYYY-MM-DD> | <field: values swept> | <field: value> | <n> | <n> | <n> | <bench_...> | <survived / failed> |
+| slots | 2026-08-29 | max_model_len: 8192, 32768 | none — null result | 33536.7 | 667.1 | — | bench_7ff583b63330 | survived |

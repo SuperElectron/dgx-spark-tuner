@@ -6,8 +6,7 @@ store, not here.
 
 ## Verdict
 
-<one line, filled at conclusion: TARGET MET / LEVER ALIVE / LEVER SPENT — the
-number that decided it>
+LEVER SPENT — 0.998x and 0.996x of the control. The null the round predicted.
 
 ## Runs
 
@@ -73,7 +72,25 @@ enough that the band is about significance, not noise.
 
 ## Conclusion
 
-<pending>
+Null, as predicted. `max_model_len` 8192 -> 32768 gives 665.46 and 472.12 at
+`tg128 (c10)` d0 and d4096, against a control of 667.05 and 474.22 — ratios
+0.998 and 0.996, inside the +/-3% band and barely outside this model's own
+cv of 0.1-0.3%.
+
+The arm was genuinely served: `non-default args:` carries `max_model_len 32768`
+with `max_num_seqs` still 64. No request was rejected.
+
+That is the result this track was run for. LFM2.5-350M gained +96% at this same
+cell from lifting `max_num_seqs` 4 -> 16, and its engine log showed the
+mechanism as admission — `Running 4 / Waiting 6` of ten offered. A model already
+at 64 slots has no such queue to drain, and adding window capacity moved it by
+less than half a percent. The admission account of `LFM2.5-350M slots/h1`
+survives its control.
+
+Not established: that no lever moves this model, only that this one does not.
+And its 31.5% prefix cache hit rate — the first non-zero cache measured on this
+box — means its figures are not cold-cache comparable to the rest of the tree,
+so the comparison above is internal to this model and nothing else.
 
 Budget: 15 lines. State which of the three the decision rule gave and the
 number that decided it; anything beyond that — per-run analysis, discarded

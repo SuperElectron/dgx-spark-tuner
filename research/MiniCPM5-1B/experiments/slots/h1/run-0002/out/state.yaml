@@ -1,0 +1,39 @@
+benchmark_id: bench_71141c480b98
+cluster_id: sparkrun_d44cbd9b84f69f5c_313596140c4f
+recipe_qualified_name: research/MiniCPM5-1B/experiments/slots/h1/run-0002/recipe.yaml
+framework: llama-benchy
+profile: null
+base_args:
+  pp:
+  - 2048
+  depth:
+  - 0
+  - 4096
+  prefix_caching: true
+  tg:
+  - 128
+  concurrency:
+  - 10
+  runs: 3
+  served_model_name: minicpm5-1b
+schedule:
+- depth: 0
+  concurrency: 10
+- depth: 4096
+  concurrency: 10
+intent_id: d44cbd9b84f69f5c
+completed_indices:
+- 0
+- 1
+failed_indices: []
+crash_count: 0
+session_count: 1
+sessions:
+- session: 1
+  started_at: '2026-08-29T21:23:19.270711+00:00'
+  status: completed
+  ended_at: '2026-08-29T21:23:47.821163+00:00'
+extras:
+  framework_version: 0.4.0
+created_at: '2026-08-29T21:23:19.270757+00:00'
+updated_at: '2026-08-29T21:23:47.821167+00:00'
