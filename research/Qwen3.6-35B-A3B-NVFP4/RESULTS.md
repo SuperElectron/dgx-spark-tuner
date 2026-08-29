@@ -49,3 +49,4 @@ throughput at fixed depth — h6 raised acceptance 3.07 → 3.22 and `tg` moved
 1.4%. The 13% between our internal figure and the board figure remains
 unexplained, with warm cache, acceptance and sampling all eliminated as causes.
 `experiments/decode-tg/EXPERIMENT.md` carries the full closure.
+| c4 | 2026-08-29 | concurrency: 4 (grid, not a recipe field) | none — control won | 6383.9 | 212.7 | — | bench_0ad4a95ab512 | survived |

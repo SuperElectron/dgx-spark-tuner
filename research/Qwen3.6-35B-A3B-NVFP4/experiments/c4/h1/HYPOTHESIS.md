@@ -6,8 +6,7 @@ store, not here.
 
 ## Verdict
 
-<one line, filled at conclusion: TARGET MET / LEVER ALIVE / LEVER SPENT — the
-number that decided it>
+TARGET MET — all five cells clear their leader; d0 212.66 t/s against 82.85.
 
 ## Runs
 
@@ -106,7 +105,26 @@ board regenerates every 30 minutes.
 
 ## Conclusion
 
-<pending>
+Target met on the control, with no lever spent. `recipe-new.yaml` run
+unchanged at c4 gives 212.66 / 182.89 / 178.62 / 173.51 / 138.89 t/s across
+d0 / d4096 / d8192 / d16384 / d32768, against leaders of 82.85 / 54.54 /
+44.29 / 46.68 / 36.51 — margins of +157% to +303%, every one far outside the
+3% band. `served matches recipe defaults (6 fields)`; no field moved.
+
+The hypothesis held for the reason it argued: the queue read max Running 4,
+max Waiting 0, so all four offered requests were admitted and nothing
+competed for slots. That also confirms `00b3d74d` prospectively — the
+`max_num_seqs` lever has nothing to act on at c4.
+
+Two things the round did not predict. d32768 measured 138.89, above both its
+c2 (128.58) and c5 (125.87) brackets, so the non-monotone interval resolved
+upward rather than being unreadable. And the served cudagraph list was
+[1,2,4,8,16,24,32,40,48,56,64,72,80], which is not `1084d7c0`'s
+truncate-at-2xmns rule; that memory is bounded to the model it was read on.
+
+Scatter ran above Strategy's figure — cv 5.2% at d4096 against the 1.5%
+`8950a696` recorded at c4. Margins this size are unaffected, but a later
+round reading a small effect at c4 must re-measure the spread first.
 
 Budget: 15 lines. State which of the three the decision rule gave and the
 number that decided it; anything beyond that — per-run analysis, discarded

@@ -106,8 +106,26 @@ Held — reading one as a Held is what cost `concurrency/h1` an entire round
 
 | round | hypothesis | outcome |
 |-------|------------|---------|
-| h1 | the tuned recipe, unchanged, already clears every c4 leader | |
+| h1 | the tuned recipe, unchanged, already clears every c4 leader | TARGET MET — 212.66 t/s at d0 c4 vs 82.85; all five cells clear by +157% to +303% |
 
 ## Conclusion
 
-Open.
+Objective reached in h1, on the control, with no lever spent. `recipe-new.yaml`
+run unchanged at concurrency 4 gives 212.66 / 182.89 / 178.62 / 173.51 / 138.89
+t/s at d0 / d4096 / d8192 / d16384 / d32768, against leaders of 82.85 / 54.54 /
+44.29 / 46.68 / 36.51 — every cell clear by +157% to +303%, far outside the 3%
+band. `recipe-new.yaml` here is identical to `recipe.yaml`: nothing was tuned,
+because nothing needed tuning.
+
+The Strategy's argument held and its mechanism was confirmed directly: the queue
+read max Running 4, max Waiting 0, so all four offered requests were admitted
+and none queued. The c4 column was thin because arena-v2's profile is 1/2/5/10,
+not because it is hard.
+
+Two things the experiment did not predict. d32768 measured above both its c2 and
+c5 brackets, resolving the non-monotone interval upward. And the served cudagraph
+list did not follow the truncate-at-2x-mns rule recorded on another model.
+
+What this does not settle: every figure is cold-cache and none was measured on
+the board's own epoch, so a claim against the board crosses a build boundary.
+Submission is Mat's call, not this experiment's.
