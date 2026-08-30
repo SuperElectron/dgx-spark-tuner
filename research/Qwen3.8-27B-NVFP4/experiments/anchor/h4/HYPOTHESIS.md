@@ -11,7 +11,8 @@ number that decided it>
 | run | changed | why | cell | pp | tg | ttfr | bench |
 |---|---|---|---|---|---|---|---|
 | run-0001 | max_model_len: 262144 -> 131072 | board twin sub1786821875313 scores 63.05 at this cell on our exact checkpoint and differs in only three fields; this is the first, isolated against h3 run-0001's 36.96 | d16384 c10 | 131.44 | 39.50 | 152682.6 | bench_aa90097c9a3d |
-| run-0002 | env VLLM_MARLIN_USE_ATOMIC_ADD: absent -> 1 | arm 1 took the cell 36.96 -> 39.50 by adopting the twin's max_model_len; this adds the twin's second delta on top of the higher-reading arm, as the round's Method requires | d16384 c10 |  |  |  |  |
+| run-0002 | env VLLM_MARLIN_USE_ATOMIC_ADD: absent -> 1 | arm 1 took the cell 36.96 -> 39.50 by adopting the twin's max_model_len; this adds the twin's second delta on top of the higher-reading arm | d16384 c10 | 129.47 | 36.80 | 152516 | bench_0adb7755f69d |
+| run-0003 | max_num_batched_tokens: 65536 -> 32768 | arm 2's env var regressed the cell 39.50 -> 36.80, so this builds on arm 1 instead. 32768 is the twin's third and last delta, and it is LOWER than the budget h2 spent three arms and two box wedges climbing to | d16384 c10 |  |  |  |  |
 <!-- RUNS:END -->
 
 Script-written by `spark-autoresearch`'s CREATE/RECORD steps. Never hand-edit.
