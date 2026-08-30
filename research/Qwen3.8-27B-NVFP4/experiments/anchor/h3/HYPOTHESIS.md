@@ -10,6 +10,8 @@ number that decided it>
 <!-- RUNS:BEGIN -->
 | run | changed | why | cell | pp | tg | ttfr | bench |
 |---|---|---|---|---|---|---|---|
+| run-0001 | language_model_only: absent -> true (at max_num_batched_tokens 65536) | h2 closed LEVER SPENT at 36.56 on a memory ceiling, not an exhausted mechanism. This isolates the flag against h2 run-0002 at an identical budget | d16384 c10 | 126.74 | 36.96 | 156861.77 | bench_40238cb03dbc |
+| run-0002 | language_model_only: true, max_num_batched_tokens: 16384 -> 81920 | arm 1 showed the flag's freed memory going to KV (56.98 -> 58.77 GiB) rather than to headroom, and moved the objective cell only +1.1%. 81920 without the flag died on autotune profile 25; this is the direct test of whether the flag moved that ceiling | d16384 c10 |  |  |  |  |
 <!-- RUNS:END -->
 
 Script-written by `spark-autoresearch`'s CREATE/RECORD steps. Never hand-edit.
