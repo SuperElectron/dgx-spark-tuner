@@ -11,7 +11,8 @@ number that decided it>
 | run | changed | why | cell | pp | tg | ttfr | bench |
 |---|---|---|---|---|---|---|---|
 | run-0001 | max_num_batched_tokens: 16384 -> 32768 | h1: engine ran 10 / waited 9 with max_num_seqs 256, so mnbt gated admission against a per-request prefill of 18432; 32768 is the twin's own value | d16384 c10 | 129.36 | 14.37 | 151281.3 | bench_40cfbf2570f2 |
-| run-0002 | max_num_batched_tokens: 16384 -> 65536 | run-0001 at 32768 drained the queue (waiting 0 in 52% of c10 frames) but bought only +28%; 65536 tests whether the residual admission ramp 5/5->7/3->9/1->10/0 is still costing aggregate tg | d16384 c10 |  |  |  |  |
+| run-0002 | max_num_batched_tokens: 16384 -> 65536 | run-0001 at 32768 drained the queue (waiting 0 in 52% of c10 frames) but bought only +28%; 65536 tests whether the residual admission ramp 5/5->7/3->9/1->10/0 is still costing aggregate tg | d16384 c10 | 127.37 | 36.56 | 157259.87 | bench_c724e36d03cb |
+| run-0003 | max_num_batched_tokens: 16384 -> 131072 | run-0002 at 65536 removed the admission ramp entirely (waiting 0 in 100% of frames) and took the cell 14.37 -> 36.56; the lever is still climbing steeply, and the rule's lever-alive branch requires the best arm to be 131072 | d16384 c10 |  |  |  |  |
 <!-- RUNS:END -->
 
 Script-written by `spark-autoresearch`'s CREATE/RECORD steps. Never hand-edit.

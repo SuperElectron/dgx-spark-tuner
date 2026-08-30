@@ -1,0 +1,70 @@
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+
+VRAM Estimation:
+  Model dtype:      fp8
+  KV cache dtype:   fp8
+  Architecture:     64 layers, 4 KV heads, 256 head_dim
+  Model weights:    21.81 GB
+  KV cache:         32.00 GB (max_model_len=262,144)
+  Tensor parallel:  1
+  Per-GPU total:    53.81 GB
+  DGX Spark fit:    YES
+
+  GPU Memory Budget:
+    gpu_memory_utilization: 80%
+    Usable GPU memory:     96.8 GB (121 GB x 80%)
+    Available for KV:      75.0 GB
+    Max context tokens:    614,323
+    Context multiplier:    2.3x (vs max_model_len=262,144)
+============================================================
+sparkrun v0.3.5 — benchmark
+============================================================
+Recipe:                research/Qwen3.8-27B-NVFP4/experiments/anchor/h2/run-0002/recipe.yaml
+Model:                 unsloth/Qwen3.8-27B-NVFP4
+Runtime:               vllm-distributed
+Image:                 vllm-node
+Benchmark Framework:   llama-benchy
+Hosts:                 spark-6f0e.tailae2b1.ts.net
+Mode:                  solo
+
+Benchmark args:
+  pp:                                 [2048]
+  depth:                              [16384]
+  prefix_caching:                     True
+  tg:                                 [128]
+  runs:                               3
+  no_adapt_prompt:                    True
+  concurrency:                        [1, 10]
+============================================================
+
+Benchmark ID:          bench_c724e36d03cb
+State directory:       /Users/mat/.cache/sparkrun/benchmarks/bench_c724e36d03cb
+
+Pinned llama-benchy version: 0.4.0
+Step 1/3: Skipping inference launch (--skip-run)
+
+Step 2/3: Running benchmark (llama-benchy)...
+[08:57:37] Task 1/2 done (171.9s)                             progress_ui.py:158
+16384  1  153.4  16.6  13365.8  3
+[09:14:16] Task 2/2 done (998.4s)                             progress_ui.py:158
+16384  10  126.9  40.2  156546.1  3
+  [2/2] d=16384 c=10 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2/2 100.0% 0:00:00 0:19:30
+┏━━━━━━━┳━━━━━━┳━━━━━━━━┳━━━━━━━━┳━━━━━━━━━━┳━━━━━━┓                            
+┃ depth ┃ conc ┃ pp t/s ┃ tg t/s ┃  ttfr ms ┃ runs ┃                            
+┡━━━━━━━╇━━━━━━╇━━━━━━━━╇━━━━━━━━╇━━━━━━━━━━╇━━━━━━┩                            
+│ 16384 │    1 │  153.4 │   16.6 │  13365.8 │    3 │                            
+│ 16384 │   10 │  126.9 │   40.2 │ 156546.1 │    3 │                            
+└───────┴──────┴────────┴────────┴──────────┴──────┘                            ┏━━━━━━━┳━━━━━━┳━━━━━━━━┳━━━━━━━━┳━━━━━━━━━━┳━━━━━━┓
+┃ depth ┃ conc ┃ pp t/s ┃ tg t/s ┃  ttfr ms ┃ runs ┃
+┡━━━━━━━╇━━━━━━╇━━━━━━━━╇━━━━━━━━╇━━━━━━━━━━╇━━━━━━┩
+│ 16384 │    1 │  153.4 │   16.6 │  13365.8 │    3 │
+│ 16384 │   10 │  126.9 │   40.2 │ 156546.1 │    3 │
+└───────┴──────┴────────┴────────┴──────────┴──────┘
+Results saved to: research/Qwen3.8-27B-NVFP4/experiments/anchor/h2/run-0002/out/results.yaml
+JSON output: research/Qwen3.8-27B-NVFP4/experiments/anchor/h2/run-0002/out/results.json
+CSV output: research/Qwen3.8-27B-NVFP4/experiments/anchor/h2/run-0002/out/results.csv
+
+Step 3/3: Skipping inference stop (--no-stop)
+
+Benchmark complete.
