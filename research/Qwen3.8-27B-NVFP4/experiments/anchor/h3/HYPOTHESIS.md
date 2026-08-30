@@ -2,8 +2,8 @@
 
 ## Verdict
 
-<one line, filled at conclusion: TARGET MET / LEVER ALIVE / LEVER SPENT — the
-number that decided it>
+LEVER SPENT — 36.96 t/s at `tg128 @ d16384 c10`, under the 42.0 floor, and no
+arm above 65536 started at all.
 
 ## Runs
 
@@ -101,7 +101,19 @@ the fault h2's rule had.
 
 ## Conclusion
 
-<pending>
+LEVER SPENT. `language_model_only` moved `absent -> true` at
+`max_num_batched_tokens` 65536, then the budget `65536 -> 81920` with the flag
+on. Best arm reads **36.96 t/s** at `tg128 @ d16384 c10`, under the rule's 42.0
+floor and +1.1% on h2's 36.56 at the same budget without the flag — inside
+noise. The rule's second condition holds too: 81920 with the flag died twice in
+the FlashInfer `fp4_gemm` autotune, so no arm above 65536 started. Both branches
+resolve; this rule was well specified where h2's was not.
 
-Budget: 15 lines — the verdict, the deciding figure, what varied, one line of
-why. Everything else goes to the memory store.
+The flag does what it claims — modality limits 0, tower absent, model load 21.97
+-> 21.11 GiB against its measured 0.858 GiB — but vLLM spends the freed memory
+on KV (56.98 -> 58.77 GiB), not headroom. **The autotune ceiling is not about
+free memory:** 81920+flag failed from a plateau of 18.1-21.8 GB available while
+65536+flag completed the same autotune from 16.4 GB. It is a step function in
+the requested allocation size, set by the token budget, so any lever returning a
+few GB is aimed at the wrong quantity. Variance correction: c10 is cv **1.0% at
+n=5**, not h2's 13.7% — that was one bad draw. Size later c10 rules on ~1-2%.
