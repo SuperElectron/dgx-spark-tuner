@@ -131,7 +131,9 @@ Imported priors, to be replaced by our own the moment they exist:
 | round | hypothesis | outcome |
 |-------|------------|---------|
 | h1 | baseline sweep — our recipe over the board's own 28-cell grid, to place every cell of ours beside the eight like-for-like entries and measure our scatter | LEVER SPENT — 11.22 t/s at the objective cell, under the 55.0 floor. c1 is healthy at 16.96 (inside the board's 16.13-18.52); only c10 collapses. Engine ran 10 / waited 9 with `max_num_seqs` resolved to 256, so `max_num_batched_tokens` 16384 gates admission against a per-request prefill of 18432. Our c10 scatter is 0.9% of median |
-| h2 | `max_num_batched_tokens` — raise the token budget off 16384 so a c10 batch at d16384 can be admitted at all | pending |
+| h2 | `max_num_batched_tokens` — raise the token budget off 16384 so a c10 batch at d16384 can be admitted at all | LEVER SPENT — 36.56 t/s at 65536, from 11.22, a 3.26x move that still misses 72.5 and the board's 63.05. Two effects of one field: 32768 drained the queue (+28%), 65536 removed the admission ramp (+154%). Spent by the box, not the mechanism — 81920, 98304 and 131072 all die in the FlashInfer `fp4_gemm` autotune, so the curve is unmeasurable above 65536 while it is still climbing. Decision rule mis-specified: both branches required arms that cannot exist. c10 scatter is cv 13.7% here, not h1's 0.9% |
+
+| h3 | `--language-model-only` — return the unused vision tower's memory, the constraint that ended h2 while its curve was still climbing | pending |
 
 Later rounds are motivated by h1's deltas, not pre-committed. The three standing
 candidates from the twin's recipe — `max_num_batched_tokens` 32768,

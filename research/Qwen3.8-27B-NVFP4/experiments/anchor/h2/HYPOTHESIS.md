@@ -2,8 +2,8 @@
 
 ## Verdict
 
-<one line, filled at conclusion: TARGET MET / LEVER ALIVE / LEVER SPENT — the
-number that decided it>
+LEVER SPENT — 36.56 t/s at `max_num_batched_tokens` 65536, the largest budget
+this box can start. Spent by the hardware, not by the mechanism.
 
 ## Runs
 
@@ -14,7 +14,7 @@ number that decided it>
 | run-0002 | max_num_batched_tokens: 16384 -> 65536 | run-0001 at 32768 drained the queue (waiting 0 in 52% of c10 frames) but bought only +28%; 65536 tests whether the residual admission ramp 5/5->7/3->9/1->10/0 is still costing aggregate tg | d16384 c10 | 127.37 | 36.56 | 157259.87 | bench_c724e36d03cb |
 | run-0003 | max_num_batched_tokens: 16384 -> 131072 | run-0002 at 65536 removed the admission ramp and took the cell 14.37 -> 36.56, still climbing. CRASHED: box lost 10m18s after engine start, during the FlashInfer autotune for the new budget. sshd and tailscaled died with it, so a whole-host loss, not an engine exception — the signature of host memory exhaustion on unified memory. No engine log, no archive, no figures | d16384 c10 | — | — | — | — |
 | run-0004 | max_num_batched_tokens: 16384 -> 98304 | run-0002 at 65536 read 36.56 and was still climbing; 98304 was the largest budget below the one that killed the box. CRASHED THE SAME WAY, but this time instrumented: engine completed KV sizing (50.8 GiB, 1433737 tokens, max concurrency 5.47x) then died inside the FlashInfer fp4_gemm autotune — a single ~20 GB step allocation took host available from 20431 MB to 620 MB between two 10s polls, then 119 NV_ERR_NO_MEMORY driver failures | d16384 c10 | — | — | — | — |
-| run-0005 | max_num_batched_tokens: 16384 -> 81920 | 65536 survived at 36.56 and was still climbing; 98304 and 131072 both wedged the host inside the FlashInfer autotune. 81920 is the one authorised retry between the last surviving budget and the smallest known to crash, and the round's rule needs a real arm above 65536 to resolve | d16384 c10 |  |  |  |  |
+| run-0005 | max_num_batched_tokens: 16384 -> 81920 | 65536 survived at 36.56 and was still climbing; 98304 and 131072 both wedged the host. ABORTED on the first NV_ERR_NO_MEMORY at autotune profile 25, per protocol. Box survived — driver refused the allocation rather than wedging: 20826 -> 920 MB available in one 10s window, then back to 23095 MB and fully responsive | d16384 c10 | — | — | — | — |
 <!-- RUNS:END -->
 
 Script-written by `spark-autoresearch`'s CREATE/RECORD steps. Never hand-edit.
@@ -86,7 +86,19 @@ anything scatter can produce. The imported 15% prior is retired for c10.
 
 ## Conclusion
 
-<pending>
+The hypothesis is confirmed: `max_num_batched_tokens` 16384 -> 32768 -> 65536
+took `tg128 @ d16384 c10` 11.22 -> 14.37 -> **36.56 t/s**, clearing the 22.5
+floor by 1.6x. The Objective is not met — 36.56 against 72.5, and against the
+63.05 best like-for-like board entry. c1 is unmoved (16.96 / 16.65 / 16.61), as
+pre-registered.
 
-Budget: 15 lines — the verdict, the deciding figure, what varied, one line of
-why. Everything else goes to the memory store.
+**The decision rule was mis-specified and cannot resolve as written.** Both its
+`lever alive` and `lever spent` branches turn on where the best arm sits among
+32768 / 65536 / 131072, and 131072, 98304 and 81920 all die in the FlashInfer
+`fp4_gemm` autotune before any figure exists. The rule assumed all three arms
+would be measurable. The rule stands unedited; the verdict is argued instead.
+
+LEVER SPENT is the honest call, but the lever was **still climbing steeply**
+when the box stopped it — +28% then +154%, no sign of saturation. It is closed
+by a hardware ceiling between 65536 and 81920, not an exhausted mechanism. h3
+must move the memory picture before this field is worth another arm.
