@@ -1,0 +1,118 @@
+benchmark_id: bench_3691c02e8f1d
+cluster_id: sparkrun_819a07202ceee0cf_313596140c4f
+recipe_qualified_name: research/Qwen3.8-27B-NVFP4/experiments/anchor/h1/run-0001/recipe.yaml
+framework: llama-benchy
+profile: null
+base_args:
+  pp:
+  - 2048
+  depth:
+  - 0
+  prefix_caching: true
+  tg:
+  - 128
+  runs: 3
+  no_adapt_prompt: true
+schedule:
+- depth: 0
+  concurrency: 1
+- depth: 0
+  concurrency: 2
+- depth: 0
+  concurrency: 5
+- depth: 0
+  concurrency: 10
+- depth: 4096
+  concurrency: 1
+- depth: 4096
+  concurrency: 2
+- depth: 4096
+  concurrency: 5
+- depth: 4096
+  concurrency: 10
+- depth: 8192
+  concurrency: 1
+- depth: 8192
+  concurrency: 2
+- depth: 8192
+  concurrency: 5
+- depth: 8192
+  concurrency: 10
+- depth: 16384
+  concurrency: 1
+- depth: 16384
+  concurrency: 2
+- depth: 16384
+  concurrency: 5
+- depth: 16384
+  concurrency: 10
+- depth: 32768
+  concurrency: 1
+- depth: 32768
+  concurrency: 2
+- depth: 32768
+  concurrency: 5
+- depth: 32768
+  concurrency: 10
+- depth: 65535
+  concurrency: 1
+- depth: 65535
+  concurrency: 2
+- depth: 65535
+  concurrency: 5
+- depth: 65535
+  concurrency: 10
+- depth: 100000
+  concurrency: 1
+- depth: 100000
+  concurrency: 2
+- depth: 100000
+  concurrency: 5
+- depth: 100000
+  concurrency: 10
+intent_id: 819a07202ceee0cf
+completed_indices:
+- 0
+- 1
+- 2
+- 3
+- 4
+- 5
+- 6
+- 7
+- 8
+- 9
+- 10
+- 11
+- 12
+- 13
+- 14
+- 15
+- 16
+- 17
+- 18
+- 19
+- 20
+- 21
+- 22
+- 23
+- 24
+- 25
+- 26
+- 27
+failed_indices: []
+crash_count: 0
+session_count: 2
+sessions:
+- session: 1
+  started_at: '2026-08-30T02:17:48.811212+00:00'
+  status: interrupted
+  ended_at: '2026-08-30T03:17:46.226309+00:00'
+- session: 2
+  started_at: '2026-08-30T03:20:53.681895+00:00'
+  status: completed
+  ended_at: '2026-08-30T09:36:48.913287+00:00'
+extras:
+  framework_version: 0.4.0
+created_at: '2026-08-30T02:17:48.811258+00:00'
+updated_at: '2026-08-30T09:36:48.913297+00:00'
