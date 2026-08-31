@@ -2,8 +2,8 @@
 
 ## Verdict
 
-<one line, filled at conclusion: TARGET MET / LEVER ALIVE / LEVER SPENT — the
-number that decided it>
+LEVER SPENT — best arm 39.50 t/s at `tg128 @ d16384 c10`, above the 38.1 floor
+but with all three of the lever's arms measured and no fourth in existence.
 
 ## Runs
 
@@ -12,7 +12,7 @@ number that decided it>
 |---|---|---|---|---|---|---|---|
 | run-0001 | max_model_len: 262144 -> 131072 | board twin sub1786821875313 scores 63.05 at this cell on our exact checkpoint and differs in only three fields; this is the first, isolated against h3 run-0001's 36.96 | d16384 c10 | 131.44 | 39.50 | 152682.6 | bench_aa90097c9a3d |
 | run-0002 | env VLLM_MARLIN_USE_ATOMIC_ADD: absent -> 1 | arm 1 took the cell 36.96 -> 39.50 by adopting the twin's max_model_len; this adds the twin's second delta on top of the higher-reading arm | d16384 c10 | 129.47 | 36.80 | 152516 | bench_0adb7755f69d |
-| run-0003 | max_num_batched_tokens: 65536 -> 32768 | arm 2's env var regressed the cell 39.50 -> 36.80, so this builds on arm 1 instead. 32768 is the twin's third and last delta, and it is LOWER than the budget h2 spent three arms and two box wedges climbing to | d16384 c10 |  |  |  |  |
+| run-0003 | max_num_batched_tokens: 65536 -> 32768 | arm 2's env var regressed the cell, so this builds on arm 1. 32768 is the twin's third delta and is lower than the budget h2 climbed to | d16384 c10 | 125.16 | 13.95 | 156246 | bench_da9605e692c9 |
 <!-- RUNS:END -->
 
 Script-written by `spark-autoresearch`'s CREATE/RECORD steps. Never hand-edit.
@@ -100,7 +100,24 @@ from one bad draw. Every branch resolves on figures this grid can produce.
 
 ## Conclusion
 
-<pending>
+LEVER SPENT at 39.50 t/s. 39.50 falls in the rule's 38.1-72.5 `lever alive`
+band, but `alive` means another arm exists and this lever had exactly three —
+the three fields separating twin `sub1786821875313` from us — and all three are
+measured. The band says alive; the lever is enumerated and spent. The rule
+stands unedited: it was sized for an open range, and this lever was a list.
+
+    max_model_len 262144 -> 131072      39.50   +6.9% on h3's 36.96, adopted
+    + VLLM_MARLIN_USE_ATOMIC_ADD=1      36.80   -6.8%, rejected
+    mnbt 65536 -> 32768 on arm 1        13.95   -65%,  rejected
+
+Reopening `max_model_len` was correct — h2 retired a mechanism, not the field.
+The env var gates on `n < 2048 and k >= 2048` and at c10 is on the wrong side of
+its own gate. 32768 restores h2's admission ramp (waiting non-zero in 40 of 97
+frames, every episode `5/5 -> 7/3 -> 9/1 -> 10/0`; 65536 reaches 10 in one step,
+waiting 0 in 100%), vindicating h2 from the opposite direction. **The twin's
+config does not reproduce the twin's number** — 39.50 against its 63.05, with
+only the image between us (`:2026081501` against `:2026082102`), which `Held`
+pins. The residual gap is the build, not the recipe.
 
 Budget: 15 lines — the verdict, the deciding figure, what varied, one line of
 why. Everything else goes to the memory store.

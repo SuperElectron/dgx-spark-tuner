@@ -59,3 +59,4 @@ asked next.
 | experiment | date | varied | won | pp t/s | tg t/s | ttfr ms | bench | outcome |
 |---|---|---|---|---|---|---|---|---|
 | <name> | <YYYY-MM-DD> | <field: values swept> | <field: value> | <n> | <n> | <n> | <bench_...> | <survived / failed> |
+| anchor | 2026-08-30 | max_num_batched_tokens: 16384-131072; language_model_only: off/on; max_model_len: 262144/131072; VLLM_MARLIN_USE_ATOMIC_ADD: unset/1 | max_num_batched_tokens: 65536 + language_model_only: true + max_model_len: 131072 | 131.44 | 39.50 | 152682.6 | bench_aa90097c9a3d | exhausted |

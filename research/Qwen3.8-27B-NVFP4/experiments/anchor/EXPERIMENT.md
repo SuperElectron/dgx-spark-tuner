@@ -134,7 +134,7 @@ Imported priors, to be replaced by our own the moment they exist:
 | h2 | `max_num_batched_tokens` — raise the token budget off 16384 so a c10 batch at d16384 can be admitted at all | LEVER SPENT — 36.56 t/s at 65536, from 11.22, a 3.26x move that still misses 72.5 and the board's 63.05. Two effects of one field: 32768 drained the queue (+28%), 65536 removed the admission ramp (+154%). Spent by the box, not the mechanism — 81920, 98304 and 131072 all die in the FlashInfer `fp4_gemm` autotune, so the curve is unmeasurable above 65536 while it is still climbing. Decision rule mis-specified: both branches required arms that cannot exist. c10 scatter is cv 13.7% here, not h1's 0.9% |
 
 | h3 | `--language-model-only` — return the unused vision tower's memory, the constraint that ended h2 while its curve was still climbing | LEVER SPENT — 36.96 t/s at 65536 with the flag, against 36.56 without it: +1.1%, inside noise, under the 42.0 floor. 81920 with the flag still dies in the FlashInfer autotune, so no arm above 65536 started — both conditions of the rule. The flag works (tower absent, load 21.97 -> 21.11 GiB) but vLLM spends the memory on KV (56.98 -> 58.77 GiB). The autotune ceiling is not about free memory: 81920+flag failed from 18.1-21.8 GB available, 65536+flag completed from 16.4 GB. c10 scatter is cv 1.0% at n=5, correcting h2's 13.7% |
-| h4 | the three config fields where board twin `sub1786821875313` (63.05 on our checkpoint) differs from ours — `max_model_len` 131072, `VLLM_MARLIN_USE_ATOMIC_ADD=1`, `max_num_batched_tokens` 32768 — tested one at a time on our epoch | pending |
+| h4 | the three config fields where board twin `sub1786821875313` (63.05 on our checkpoint) differs from ours — `max_model_len` 131072, `VLLM_MARLIN_USE_ATOMIC_ADD=1`, `max_num_batched_tokens` 32768 — tested one at a time on our epoch | LEVER SPENT — 39.50 t/s at the objective cell, from h3's 36.96. `max_model_len` 131072 is worth +6.9% and is adopted; `VLLM_MARLIN_USE_ATOMIC_ADD=1` costs 6.8% (it gates on `n < 2048 and k >= 2048` and at c10 sits on the wrong side of it); `mnbt` 32768 costs 65% and restores h2's `5/5 -> 7/3 -> 9/1 -> 10/0` admission ramp, vindicating h2 from the opposite direction. 39.50 is inside the rule's `alive` band but the lever is a three-item list and all three are measured, so it is spent rather than alive. The twin's config does not reproduce the twin's 63.05: only the container image remains between us, and `Held` pins it |
 
 Later rounds are motivated by h1's deltas, not pre-committed. The three standing
 candidates from the twin's recipe — `max_num_batched_tokens` 32768,
@@ -143,4 +143,37 @@ so that h1 is not tempted to test them; h1 measures, it does not tune.
 
 ## Conclusion
 
-<pending — written when the objective is reached or the levers are exhausted>
+**CLOSED AS EXHAUSTED. The Objective is not met.** Best measured at
+`tg128 @ d16384 c10` is **39.50 t/s** (h4 run-0001, `bench_aa90097c9a3d`),
+against a target of 72.5 and the board twin's 63.05. Against h1's baseline of
+11.22 the experiment is a **3.5x** move, and every lever it opened is spent:
+
+| round | lever | what it bought | how it ended |
+|---|---|---|---|
+| h1 | baseline sweep | — (11.22 established) | located admission as the gate |
+| h2 | `max_num_batched_tokens` | +226% | hardware ceiling between 65536 and 81920 — 81920+ dies in the FlashInfer `fp4_gemm` autotune |
+| h3 | `--language-model-only` | +1.1%, inside noise | refuted the memory-headroom theory: the autotune ceiling is not about free memory |
+| h4 | the twin's three config deltas | +6.9% net | all three arms measured; the twin's number is not config-reproducible on our build |
+
+What is now known to be closed. Admission, not memory, governs this cell: the
+`5/5 → 7/3 → 9/1 → 10/0` ramp appears whenever `max_num_batched_tokens` is
+32768 and vanishes at 65536, measured twice from opposite directions (h2 up,
+h4 down). Above 65536 the field is unmeasurable on this box. Freeing memory —
+by dropping the vision tower (h3) or by lowering the token budget (h4 arm 3) —
+buys nothing, because memory was never binding. MTP acceptance sat at
+0.417-0.434 across every arm of every round and moved for no lever tried. The
+recipe space reachable from a public pinned image is, on this evidence, worked
+out at ~39.5 t/s.
+
+**The one hypothesis left untested, and why it is out of scope.** The twin runs
+our checkpoint, our runtime, our cluster size, and — after h4 — a config we have
+now measured field by field, yet scores 63.05 where our best combination reaches
+39.50. The only remaining difference is the container image: theirs
+`dgx-vllm-eugr-nightly:2026081501`, ours `:2026082102`. `Held` pins our image
+digest, so testing that is an epoch break and therefore a different experiment,
+not a further round here. It is the strongest single candidate this campaign has
+produced and should be the first thing a build-epoch experiment asks.
+
+The answer this experiment reached is `recipe-new.yaml`: h4 arm 1's
+configuration — `max_model_len` 131072, `max_num_batched_tokens` 65536,
+`--language-model-only`, MTP k=3, `max_num_seqs` unset, `env: {}`.
