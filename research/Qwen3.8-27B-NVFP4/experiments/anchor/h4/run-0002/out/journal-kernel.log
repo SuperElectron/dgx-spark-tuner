@@ -1,0 +1,20 @@
+Aug 30 15:29:53 spark-6f0e kernel: docker0: port 1(veth9a9a3a1) entered blocking state
+Aug 30 15:29:53 spark-6f0e kernel: docker0: port 1(veth9a9a3a1) entered disabled state
+Aug 30 15:29:53 spark-6f0e kernel: veth9a9a3a1: entered allmulticast mode
+Aug 30 15:29:53 spark-6f0e kernel: veth9a9a3a1: entered promiscuous mode
+Aug 30 15:29:53 spark-6f0e kernel: eth0: renamed from veth71ab1c7
+Aug 30 15:29:53 spark-6f0e kernel: docker0: port 1(veth9a9a3a1) entered blocking state
+Aug 30 15:29:53 spark-6f0e kernel: docker0: port 1(veth9a9a3a1) entered forwarding state
+Aug 30 15:29:53 spark-6f0e kernel: docker0: port 1(veth9a9a3a1) entered disabled state
+Aug 30 15:29:53 spark-6f0e kernel: veth71ab1c7: renamed from eth0
+Aug 30 15:29:53 spark-6f0e kernel: docker0: port 1(veth9a9a3a1) entered disabled state
+Aug 30 15:29:53 spark-6f0e kernel: veth9a9a3a1 (unregistering): left allmulticast mode
+Aug 30 15:29:53 spark-6f0e kernel: veth9a9a3a1 (unregistering): left promiscuous mode
+Aug 30 15:29:53 spark-6f0e kernel: docker0: port 1(veth9a9a3a1) entered disabled state
+Aug 30 15:29:56 spark-6f0e kernel: tee (541604): drop_caches: 3
+Aug 30 15:35:37 spark-6f0e kernel: NVRM: nvCheckOkFailedNoLog: Check failed: Out of memory [NV_ERR_NO_MEMORY] (0x00000051) returned from _memdescAllocInternal(pMemDesc) @ mem_desc.c:1359
+Aug 30 15:35:37 spark-6f0e kernel: NVRM: nvCheckOkFailedNoLog: Check failed: Out of memory [NV_ERR_NO_MEMORY] (0x00000051) returned from _memdescAllocInternal(pMemDesc) @ mem_desc.c:1359
+Aug 30 15:42:34 spark-6f0e kernel: audit: type=1400 audit(1788129754.737:228): apparmor="DENIED" operation="capable" class="cap" profile="ubuntu_pro_esm_cache_systemd_detect_virt" pid=574802 comm="systemd-detect-" capability=38  capname="perfmon"
+Aug 30 15:42:34 spark-6f0e kernel: audit: type=1400 audit(1788129754.738:229): apparmor="DENIED" operation="capable" class="cap" profile="ubuntu_pro_esm_cache//cloud_id" pid=574763 comm="cloud-id" capability=38  capname="perfmon"
+Aug 30 15:48:24 spark-6f0e kernel: NVRM: nvCheckOkFailedNoLog: Check failed: Out of memory [NV_ERR_NO_MEMORY] (0x00000051) returned from _memdescAllocInternal(pMemDesc) @ mem_desc.c:1359
+Aug 30 15:48:25 spark-6f0e kernel: NVRM: nvCheckOkFailedNoLog: Check failed: Out of memory [NV_ERR_NO_MEMORY] (0x00000051) returned from _memdescAllocInternal(pMemDesc) @ mem_desc.c:1359

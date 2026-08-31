@@ -1,0 +1,46 @@
+command: |
+  vllm serve {model} \
+    --host {host} \
+    --port {port} \
+    --trust-remote-code \
+    --max-model-len {max_model_len} \
+    --max-num-batched-tokens {max_num_batched_tokens} \
+    --gpu-memory-utilization {gpu_memory_utilization} \
+    --kv-cache-dtype {kv_cache_dtype} \
+    --load-format {load_format} \
+    --attention-backend {attention_backend} \
+    --mm-encoder-tp-mode {mm_encoder_tp_mode} \
+    --speculative-config '{{"method":"mtp","num_speculative_tokens":3}}' \
+    --enable-prefix-caching \
+    --enable-auto-tool-choice \
+    --tool-call-parser {tool_call_parser} \
+    --reasoning-parser {reasoning_parser} \
+benchmark:
+  framework: llama-benchy
+  pp: [2048]
+  tg: [128]
+  runs: 3
+  prefix_caching: true
+  no_adapt_prompt: true
+  depth: [16384]
+  concurrency: [1, 10]
+recipe_version: '1'
+model: unsloth/Qwen3.8-27B-NVFP4
+solo_only: false
+container: vllm-node
+cluster_only: false
+env: {}
+description: anchor h2 arm 5 — max_num_batched_tokens 65536 -> 81920, the authorised retry below the crash point
+name: Qwen3.8-27B-NVFP4-anchor
+defaults:
+  port: 8000
+  host: 0.0.0.0
+  max_model_len: 262144
+  max_num_batched_tokens: 81920
+  gpu_memory_utilization: 0.8
+  kv_cache_dtype: fp8
+  load_format: instanttensor
+  attention_backend: flashinfer
+  mm_encoder_tp_mode: data
+  tool_call_parser: qwen3_coder
+  reasoning_parser: qwen3

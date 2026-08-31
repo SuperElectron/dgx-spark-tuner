@@ -1,0 +1,179 @@
+# anchor — measure our own grid against the board's leaders on the same checkpoint, and take the first cell off them
+
+## Objective
+
+`tg128 @ d16384`, concurrency 10, clusterSize 1, vLLM, median of the run's
+values: **≥ 72.5 t/s**.
+
+Where it stands: unmeasured by us, well measured by others on this exact
+checkpoint. Read live 2026-08-29 from each submission's own `benchmarkData`,
+**eight board entries serve `unsloth/Qwen3.8-27B-NVFP4` on vLLM at
+clusterSize 1**. At this cell they read:
+
+    63.05  sub1786821875313   MTP k=3, max_num_seqs UNSET   <- best like-for-like
+    61.51  sub1786754097881   no speculation, max_num_seqs UNSET
+    47.87  sub1786875964739   MTP k=3, max_num_seqs 4
+    42.21  sub1786803355903   MTP k=3, max_num_seqs unset, gmu 0.6, no ctx caps
+    33.74  sub1786810530268   MTP k=3, max_num_seqs 4
+    13.09  sub1787467674993   DFlash2 k=8, max_num_seqs 4
+
+**72.5 is the best like-for-like entry plus 15%** — the imported scatter band, so
+a win cannot be noise. The roofline says it is reachable: at c10 the weights
+amortize to 19.10/10 + 0.537 KV + 0.151 GDN state = 2.60 GB per token, an
+aggregate ceiling of **84 t/s** at 80% of peak. 63.05 is 75% of that ceiling, so
+there is real room, and it is room in bytes rather than in hope.
+
+Reached when: the median at `tg128 @ d16384 c10` reads ≥ 72.5 t/s on a run whose
+engine log confirms the served config matches the recipe, measured on the same
+28-cell arena grid the board entries were measured on.
+
+## Strategy
+
+This is a comparative campaign, not a blind search. Eight entries run our
+checkpoint on our runtime at our cluster size, they publish their full recipes,
+and they disagree with each other by 5x at the Objective's cell. **The spread
+between them is the map of the lever space**, and reading it is cheaper than
+discovering it.
+
+What the published recipes already say:
+
+- **Capping admission is what separates the pack from the leaders.** The two
+  fastest c10 entries (63.05, 61.51) both leave `max_num_seqs` **unset**, at
+  vLLM's default. Every entry that pins it to 4 lands at 33.74-47.87, and the
+  one that pins it to 1 lands at 14.28. This inverts the assumption this
+  experiment was first written with — the lever is not "raise the cap", it is
+  "do not impose one". Our recipe already leaves it unset, so h1 starts on the
+  right side of it and must *record what the engine resolves it to*.
+- **Speculation is worth much less here than the cycle arithmetic implies.** At
+  `d16384 c1` the no-spec entry reads 11.19 and the MTP k=3 entries read
+  16.13-18.52 — 1.44-1.65x, against the 2.2x implied by ~2.9 of 4 accepted. And
+  at c10 speculation is nearly free either way: 63.05 with MTP against 61.51
+  without. Acceptance on this checkpoint is evidently well below the MoE's.
+- **DFlash2 wins c1 and loses c10 badly.** The Inferact/DFlash2 entries take
+  29.15 at c1 and collapse to 13-15 at c10. It is also not reachable from a
+  stock image — it needs a locally built `vllm-node-dflash2` on vLLM mainline
+  `b389ac2` plus the `z-lab` draft — so it is out of scope for this experiment
+  and belongs to a later one if at all.
+- **Nobody pins a checkpoint revision.** No submission carries a `revision`
+  field. Ours does, in Held.
+
+The roofline is validated rather than assumed: 19.10 GB per forward against
+273 GB/s predicts 11.4 t/s unspeculated at 80% of peak, and `sub1786754097881`
+measured 11.19 on the same checkpoint. Agreement to 2%. **That gives every
+no-speculation arm in this experiment a known cell to reproduce, and a probe
+that does not reproduce it is broken rather than interesting.**
+
+The nearest reproducible twin is `sub1786821875313` — our checkpoint, MTP k=3,
+`kv-cache-dtype fp8`, `attention-backend flashinfer`, `load-format
+instanttensor`, `gpu-memory-utilization 0.8`, no `max_num_seqs`, on the **public
+pinned** image `dgx-vllm-eugr-nightly:2026081501`. It differs from our
+`recipe.yaml` in exactly three places: `max_model_len` 131072 against our
+262144, `max_num_batched_tokens` 32768 against our 16384, and it sets
+`VLLM_MARLIN_USE_ATOMIC_ADD=1`. Those three are the first hypotheses this
+experiment has, and they are hypotheses because a twin measured 63.05 with them.
+
+Measured scatter, per cell — what a decision rule here has to clear:
+
+    tg128 @ d16384 c10 (this model): UNMEASURED. h1's sweep measures it.
+
+Imported priors, to be replaced by our own the moment they exist:
+
+    tg128 @ d16384 c1, MTP on:   ±15%     (Qwen3.6-35B-A3B-NVFP4, concurrency/h1)
+    tg, MTP on vs off:           σ 8.6 vs 0.24 — speculation widens tg ~36x
+    board's own c10 spread:      ±0.5-0.9 on 61-63 (sub1786821875313 ±0.55,
+                                 sub1786754097881 ±0.49) — far tighter than our
+                                 c1 prior, which is consistent with the tree's
+                                 finding that c>1 cells resolve in ~3 runs and
+                                 c1 cells need 7+
+
+## Held
+
+- Box `spark-6f0e`, container image digest `sha256:4894c3f1…3818990`, vLLM
+  `0.27.2rc1.dev360+ge85d1b69c`, flashinfer `0.6.18`, llama-benchy `0.4.0`. Any
+  change is a new epoch and re-bases every figure here.
+- Checkpoint `unsloth/Qwen3.8-27B-NVFP4` at sha
+  `57926baca9a82b4d6906b43f2750d55315f5b10f`, single node, TP=1, `vllm-node`.
+  Changing the checkpoint is a different experiment. No board entry pins a
+  revision; we do, because the repo was last modified 2026-08-29.
+- Runtime is vLLM from the arena image. SGLang, DFlash2 and any locally-built
+  image are out of scope — a result we cannot reproduce from a public pinned
+  image is not a result this tree can defend.
+- Scored on `tg` only. `pp` and `ttfr` are recorded; ours are cold-cache and
+  comparable to nothing on the board.
+- Prompt pinned: `no_adapt_prompt: true` — verified against sparkrun's adapter,
+  where it is a `_BOOL_ARGS` member and renders as the bare flag.
+
+  **Generation length is deliberately NOT forced in this experiment.**
+  llama-benchy has `--exact-tg`, which sends `min_tokens=<tg>` and
+  `ignore_eos=true` and would guarantee every request emits exactly 128 tokens —
+  the direct fix for the early-EOS short returns that biased 13 of 60 cells on
+  LFM2.5. It is held off because this experiment's whole purpose is to sit
+  beside eight board entries measured without it, and forcing length changes
+  what `tg` means. **Every round here therefore reports short-return counts per
+  cell as a validity gate.** If they are material, that is a finding, and
+  turning `exact_tg` on is an epoch break to be declared, not a quiet fix.
+
+  Sampling parameters are likewise unset: llama-benchy exposes no
+  temperature/top_p/top_k/seed argument, only `--extra-body` for arbitrary JSON.
+  Generation is therefore governed by the checkpoint's own
+  `generation_config.json`, unrecorded — the same as every board entry.
+- Medians, never the means `run.py` prints.
+- **Cell order is depth-major ascending**, 28 cells against one running server,
+  and it is held for every round that runs a schedule. Order decides what is
+  warm and what is hot, and no figure reveals which order produced it. Note this
+  is *not* the board's own order — arena uses a heat-aware `bucket_43521_seed42`
+  schedule in which `d16384 c1` sits at index 13 of 28, measured mid-sweep and
+  warm. Ours is a different order, so cell-by-cell comparison to a board entry
+  carries that systematic and must say so.
+
+## Rounds
+
+| round | hypothesis | outcome |
+|-------|------------|---------|
+| h1 | baseline sweep — our recipe over the board's own 28-cell grid, to place every cell of ours beside the eight like-for-like entries and measure our scatter | LEVER SPENT — 11.22 t/s at the objective cell, under the 55.0 floor. c1 is healthy at 16.96 (inside the board's 16.13-18.52); only c10 collapses. Engine ran 10 / waited 9 with `max_num_seqs` resolved to 256, so `max_num_batched_tokens` 16384 gates admission against a per-request prefill of 18432. Our c10 scatter is 0.9% of median |
+| h2 | `max_num_batched_tokens` — raise the token budget off 16384 so a c10 batch at d16384 can be admitted at all | LEVER SPENT — 36.56 t/s at 65536, from 11.22, a 3.26x move that still misses 72.5 and the board's 63.05. Two effects of one field: 32768 drained the queue (+28%), 65536 removed the admission ramp (+154%). Spent by the box, not the mechanism — 81920, 98304 and 131072 all die in the FlashInfer `fp4_gemm` autotune, so the curve is unmeasurable above 65536 while it is still climbing. Decision rule mis-specified: both branches required arms that cannot exist. c10 scatter is cv 13.7% here, not h1's 0.9% |
+
+| h3 | `--language-model-only` — return the unused vision tower's memory, the constraint that ended h2 while its curve was still climbing | LEVER SPENT — 36.96 t/s at 65536 with the flag, against 36.56 without it: +1.1%, inside noise, under the 42.0 floor. 81920 with the flag still dies in the FlashInfer autotune, so no arm above 65536 started — both conditions of the rule. The flag works (tower absent, load 21.97 -> 21.11 GiB) but vLLM spends the memory on KV (56.98 -> 58.77 GiB). The autotune ceiling is not about free memory: 81920+flag failed from 18.1-21.8 GB available, 65536+flag completed from 16.4 GB. c10 scatter is cv 1.0% at n=5, correcting h2's 13.7% |
+| h4 | the three config fields where board twin `sub1786821875313` (63.05 on our checkpoint) differs from ours — `max_model_len` 131072, `VLLM_MARLIN_USE_ATOMIC_ADD=1`, `max_num_batched_tokens` 32768 — tested one at a time on our epoch | LEVER SPENT — 39.50 t/s at the objective cell, from h3's 36.96. `max_model_len` 131072 is worth +6.9% and is adopted; `VLLM_MARLIN_USE_ATOMIC_ADD=1` costs 6.8% (it gates on `n < 2048 and k >= 2048` and at c10 sits on the wrong side of it); `mnbt` 32768 costs 65% and restores h2's `5/5 -> 7/3 -> 9/1 -> 10/0` admission ramp, vindicating h2 from the opposite direction. 39.50 is inside the rule's `alive` band but the lever is a three-item list and all three are measured, so it is spent rather than alive. The twin's config does not reproduce the twin's 63.05: only the container image remains between us, and `Held` pins it |
+
+Later rounds are motivated by h1's deltas, not pre-committed. The three standing
+candidates from the twin's recipe — `max_num_batched_tokens` 32768,
+`max_model_len` 131072, `VLLM_MARLIN_USE_ATOMIC_ADD=1` — are named in Strategy
+so that h1 is not tempted to test them; h1 measures, it does not tune.
+
+## Conclusion
+
+**CLOSED AS EXHAUSTED. The Objective is not met.** Best measured at
+`tg128 @ d16384 c10` is **39.50 t/s** (h4 run-0001, `bench_aa90097c9a3d`),
+against a target of 72.5 and the board twin's 63.05. Against h1's baseline of
+11.22 the experiment is a **3.5x** move, and every lever it opened is spent:
+
+| round | lever | what it bought | how it ended |
+|---|---|---|---|
+| h1 | baseline sweep | — (11.22 established) | located admission as the gate |
+| h2 | `max_num_batched_tokens` | +226% | hardware ceiling between 65536 and 81920 — 81920+ dies in the FlashInfer `fp4_gemm` autotune |
+| h3 | `--language-model-only` | +1.1%, inside noise | refuted the memory-headroom theory: the autotune ceiling is not about free memory |
+| h4 | the twin's three config deltas | +6.9% net | all three arms measured; the twin's number is not config-reproducible on our build |
+
+What is now known to be closed. Admission, not memory, governs this cell: the
+`5/5 → 7/3 → 9/1 → 10/0` ramp appears whenever `max_num_batched_tokens` is
+32768 and vanishes at 65536, measured twice from opposite directions (h2 up,
+h4 down). Above 65536 the field is unmeasurable on this box. Freeing memory —
+by dropping the vision tower (h3) or by lowering the token budget (h4 arm 3) —
+buys nothing, because memory was never binding. MTP acceptance sat at
+0.417-0.434 across every arm of every round and moved for no lever tried. The
+recipe space reachable from a public pinned image is, on this evidence, worked
+out at ~39.5 t/s.
+
+**The one hypothesis left untested, and why it is out of scope.** The twin runs
+our checkpoint, our runtime, our cluster size, and — after h4 — a config we have
+now measured field by field, yet scores 63.05 where our best combination reaches
+39.50. The only remaining difference is the container image: theirs
+`dgx-vllm-eugr-nightly:2026081501`, ours `:2026082102`. `Held` pins our image
+digest, so testing that is an epoch break and therefore a different experiment,
+not a further round here. It is the strongest single candidate this campaign has
+produced and should be the first thing a build-epoch experiment asks.
+
+The answer this experiment reached is `recipe-new.yaml`: h4 arm 1's
+configuration — `max_model_len` 131072, `max_num_batched_tokens` 65536,
+`--language-model-only`, MTP k=3, `max_num_seqs` unset, `env: {}`.

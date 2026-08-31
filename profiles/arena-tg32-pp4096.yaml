@@ -1,0 +1,61 @@
+framework: llama-benchy
+metadata:
+  description: >
+    tg32 + pp4096 coverage grid. Targets the two arena metrics that the
+    official spark-arena-v2 profile does not measure and that are therefore
+    almost unpopulated on the board: as of 2026-08-30, 27 tg32 cells hold a
+    single entry and 9 pp4096 cells hold two.
+
+    Deliberate pairing: llama-benchy emits one pp metric and one tg metric per
+    execution, so pp 4096 with tg 32 produces ONLY near-empty cells. A profile
+    using pp 2048 would republish contested pp2048-at-depth cells, where our
+    own submissions already rank >=100.
+
+    Caveat: at depth > 0 this also emits ctx_pp and ctx_tg cells, which ARE
+    contested and where we already hold rank 1 or 2 from other submissions.
+    Those figures will be added, not replaced.
+
+    Cell order is NOT arena's bucket_43521_seed42. It mirrors its intent -
+    never two hot cells back to back - with the three c4 rungs interleaved,
+    since the board's pp4096 cells exist at c4 and the official profile has no
+    c4. Order decides what is warm; no figure reveals which order produced it.
+args:
+  depth: [ 0, 4096, 8192, 16384, 32768, 65535, 100000 ]
+  pp: [ 4096 ]
+  tg: [ 32 ]
+  concurrency: [ 1, 2, 4, 5, 10 ]
+  prefix_caching: true
+  runs: 3
+
+schedule:
+  - { depth: 8192, concurrency: 5 }
+  - { depth: 4096, concurrency: 5 }
+  - { depth: 8192, concurrency: 10 }
+  - { depth: 8192, concurrency: 2 }
+  - { depth: 4096, concurrency: 2 }
+  - { depth: 100000, concurrency: 5 }
+  - { depth: 100000, concurrency: 2 }
+  - { depth: 0, concurrency: 4 }
+  - { depth: 65535, concurrency: 10 }
+  - { depth: 65535, concurrency: 1 }
+  - { depth: 0, concurrency: 1 }
+  - { depth: 65535, concurrency: 5 }
+  - { depth: 32768, concurrency: 2 }
+  - { depth: 4096, concurrency: 10 }
+  - { depth: 16384, concurrency: 1 }
+  - { depth: 16384, concurrency: 4 }
+  - { depth: 8192, concurrency: 1 }
+  - { depth: 32768, concurrency: 5 }
+  - { depth: 0, concurrency: 10 }
+  - { depth: 16384, concurrency: 10 }
+  - { depth: 32768, concurrency: 1 }
+  - { depth: 0, concurrency: 5 }
+  - { depth: 16384, concurrency: 5 }
+  - { depth: 32768, concurrency: 4 }
+  - { depth: 100000, concurrency: 1 }
+  - { depth: 32768, concurrency: 10 }
+  - { depth: 16384, concurrency: 2 }
+  - { depth: 0, concurrency: 2 }
+  - { depth: 65535, concurrency: 2 }
+  - { depth: 4096, concurrency: 1 }
+  - { depth: 100000, concurrency: 10 }
