@@ -1,0 +1,77 @@
+command: "vllm serve LiquidAI/LFM2.5-350M \\\n  --host {host} \\\n  --port {port} \\\n  --language-model-only \\\n  --max-model-len {max_model_len} \\\n  --max-num-batched-tokens {max_num_batched_tokens} \\\n  --max-num-seqs {max_num_seqs} \\\n  --gpu-memory-utilization {gpu_memory_utilization} \\\n  --load-format fastsafetensors \\\n  --attention-backend FLASHINFER \\\n  --enable-prefix-caching \\\n  --enable-chunked-prefill \\\n  --trust-remote-code \\\n  --dtype auto \\\n  --kv-cache-dtype fp8 \\\n  --quantization fp8 \\\n"
+benchmark:
+  framework: llama-benchy
+  depth:
+  - 0
+  - 4096
+  - 8192
+  - 16384
+  pp:
+  - 4096
+  tg:
+  - 32
+  concurrency:
+  - 1
+  - 2
+  - 4
+  - 5
+  - 10
+  prefix_caching: true
+  runs: 3
+  schedule:
+  - depth: 8192
+    concurrency: 5
+  - depth: 8192
+    concurrency: 2
+  - depth: 8192
+    concurrency: 10
+  - depth: 8192
+    concurrency: 1
+  - depth: 8192
+    concurrency: 4
+  - depth: 4096
+    concurrency: 5
+  - depth: 4096
+    concurrency: 2
+  - depth: 4096
+    concurrency: 10
+  - depth: 4096
+    concurrency: 1
+  - depth: 4096
+    concurrency: 4
+  - depth: 16384
+    concurrency: 5
+  - depth: 16384
+    concurrency: 2
+  - depth: 16384
+    concurrency: 10
+  - depth: 16384
+    concurrency: 1
+  - depth: 16384
+    concurrency: 4
+  - depth: 0
+    concurrency: 5
+  - depth: 0
+    concurrency: 2
+  - depth: 0
+    concurrency: 10
+  - depth: 0
+    concurrency: 1
+  - depth: 0
+    concurrency: 4
+recipe_version: '1'
+model: LiquidAI/LFM2.5-350M
+solo_only: false
+container: vllm-node
+cluster_only: false
+env:
+  VLLM_MARLIN_USE_ATOMIC_ADD: '1'
+description: "coverage h1 \u2014 tg32 + pp4096 grid on the slots winner, unchanged"
+name: LFM2.5-350M
+defaults:
+  port: 8000
+  host: 0.0.0.0
+  gpu_memory_utilization: 0.8
+  max_model_len: 32768
+  max_num_batched_tokens: 8192
+  max_num_seqs: 16

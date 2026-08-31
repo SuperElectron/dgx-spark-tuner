@@ -1,0 +1,76 @@
+command: |
+  vllm serve {model} \
+    --host {host} \
+    --port {port} \
+    --trust-remote-code \
+    --max-model-len {max_model_len} \
+    --max-num-batched-tokens {max_num_batched_tokens} \
+    --gpu-memory-utilization {gpu_memory_utilization} \
+    --kv-cache-dtype {kv_cache_dtype} \
+    --load-format {load_format} \
+    --attention-backend {attention_backend} \
+    --mm-encoder-tp-mode {mm_encoder_tp_mode} \
+    --speculative-config '{{"method":"mtp","num_speculative_tokens":3}}' \
+    --enable-prefix-caching \
+    --enable-auto-tool-choice \
+    --tool-call-parser {tool_call_parser} \
+    --reasoning-parser {reasoning_parser} \
+benchmark:
+  framework: llama-benchy
+  pp: [2048]
+  tg: [128]
+  runs: 3
+  prefix_caching: true
+  no_adapt_prompt: true
+  # 28 cells against ONE running server: model load is ~150 s and dominates.
+  # Order is depth-major, ascending, and is part of the round's contract -
+  # it decides what is warm and no figure reveals which order produced it.
+  schedule:
+    - {depth: 0, concurrency: 1}
+    - {depth: 0, concurrency: 2}
+    - {depth: 0, concurrency: 5}
+    - {depth: 0, concurrency: 10}
+    - {depth: 4096, concurrency: 1}
+    - {depth: 4096, concurrency: 2}
+    - {depth: 4096, concurrency: 5}
+    - {depth: 4096, concurrency: 10}
+    - {depth: 8192, concurrency: 1}
+    - {depth: 8192, concurrency: 2}
+    - {depth: 8192, concurrency: 5}
+    - {depth: 8192, concurrency: 10}
+    - {depth: 16384, concurrency: 1}
+    - {depth: 16384, concurrency: 2}
+    - {depth: 16384, concurrency: 5}
+    - {depth: 16384, concurrency: 10}
+    - {depth: 32768, concurrency: 1}
+    - {depth: 32768, concurrency: 2}
+    - {depth: 32768, concurrency: 5}
+    - {depth: 32768, concurrency: 10}
+    - {depth: 65535, concurrency: 1}
+    - {depth: 65535, concurrency: 2}
+    - {depth: 65535, concurrency: 5}
+    - {depth: 65535, concurrency: 10}
+    - {depth: 100000, concurrency: 1}
+    - {depth: 100000, concurrency: 2}
+    - {depth: 100000, concurrency: 5}
+    - {depth: 100000, concurrency: 10}
+recipe_version: '1'
+model: unsloth/Qwen3.8-27B-NVFP4
+solo_only: false
+container: vllm-node
+cluster_only: false
+env: {}
+description: anchor h1 baseline sweep — unsloth/Qwen3.8-27B-NVFP4, MTP N=3, board's 28-cell grid
+name: Qwen3.8-27B-NVFP4-anchor
+defaults:
+  port: 8000
+  host: 0.0.0.0
+  max_model_len: 262144
+  max_num_batched_tokens: 16384
+  gpu_memory_utilization: 0.8
+  kv_cache_dtype: fp8
+  load_format: instanttensor
+  attention_backend: flashinfer
+  mm_encoder_tp_mode: data
+  tool_call_parser: qwen3_coder
+  reasoning_parser: qwen3

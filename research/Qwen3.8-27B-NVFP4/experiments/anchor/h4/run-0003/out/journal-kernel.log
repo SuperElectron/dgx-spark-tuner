@@ -1,0 +1,16 @@
+Aug 30 16:20:17 spark-6f0e kernel: docker0: port 1(veth73ab03a) entered blocking state
+Aug 30 16:20:17 spark-6f0e kernel: docker0: port 1(veth73ab03a) entered disabled state
+Aug 30 16:20:17 spark-6f0e kernel: veth73ab03a: entered allmulticast mode
+Aug 30 16:20:17 spark-6f0e kernel: veth73ab03a: entered promiscuous mode
+Aug 30 16:20:17 spark-6f0e kernel: eth0: renamed from veth2e7f9f4
+Aug 30 16:20:17 spark-6f0e kernel: docker0: port 1(veth73ab03a) entered blocking state
+Aug 30 16:20:17 spark-6f0e kernel: docker0: port 1(veth73ab03a) entered forwarding state
+Aug 30 16:20:17 spark-6f0e kernel: docker0: port 1(veth73ab03a) entered disabled state
+Aug 30 16:20:17 spark-6f0e kernel: veth2e7f9f4: renamed from eth0
+Aug 30 16:20:17 spark-6f0e kernel: docker0: port 1(veth73ab03a) entered disabled state
+Aug 30 16:20:17 spark-6f0e kernel: veth73ab03a (unregistering): left allmulticast mode
+Aug 30 16:20:17 spark-6f0e kernel: veth73ab03a (unregistering): left promiscuous mode
+Aug 30 16:20:17 spark-6f0e kernel: docker0: port 1(veth73ab03a) entered disabled state
+Aug 30 16:20:20 spark-6f0e kernel: tee (674692): drop_caches: 3
+Aug 30 16:42:34 spark-6f0e kernel: audit: type=1400 audit(1788133354.762:230): apparmor="DENIED" operation="capable" class="cap" profile="ubuntu_pro_esm_cache_systemd_detect_virt" pid=721845 comm="systemd-detect-" capability=38  capname="perfmon"
+Aug 30 16:42:34 spark-6f0e kernel: audit: type=1400 audit(1788133354.764:231): apparmor="DENIED" operation="capable" class="cap" profile="ubuntu_pro_esm_cache//cloud_id" pid=721766 comm="cloud-id" capability=38  capname="perfmon"

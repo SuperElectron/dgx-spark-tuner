@@ -1,0 +1,57 @@
+framework: llama-benchy
+metadata:
+  description: >
+    tg32 + pp4096 coverage grid, scoped to LFM2.5-350M's validated slots winner
+    (max_model_len 32768, max_num_seqs 16).
+
+    Targets the two arena metrics the official spark-arena-v2 profile does not
+    measure and which are therefore almost unpopulated. As of the live sweep of
+    2026-08-30, 27 tg32 cells hold a single entry (Qwen3.6-27B-PrismaSCOUT,
+    submitted 2026-05-21, 0.6-61.4 t/s) and 9 pp4096 cells hold two.
+
+    pp 4096 is paired with tg 32 deliberately: llama-benchy emits one pp metric
+    and one tg metric per execution, so this pairing produces ONLY near-empty
+    cells. A pp 2048 profile would republish contested pp2048-at-depth cells
+    where our own submissions already rank >=100.
+
+    DEPTHS STOP AT 16384. The published winner runs max_model_len 32768, so with
+    pp 4096 the deepest servable depth is max_model_len - pp - 2 = 28670. The
+    d32768, d65535 and d100000 rungs are unreachable without changing a config
+    that has been validated and is the one we would publish. Covering 4 depths
+    on a proven config beats covering 7 on an unproven one.
+
+    Concurrency includes 4 because the board's pp4096 cells exist at c4 and the
+    official profile has none.
+
+    Cell order is depth-major over a fixed concurrency sweep, not arena's
+    bucket_43521_seed42. It is part of this round's contract: order decides what
+    is warm, and no figure reveals which order produced it.
+args:
+  depth: [ 0, 4096, 8192, 16384 ]
+  pp: [ 4096 ]
+  tg: [ 32 ]
+  concurrency: [ 1, 2, 4, 5, 10 ]
+  prefix_caching: true
+  runs: 3
+
+schedule:
+  - { depth: 8192, concurrency: 5 }
+  - { depth: 8192, concurrency: 2 }
+  - { depth: 8192, concurrency: 10 }
+  - { depth: 8192, concurrency: 1 }
+  - { depth: 8192, concurrency: 4 }
+  - { depth: 4096, concurrency: 5 }
+  - { depth: 4096, concurrency: 2 }
+  - { depth: 4096, concurrency: 10 }
+  - { depth: 4096, concurrency: 1 }
+  - { depth: 4096, concurrency: 4 }
+  - { depth: 16384, concurrency: 5 }
+  - { depth: 16384, concurrency: 2 }
+  - { depth: 16384, concurrency: 10 }
+  - { depth: 16384, concurrency: 1 }
+  - { depth: 16384, concurrency: 4 }
+  - { depth: 0, concurrency: 5 }
+  - { depth: 0, concurrency: 2 }
+  - { depth: 0, concurrency: 10 }
+  - { depth: 0, concurrency: 1 }
+  - { depth: 0, concurrency: 4 }
