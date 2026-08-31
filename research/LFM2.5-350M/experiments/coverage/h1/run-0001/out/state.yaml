@@ -1,0 +1,98 @@
+benchmark_id: bench_88df45c73f9b
+cluster_id: sparkrun_1619e2a9952c9dee_313596140c4f
+recipe_qualified_name: research/LFM2.5-350M/experiments/coverage/h1/run-0001/recipe.yaml
+framework: llama-benchy
+profile: null
+base_args:
+  pp:
+  - 4096
+  depth:
+  - 0
+  - 4096
+  - 8192
+  - 16384
+  prefix_caching: true
+  tg:
+  - 32
+  concurrency:
+  - 1
+  - 2
+  - 4
+  - 5
+  - 10
+  runs: 3
+schedule:
+- depth: 8192
+  concurrency: 5
+- depth: 8192
+  concurrency: 2
+- depth: 8192
+  concurrency: 10
+- depth: 8192
+  concurrency: 1
+- depth: 8192
+  concurrency: 4
+- depth: 4096
+  concurrency: 5
+- depth: 4096
+  concurrency: 2
+- depth: 4096
+  concurrency: 10
+- depth: 4096
+  concurrency: 1
+- depth: 4096
+  concurrency: 4
+- depth: 16384
+  concurrency: 5
+- depth: 16384
+  concurrency: 2
+- depth: 16384
+  concurrency: 10
+- depth: 16384
+  concurrency: 1
+- depth: 16384
+  concurrency: 4
+- depth: 0
+  concurrency: 5
+- depth: 0
+  concurrency: 2
+- depth: 0
+  concurrency: 10
+- depth: 0
+  concurrency: 1
+- depth: 0
+  concurrency: 4
+intent_id: 1619e2a9952c9dee
+completed_indices:
+- 0
+- 1
+- 2
+- 3
+- 4
+- 5
+- 6
+- 7
+- 8
+- 9
+- 10
+- 11
+- 12
+- 13
+- 14
+- 15
+- 16
+- 17
+- 18
+- 19
+failed_indices: []
+crash_count: 0
+session_count: 1
+sessions:
+- session: 1
+  started_at: '2026-08-31T00:27:29.592529+00:00'
+  status: completed
+  ended_at: '2026-08-31T00:29:02.206888+00:00'
+extras:
+  framework_version: 0.4.0
+created_at: '2026-08-31T00:27:29.592573+00:00'
+updated_at: '2026-08-31T00:29:02.206897+00:00'
