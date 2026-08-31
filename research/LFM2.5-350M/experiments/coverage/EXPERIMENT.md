@@ -156,8 +156,50 @@ says so in its own Method. Anything named here is closed to every round.
 
 | round | hypothesis | outcome |
 |-------|------------|---------|
-| h1 | the `slots` winner, run over the tg32/pp4096 grid, places top-3 in ≥16 of the 20 grid points | <pending> |
+| h1 | the `slots` winner, run over the tg32/pp4096 grid, places top-3 in ≥16 of the 20 grid points | TARGET MET — 16 of 16 scorable tg32 cells rank 1 board-wide (only 16 exist; the c4 column does not), narrowest 122.76 vs 24.99 at d16384 c10; 6 of 6 existing pp4096 cells rank 1 |
 
 ## Conclusion
 
-<pending — written when the objective is reached or the levers are exhausted>
+**Objective met in one round, and published as `sub1788141670208` (2026-08-31).**
+`recipe-new.yaml` is byte-identical to `recipe.yaml`: this experiment tuned
+nothing. It measured a config already validated by `slots` against cells the
+board's own profile never visits.
+
+- **16 of 16 scorable `tg32` cells rank 1 board-wide**, not merely ≤3.
+  Narrowest margin `d16384 c10`: 122.76 against an incumbent 24.99. The 6
+  existing `pp4096` cells also rank 1.
+- **The Objective's denominator was wrong and the decision rule's was right.**
+  "16 of the 20 grid points" assumed 20 live cells; only 16 `tg32` cells exist,
+  the whole `c4` column returning `Leaderboard test not found` on two separate
+  fetches. The rule as frozen had already named its denominator as the 16
+  points at c1/c2/c5/c10, so it resolved without ambiguity. Nothing was edited
+  to make it fit. **A cell can be absent, not merely empty — size a denominator
+  on a live read, never on the grid you intend to run.**
+- **The premise that opened this experiment was wrong.** It projected `tg32`
+  running ~4.8% faster than `tg128`, extrapolated rather than measured. Same
+  recipe, same box: the two agree at c1 (365.83 vs 364.39 at d0) and diverge
+  **3.1x** at c10 (651.03 vs 2044.66). Thirty-two tokens per request drain
+  before the batch fills — `Running` peaked at 5 and 7 across the two runs
+  against `max_num_seqs 16`. The conclusion survived its own broken premise
+  because these cells are vacant, not because the reasoning held. **Levers
+  validated at `tg128 c10` do not carry to `tg32 c10`.**
+- **`--profile` changed provenance, not physics.** The two runs agree at the
+  rule's cell to 2.3%, inside this model's 7–15% band. run-0001 archived
+  `profile: null` because its recipe carried an inline `benchmark:` block;
+  run-0002 dropped the block and archived the profile path. One measurement,
+  two records, only one of them submittable.
+
+**Held was crossed, with authorization.** This file froze "Nothing is submitted
+to Spark Arena … Submission is Mat's decision and it has not been given." Mat
+gave it explicitly on 2026-08-31 and run-0002 carried `--arena`. Recording the
+crossing rather than editing the Held to match what happened.
+
+**What this placement is, plainly.** Sixteen of the won cells held exactly one
+entry each, all from a single `PrismaSCOUT` submission of 2026-05-21; the six
+`pp4096` cells held two, both `DeepSeek-V4-Flash-0731-REAP` from one user. Only
+`tg32 (c1)` had a real field of 6. These are wins by coverage against a 350M
+model in cells sized for models orders of magnitude larger — not wins by tuning.
+
+**Not recoverable:** run-0002 archived no `hostmem.log`, `journal-kernel.log` or
+`metrics.txt`, so box state under load for the *submitted* run is unknown.
+run-0001's window showed ~16.8 GB free at worst and swap flat at 417 MB.

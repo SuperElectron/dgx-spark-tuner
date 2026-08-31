@@ -6,15 +6,16 @@ store, not here.
 
 ## Verdict
 
-<one line, filled at conclusion: TARGET MET / LEVER ALIVE / LEVER SPENT — the
-number that decided it>
+**TARGET MET** — 16 of 16 scorable `tg32` points rank **1** board-wide, not
+merely ≤3; narrowest margin 122.76 vs 24.99 at `d16384 c10`.
 
 ## Runs
 
 <!-- RUNS:BEGIN -->
 | run | changed | why | cell | pp | tg | ttfr | bench |
 |---|---|---|---|---|---|---|---|
-| run-0001 | none — the slots winner unchanged; only the measured grid differs | coverage round: the official arena profile measures only tg128 and pp2048, leaving 27 tg32 cells at a field of 1 and 9 pp4096 cells at a field of 2 | tg32 d0 c10 |  |  |  |  |
+| run-0001 | none — the slots winner unchanged; only the measured grid differs | coverage round: the official arena profile measures only tg128 and pp2048, leaving 27 tg32 cells at a field of 1 and 9 pp4096 cells at a field of 2 | d16384 c10 | 15308.41 | 125.60 | 1615.68 | bench_88df45c73f9b |
+| run-0002 | none — same recipe; grid supplied by --profile profiles/arena-tg32-pp4096.yaml instead of the recipe's inline benchmark block | run-0001 archived profile: null — it ran the inline block, so its figures carry no profile provenance; re-run under the profile to produce a submittable, correctly-stamped grid | d16384 c10 | 15273.22 | 122.76 | 1622.05 | bench_18c53808be50 |
 <!-- RUNS:END -->
 
 Script-written by `spark-autoresearch`'s CREATE/RECORD steps. Never hand-edit.
@@ -92,7 +93,22 @@ stated on placement instead, deliberately.
 
 ## Conclusion
 
-<pending>
+TARGET MET. Two 20/20 runs of the unchanged `slots` winner over the grid —
+`bench_88df45c73f9b`, and `bench_18c53808be50` under `--profile` — agree at the
+rule's cell to 2.3% (125.60 / 122.76). Against a live board read of 2026-08-31
+01:56 UTC our `tg32` ranks **1** in every existing cell, by +234% to +1562%;
+narrowest `d16384 c10`, 122.76 against 24.99. The 6 existing `pp4096` cells
+also rank 1, by +697% to +5529%.
+
+**The denominator.** The Objective said "16 of 20 grid points"; the live read
+found only **16 `tg32` cells exist** — the whole `c4` column absent at every
+depth, `Leaderboard test not found` on two fetches. The rule as frozen already
+anticipated this and named the denominator 16, so it resolved directly, 16 of
+16; the wrong count was the Objective's "of 20". Both readings give the same
+verdict, no branch turned on it, and nothing is edited to fix it.
+
+Falsifier never fired — no grid point failed or collapsed. Only the cell varied;
+no recipe field moved. `run-0002` was submitted as `sub1788141670208`.
 
 Budget: 15 lines. State which of the three the decision rule gave and the
 number that decided it; anything beyond that — per-run analysis, discarded
